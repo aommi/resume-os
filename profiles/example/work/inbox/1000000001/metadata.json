@@ -1,0 +1,28 @@
+{
+  "url": "https://example.com/jobs/1000000001",
+  "company": "Beacon Pay",
+  "title": "Senior Product Manager, Merchant Platform",
+  "location": "Remote (Canada)",
+  "compensation": "$150K - $180K",
+  "description": "Own the merchant platform roadmap; partner with risk, data, and engineering to ship onboarding and reconciliation improvements.",
+  "applyUrl": "https://jobs.example.com/beaconpay/spm-merchant",
+  "isEasyApply": false,
+  "isExternalApply": true,
+  "saved": true,
+  "fetched": "2026-06-25",
+  "lifecycle": {
+    "status": "to_apply",
+    "fit": "",
+    "priority": "",
+    "packagePath": "",
+    "packageReadyAt": "",
+    "appliedAt": "",
+    "outcome": "",
+    "lastContactAt": "",
+    "variant": "",
+    "notes": "",
+    "emailEvents": []
+  },
+  "enrichedAt": "2026-06-25",
+  "atsType": "greenhouse"
+}

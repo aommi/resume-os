@@ -1,0 +1,42 @@
+{
+  "profileId": "example",
+  "fullName": "Jordan Rivera",
+  "contact": {
+    "email": "jordan.rivera@example.com",
+    "phone": "(555) 014-2733",
+    "city": "Toronto",
+    "province": "Ontario",
+    "country": "Canada",
+    "links": ["linkedin.com/in/jordanrivera-example"]
+  },
+  "filenamePattern": "{fullName} - {companyRole} - Resume.pdf",
+  "timezone": "America/Toronto",
+  "atsAnswers": {
+    "previouslyWorkedForCompany": "No",
+    "applicationType": "New Applicant",
+    "legallyAbleToWork": "Yes",
+    "willingBackgroundCheck": "Yes",
+    "criminalOffenceNoPardon": "No",
+    "accommodationsRequired": "No",
+    "howDidYouHear": "LinkedIn Jobs"
+  },
+  "baseResumes": {
+    "": "resume.md"
+  },
+  "baseRoutingRules": [
+    { "when": "default", "use": "", "note": "example profile ships a single senior/general base" }
+  ],
+  "positioningFrame": {
+    "narrativeSpine": "Senior PM who turns messy operational workflows into measurable, scalable products across fintech and commerce.",
+    "headline": "Senior Product Manager",
+    "aiUsageFrame": "Uses automation and data to compress discovery-to-validation; see positioning.md."
+  },
+  "jobSearch": {
+    "titles": ["Product Manager", "Senior Product Manager"],
+    "locations": ["Toronto", "Remote", "Canada"],
+    "matchSignals": ["payments", "merchant tooling", "ecommerce", "returns", "operational workflows"]
+  },
+  "frictionNotes": [
+    "Example/demo profile — fictional data used to prove the engine runs multi-tenant."
+  ]
+}

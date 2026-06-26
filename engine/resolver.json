@@ -1,0 +1,13 @@
+{
+  "_comment": "Resolver routing table (machine-readable). task -> skill docs to load for that task. 'always' loads on every task; 'default' is the fallback for unknown/ambiguous intent and degrades to today's cold-start behavior, so the sparse resolver is never worse than the monolith. Paths are engine docs (repo root) or profile-relative.",
+  "always": ["profiles/<activeProfile>/resume-project-tracker.md"],
+  "routes": {
+    "tailor": ["resume-os.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md"],
+    "score": ["eval-rubric.md", "tailoring-methodology.md"],
+    "cover_letter": ["resume-os.md", "tailoring-methodology.md"],
+    "resume_maintenance": ["resume-os.md", "bullet-rubric.md"],
+    "pipeline_status": [],
+    "discover": []
+  },
+  "default": ["resume-os.md", "tailoring-methodology.md"]
+}

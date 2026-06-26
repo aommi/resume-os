@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+**/.DS_Store
+
+# Runtime state (machine-local, not source)
+.linkedin-last-checked
+.linkedin-chrome-profile/
+
+# Per-tenant private data (never distributed).
+# Ignore all profiles, then re-include only the fake demo profile.
+# (A bare "!profiles/example/" under an ignored "profiles/" would NOT work:
+#  git can't re-include a path whose parent dir is ignored, so we ignore the
+#  contents with "profiles/*" and negate the demo dir.)
+profiles/*
+!profiles/example/
+# ...but not the example's generated/rebuildable outputs.
+profiles/example/work/resume-formats/
+profiles/example/work/jobs-tracker.md
+
+# Personal/non-engine archived content (not distributed)
+archive/
+
+# Internal planning docs (kept local). Exception: the genericized architecture
+# review is published as design documentation.
+os-planning/*
+!os-planning/resume-os-architecture-review.md
+
+# Root working-state must NEVER be tracked. Real pipeline data lives in
+# profiles/<id>/work/. Stray copies can appear here if an external monitor or
+# pre-migration tooling writes to the old root paths.
+/inbox/
+/events/
+/applications/
+/resume-formats/
+/jobs-tracker.md
+/package-queue.md

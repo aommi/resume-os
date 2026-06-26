@@ -1,0 +1,11 @@
+{
+  "_comment": "Model-per-step config (SEAM #2). Step boundaries + model IDs ONLY. This does NOT bind the system to any runtime (Claude Code / Codex / SDK / MCP); whatever runtime executes a step reads its model id here. Change a value to route a step to a different model.",
+  "defaults": { "model": "claude-sonnet-4-6" },
+  "steps": {
+    "route":        { "model": "claude-haiku-4-5-20251001", "purpose": "base + archetype routing (light; mixed deterministic precedence + latent JD read)" },
+    "tailor":       { "model": "claude-opus-4-8",            "purpose": "bullet/skills tailoring (heavy latent)" },
+    "score":        { "model": "claude-sonnet-4-6",          "purpose": "latent ship-check items; deterministic gates run in score-resume.mjs" },
+    "cover_letter": { "model": "claude-sonnet-4-6",          "purpose": "cover letter drafting" },
+    "review":       { "model": "claude-sonnet-4-6",          "purpose": "final review / QA pass" }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://resume-os/engine/schemas/profile.schema.json",
+  "title": "Resume OS Profile",
+  "description": "The keystone data contract for a tenant. This schema holds the REUSABLE structure (field meanings + the standard ATS question key set); a profiles/<id>/profile.json instance supplies one candidate's VALUES. Replaces the personal data formerly tangled into application-profile.md and the skill docs.",
+  "type": "object",
+  "required": ["profileId", "fullName", "contact"],
+  "additionalProperties": true,
+  "properties": {
+    "profileId": {
+      "type": "string",
+      "description": "Folder id under profiles/, e.g. \"amirali\". Must match activeProfile in resume-os.config.json to be selected."
+    },
+    "fullName": {
+      "type": "string",
+      "description": "Candidate name. Leads every generated resume/PDF filename (was previously hardcoded in build-resume-formats.mjs)."
+    },
+    "contact": {
+      "type": "object",
+      "description": "Contact block rendered on resumes and used to autofill applications.",
+      "required": ["email"],
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "addressLine1": { "type": "string" },
+        "city": { "type": "string" },
+        "province": { "type": "string" },
+        "postalCode": {
+          "type": "string",
+          "description": "Keep the candidate's exact formatting, e.g. \"V6E 4R6\" with the space."
+        },
+        "country": { "type": "string" },
+        "links": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "LinkedIn, portfolio, GitHub, etc."
+        }
+      }
+    },
+    "filenamePattern": {
+      "type": "string",
+      "default": "{fullName} - {companyRole} - Resume.pdf",
+      "description": "Upload PDF naming. Supported tokens: {fullName}, {companyRole}, {variantTitle}."
+    },
+    "timezone": {
+      "type": "string",
+      "description": "Optional per-profile timezone; overrides the root resume-os.config.json timezone for this profile's job board (was hardcoded \"America/Vancouver\")."
+    },
+    "atsAnswers": {
+      "type": "object",
+      "description": "Standard screening answers. The KEYS below are the reusable question set every tenant shares; the VALUES are this candidate's answers.",
+      "properties": {
+        "previouslyWorkedForCompany": { "type": "string" },
+        "applicationType": { "type": "string" },
+        "legallyAbleToWork": { "type": "string" },
+        "willingBackgroundCheck": { "type": "string" },
+        "criminalOffenceNoPardon": { "type": "string" },
+        "accommodationsRequired": { "type": "string" },
+        "howDidYouHear": { "type": "string" }
+      }
+    },
+    "variantTitleOverrides": {
+      "type": "object",
+      "description": "Per-profile overrides of the engine's variant->title map (resume-os.config.json variantTitles).",
+      "additionalProperties": { "type": "string" }
+    },
+    "baseResumes": {
+      "type": "object",
+      "description": "Map of variant key -> base resume filename under this profile's base-resumes/.",
+      "additionalProperties": { "type": "string" }
+    },
+    "baseRoutingRules": {
+      "type": "array",
+      "description": "Ordered precedence rules the route step uses to pick a base resume from a JD. Deterministic part of routing; the latent archetype read stays in the tailoring skill.",
+      "items": {
+        "type": "object",
+        "required": ["when", "use"],
+        "properties": {
+          "when": { "type": "string", "description": "Human-readable condition, e.g. \"commerce/retail/ecommerce domain dominant\"." },
+          "use": { "type": "string", "description": "Variant key to select." },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "positioningFrame": {
+      "type": "object",
+      "description": "How this candidate is positioned across resume / LinkedIn / cover letters / interview prep. Replaces the hardcoded narrative-spine and 'How <name> Uses AI As A PM' sections previously baked into resume-os.md.",
+      "properties": {
+        "narrativeSpine": { "type": "string" },
+        "headline": { "type": "string" },
+        "aiUsageFrame": { "type": "string", "description": "The 'how this person uses AI' framing, when relevant to the role." }
+      }
+    },
+    "jobSearch": {
+      "type": "object",
+      "description": "Discovery signals/sources for this candidate's pipeline (was in application-profile.md 'Job Search' section).",
+      "properties": {
+        "titles": { "type": "array", "items": { "type": "string" } },
+        "locations": { "type": "array", "items": { "type": "string" } },
+        "sources": { "type": "array", "items": { "type": "string" } },
+        "matchSignals": { "type": "array", "items": { "type": "string" } },
+        "salaryBandCad": { "type": "string" }
+      }
+    },
+    "frictionNotes": {
+      "type": "array",
+      "description": "Candidate-specific autofill gotchas (e.g. field-of-study dropdown mismatches, title parsing quirks).",
+      "items": { "type": "string" }
+    }
+  }
+}
