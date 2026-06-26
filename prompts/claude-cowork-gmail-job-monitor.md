@@ -12,13 +12,17 @@ Repo context:
 The tracker repo is local at:
 ~/Documents/Resume CV/Resume Project/resume-os-v2
 
+Active profile: amirali (see resume-os.config.json -> activeProfile). ALL working data
+for this repo lives under that profile's work dir: profiles/amirali/work/. Never write to
+the repo root (root inbox/, events/, etc. are gitignored and ignored by the tooling).
+
 The repo uses:
-- inbox/<job-id>/metadata.json as the source of truth. These files contain applyUrl, company, role, and lifecycle fields such as appliedAt.
-- jobs-tracker.md as a generated board.
-- events/pending/ as the event handoff queue.
+- profiles/amirali/work/inbox/<job-id>/metadata.json as the source of truth. These files contain applyUrl, company, role, and lifecycle fields such as appliedAt.
+- profiles/amirali/work/jobs-tracker.md as a generated board.
+- profiles/amirali/work/events/pending/ as the event handoff queue.
 
 Task:
-1. Read tracked jobs from jobs-tracker.md and their inbox/<job-id>/metadata.json files. You need each job's job_id, company, role, applyUrl, ATS/apply domain, status, and appliedAt if present.
+1. Read tracked jobs from profiles/amirali/work/jobs-tracker.md and their profiles/amirali/work/inbox/<job-id>/metadata.json files. You need each job's job_id, company, role, applyUrl, ATS/apply domain, status, and appliedAt if present.
 2. Search Gmail with a fixed overlapping window: newer_than:3d. Overlap is intentional and safe because the importer dedups by message_id. Do not try to compute "since last run."
 3. Capture only these event types:
    - confirmation: application submitted / thank you for applying
@@ -44,7 +48,7 @@ Task:
 
 Output:
 Create one file at:
-~/Documents/Resume CV/Resume Project/resume-os-v2/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
+~/Documents/Resume CV/Resume Project/resume-os-v2/profiles/amirali/work/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
 
 Create directories if missing.
 
@@ -86,17 +90,17 @@ After writing the file, report:
 
 ## Import Contract
 
-The future importer should consume files from `events/pending/`, deduplicate on `message_id`, archive consumed files to `events/archive/`, and send malformed or ambiguous events to `events/rejected/` or `events/digest.md` for review.
+The future importer should consume files from `profiles/<activeProfile>/work/events/pending/`, deduplicate on `message_id`, archive consumed files to `profiles/<activeProfile>/work/events/archive/`, and send malformed or ambiguous events to `profiles/<activeProfile>/work/events/rejected/` or `profiles/<activeProfile>/work/events/digest.md` for review.
 
 ## Review Status Convention
 
-Event files are immutable inputs from external agents. Do not edit existing event blocks after the file is written. When a human or local agent reviews a file, add a separate review entry to `events/reviews.md` instead of editing the event file.
+Event files are immutable inputs from external agents. Do not edit existing event blocks after the file is written. When a human or local agent reviews a file, add a separate review entry to `profiles/<activeProfile>/work/events/reviews.md` instead of editing the event file.
 
 Review entries should use:
 
 ```md
 ## EVENT_FILE_REVIEW
-- file: events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
+- file: profiles/<activeProfile>/work/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
 - reviewed_at: YYYY-MM-DD HH:mm
 - reviewed_by: agent-or-human-name
 - model: model-name-if-known

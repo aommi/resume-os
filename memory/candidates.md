@@ -4,13 +4,12 @@ Staged lessons awaiting promotion to `semantic.md` or `DECISIONS.md`. Each needs
 and sources. Promote with a `**Why accepted:**` rationale; reject into `candidates.rejected.md`
 with a `**Why rejected:**` reason. The diff is the audit trail.
 
-## Cowork Gmail monitor writes to pre-migration root paths
+## Cowork Gmail monitor writes to pre-migration root paths [RESOLVED 2026-06-26]
 - **Staged:** 2026-06-26
 - **Sources:** prompts/claude-cowork-gmail-job-monitor.md; the public-push leak incident
-`prompts/claude-cowork-gmail-job-monitor.md` instructs writing to root `inbox/`, `events/pending/`,
-and `jobs-tracker.md`. The engine moved this state to `profiles/<activeProfile>/work/`. The prompt
-should be updated so daily runs write under the active profile, not the repo root. Until then, the
-root gitignore rule is the safety net.
+**Resolved:** the prompt now writes under `profiles/amirali/work/` and the work-folder convention is
+documented in `resume-os.md`, `README.md`, `AGENTS.md`, and the bootstrap. The root gitignore rule
+remains as a safety net. (Kept here for audit; superseded by the DECISIONS entry.)
 
 ## Stray root inbox jobs need reconciliation
 - **Staged:** 2026-06-26

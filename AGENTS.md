@@ -84,3 +84,12 @@ ln -s memory/semantic.md MEMORY.md
 
 The project's `memory/semantic.md` remains the single source of truth.
 <!-- amk:end -->
+
+## Working data (Hermes, Codex, Claude)
+
+Every generated or pipeline artifact (job discovery `inbox/`, Gmail/job tracking `events/`,
+application packages `applications/`, generated resumes `resume-formats/`, `jobs-tracker.md`,
+`package-queue.md`) MUST be written under `profiles/<activeProfile>/work/`, never the repo root.
+Root copies are gitignored and invisible to the tooling, which resolves these paths via
+`engine/config.mjs`. Read `resume-os.md` for the operating model and `memory/semantic.md` for engine
+architecture.

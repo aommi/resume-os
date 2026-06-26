@@ -45,6 +45,8 @@ people/companies in the public engine.
 (`inbox/`, `events/`) that were not gitignored; a `git add -A` swept them into the first public
 push, briefly exposing job-tracking data. Repo was made private and the commit rewritten.
 **Implications:** Root `inbox/`, `events/`, `applications/`, `resume-formats/`, `jobs-tracker.md`,
-`package-queue.md` are gitignored permanently. The monitor/cowork prompt
-(`prompts/claude-cowork-gmail-job-monitor.md`) still targets old root paths and should be updated
-to write under `profiles/<activeProfile>/work/`.
+`package-queue.md` are gitignored permanently. The work-folder convention (all agents write under
+`profiles/<activeProfile>/work/`, never root) is documented in `resume-os.md` Core Rules, `README.md`,
+`AGENTS.md`, and `adapters/claude-code-bootstrap.md`. The Gmail-monitor prompt
+(`prompts/claude-cowork-gmail-job-monitor.md`) was updated (2026-06-26) to write under the profile
+work dir.

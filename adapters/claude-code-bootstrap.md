@@ -31,3 +31,12 @@ do not hand-edit it. Use `node scripts/job-board.mjs` for lifecycle changes (`pa
 `skip`, `outcome`, `render`). All script paths resolve within the active profile via `engine/config.mjs`.
 
 After reading, confirm current state and pick up the tracker's next open item unless told otherwise.
+
+## Memory + working data
+
+- **Engine memory:** this repo has a git-tracked memory system (see the `CLAUDE.md` managed block).
+  Read `memory/semantic.md` for engine architecture and gotchas; log decisions in `DECISIONS.md`;
+  stage lessons in `memory/candidates.md`. Memory is about the OS, never profile content.
+- **Working data:** every generated/pipeline artifact (job `inbox/`, `events/`, `applications/`,
+  `resume-formats/`, `jobs-tracker.md`, `package-queue.md`) goes under
+  `profiles/<activeProfile>/work/`, never the repo root. See `resume-os.md` Core Rules.

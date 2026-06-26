@@ -42,6 +42,7 @@ and `tailoring-methodology.md` for package-building procedure.
 - Do not update submitted application packages unless explicitly reopened.
 - Build application PDFs with `scripts/build-resume-formats.mjs`; do not copy random export artifacts.
 - Hermes/scrapers provide facts only. Tailoring agents own base-resume choice, keywords, fit, and judgment.
+- **All working data goes under `profiles/<activeProfile>/work/`** (job inbox, events, applications, generated resumes, tracker, package queue). Never write these to the repo root; root copies are gitignored and ignored by the tooling. This applies to every agent and external job (scrapers, Gmail monitor, job discovery).
 
 ## Common commands
 
@@ -61,3 +62,17 @@ node scripts/build-resume-formats.mjs --source "<package>/resume.md" --out-dir /
 
 To run a different person, set `activeProfile` in `resume-os.config.json` and create `profiles/<id>/`
 (see `profiles/example/`).
+
+## Agent memory
+
+This repo carries a git-tracked memory system (agent-memory-kit) about the engine itself, kept
+separate from any profile data:
+
+- `memory/semantic.md`: distilled engine knowledge (architecture, extension points, gotchas).
+- `DECISIONS.md`: append-only architectural decisions.
+- `memory/candidates.md`: staged lessons awaiting promotion.
+- Entry points: `CLAUDE.md` (Claude Code) and `AGENTS.md` (Hermes and Codex). Configured in
+  `.agent/project.yaml`; regenerate with `python .agent/memory-kit/generate.py all`.
+
+Memory is about the OS (architecture, extension, maintenance), never candidate/profile content.
+

@@ -44,6 +44,7 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - Do not change locked resume content without proposing the change and waiting for approval.
 - Hard rule: do not undermine or retire the ready-to-send `resume-formats/` PDFs/HTMLs (the 1SZFA-style resumes). They are active general-purpose resumes for recruiter InMail, hiring events, email requests, and low-information or stretch applications where full tailoring is not warranted. Retired source downloads like `master-resume_1SZFA.md` are different from these active generated outputs.
 - Keep the OS tracker updated at checkpoints; it is the memory across resume-system sessions. Job application lifecycle updates belong in `inbox/<job-id>/metadata.json` via `scripts/job-board.mjs`, with `jobs-tracker.md` regenerated as the view.
+- **Working-data location (all agents):** every generated or pipeline artifact (job discovery in `inbox/`, Gmail/job tracking in `events/`, application packages in `applications/`, generated resumes in `resume-formats/`, plus `jobs-tracker.md` and `package-queue.md`) MUST be written under `profiles/<activeProfile>/work/`, never the repo root. This applies to every agent and external job (scrapers, the Gmail monitor, job discovery). Root copies are gitignored and invisible to the tooling, which resolves these paths via `engine/config.mjs`.
 - Be concise, opinionated, and willing to push back when a claim or wording is weak.
 
 ## Collaboration Guardrails
