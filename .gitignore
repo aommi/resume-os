@@ -37,3 +37,7 @@ os-planning/*
 /resume-formats/
 /jobs-tracker.md
 /package-queue.md
+.agent/.last_checked_commit
+
+# agent-memory-kit ephemeral scratchpad
+memory/working.md

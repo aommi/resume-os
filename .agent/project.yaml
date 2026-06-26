@@ -1,0 +1,42 @@
+project:
+  name: Resume OS
+  description: Reusable, config-driven engine for AI-assisted resume tailoring, job-pipeline tracking, and application packaging.
+architecture:
+  file: resume-os.md
+conventions:
+  - Engine stays profile-agnostic. Per-tenant data lives in profiles/<id>/ (gitignored except profiles/example/). Never put profile data in engine files or in this memory.
+  - Skills are plain-markdown judgment docs (resume-os.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md); scripts/*.mjs are deterministic tools; both resolve paths via engine/config.mjs.
+  - Root working-state paths (inbox/, events/, applications/, resume-formats/) must never be tracked; real pipeline data lives under profiles/<id>/work/.
+  - This memory is about the OS itself (architecture, extension, maintenance, gotchas), not any candidate's resume content.
+agents:
+  claude_code:
+    enabled: true
+  codex:
+    enabled: true
+  hermes:
+    enabled: true
+  openclaw:
+    enabled: false
+  cursor:
+    enabled: false
+  windsurf:
+    enabled: false
+  gemini_cli:
+    enabled: false
+  antigravity:
+    enabled: false
+memory:
+  semantic_max_lines: 500
+  working_max_lines: 300
+  capture_at:
+    - merge
+  files:
+    semantic: memory/semantic.md
+    working: memory/working.md
+    decisions: DECISIONS.md
+    candidates: memory/candidates.md
+    candidates_rejected: memory/candidates.rejected.md
+  approval_mode:
+    default: auto
+    review: []
+  task_directory: dev/[task]/
