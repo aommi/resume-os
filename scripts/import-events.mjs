@@ -83,7 +83,16 @@ function importEvents() {
     const filePath = join(PENDING_DIR, fileName);
     const text = readFileSync(filePath, "utf8");
     const events = parseEventFile(text);
-    if (events.length === 0) continue;
+    if (events.length === 0) {
+      // A no-events run is valid monitor evidence, not a parse failure.
+      // Archive it so pending/ drains to zero and staleness stays measurable.
+      summary.files += 1;
+      if (!dryRun) {
+        moveFile(filePath, join(ARCHIVE_DIR, basename(filePath)));
+        summary.archived += 1;
+      }
+      continue;
+    }
     summary.files += 1;
 
     const fileLog = {

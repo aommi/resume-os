@@ -195,8 +195,11 @@ if (options.html) {
       report.orphans.map((o) => `li#${o.index} lastLine="${o.lastLine}"`).join("; "),
     );
   } catch (error) {
-    record("SOFT", "bullet_height", "SKIPPED", String(error.message ?? error));
-    record("SOFT", "orphan_lines", "SKIPPED", String(error.message ?? error));
+    // Do not fail open: a check that errored is unverified, not skipped.
+    // Shipped packages have gone out with layout flaws under a silent SKIPPED.
+    record("SOFT", "bullet_height", "UNVERIFIED", String(error.message ?? error));
+    record("SOFT", "orphan_lines", "UNVERIFIED", String(error.message ?? error));
+    console.error("WARNING: line-wrap checks did not run (" + String(error.message ?? error) + "). Re-run before shipping or waive with a written reason.");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }

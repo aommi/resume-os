@@ -54,14 +54,14 @@ If the PM archetype conflicts with the base resume choice from 0.2, flag the con
 - **True gaps:** unsupported must-haves; report them, do not include them as resume claims.
 - **Context-only terms:** describe the employer's environment more than the candidate's experience. Keep these in `keywords.md`; do not force them into resume bullets or skills.
 
-Use this minimum `keywords.md` table:
+Use this minimum `keywords.md` table. The **claim boundary** prevents both overclaiming and underselling when the strongest evidence is adjacent rather than exact:
 
-| Term | Category | Coverage | Evidence anchor | Action |
-|---|---|---|---|---|
-| merchant | company vocabulary | Yes | Summit Outfitters merchandising workflows | Use naturally |
-| rollout | role verb | Partial | Summit Outfitters/Tutorly implementation work | Weave carefully |
-| M365 | hard tool | No | None | Gap - do not include |
-| procurement | context-only | Context-only | None | Context only - do not put in skills |
+| Term | Category | Coverage | Evidence anchor | Claim boundary | Action |
+|---|---|---|---|---|---|
+| merchant | company vocabulary | Yes | Summit Outfitters merchandising workflows | May describe merchant-facing workflow discovery; do not claim merchant-platform ownership | Use naturally |
+| rollout | role verb | Partial | Summit Outfitters/Tutorly implementation work | May describe supported rollout; do not claim sole change-program ownership | Weave carefully |
+| M365 | hard tool | No | None | No supported claim | Gap - do not include |
+| procurement | context-only | Context-only | None | Employer context, not a candidate capability | Context only - do not put in skills |
 
 Coverage values: `Yes`, `Partial`, `No`, `Context-only`. Actions: `Use naturally`, `Weave carefully`, `Gap - do not include`, `Context only - do not put in skills`, `Omit intentionally`.
 
@@ -75,9 +75,9 @@ The scorer should receive only supported terms: `--terms-hard` for supported mus
 
 Prior application packages are not source material unless the user explicitly asks, or the wording/story has already been promoted into a base resume, `exhaustive-experience.md`, or `skills-bank.md`. If the selected base resume is missing a stronger relevant story from canonical source material, pull it in deliberately and record it in `tailoring-log.md` when material.
 
-### 0.6 Evidence-lens pass
+### 0.6 Evidence-lens and dominance pass
 
-Before editing bullets, write a short evidence-lens note in `strategy.md` for the 2-4 strongest source-backed stories. Do not rely on the base resume's current wording as the only interpretation of a story. The same experience can legitimately signal different things depending on the JD:
+Before editing bullets, identify the **one or two dominant evidence stories**: the closest, differentiating, source-backed proof for this role. Record the intended resume location for each in `strategy.md`. Each dominant story must appear within the first two bullets of the most relevant recent role, unless a written constraint makes that impossible. Do not rely on the base resume's current wording as the only interpretation of a story. The same experience can legitimately signal different things depending on the JD:
 
 | Source story | Default/base wording | This JD's lens | Must preserve |
 |---|---|---|---|
@@ -86,6 +86,14 @@ Before editing bullets, write a short evidence-lens note in `strategy.md` for th
 | Tutorly AI tutoring | AI product / engagement growth | AI routing / product usage analytics / decision automation | Data-science partnership, experiment loop, product-health metric |
 
 If a JD is analytics, data, AI-insights, platform, or decision-support oriented, every relevant pipeline/workflow story must be described with four parts when true: **inputs → transformation/curation → decision/user → metric**. Do not collapse source-backed data work into generic "automation."
+
+For referral, high-fit, ambiguous, or high-stakes applications, add a compact **Requirement-to-Evidence & Visibility** table to `strategy.md`. It is not an ATS keyword list; its purpose is to catch proof that is technically present but buried.
+
+| JD requirement | Candidate evidence | Resume location | Visibility | Claim boundary |
+|---|---|---|---|---|
+| search / recommender familiarity | Existing recommendation workflow | MEC bullet 2 | Top of page one | Operationalized workflow; not platform/model ownership |
+
+Use `Top of page one`, `Mid-page`, `Skills-only`, `Absent`, or `Intentionally omitted` for visibility. A must-have that is only skills-level or below the first role block is a fix candidate, not a pass.
 
 ### 0.5 Load feedback (if it exists)
 
@@ -168,11 +176,11 @@ Do not add a standalone "PM process" bullet. It reads as filler.
 
 Within each role, reorder bullets by relevance to THIS job, not by general impact. The lead bullet per role does 60% of the work — make it the one most relevant to the JD.
 
-Rule: quantified, defensible, on-thread bullet first. Qualitative or supporting bullets lower. Never chronology.
+Rule: quantified, defensible, on-thread bullet first. Qualitative or supporting bullets lower. Never chronology. The dominant evidence stories from Phase 0.6 take precedence: they must occupy the first two bullets of the most relevant recent role. If a more general roadmap opener needs to remain first, place the dominant proof second.
 
 ### Step 7: Selective bolding
 
-Bold the scan anchor: the product/system name OR the primary metric. Not both in the same bullet. Never bold implementation details, architectural choices, or internal mechanism names.
+Bold the scan anchor: the product/system name OR the primary metric. Not both in the same bullet. **Target-role relevance wins before metric magnitude:** a directly relevant product, system, adoption outcome, or domain phrase is a stronger anchor than a larger but less relevant number. Never bold implementation details, architectural choices, or internal mechanism names.
 
 Test: "Would a recruiter repeat this phrase in a phone screen?" If yes, bold it. If no, strip it.
 
@@ -211,7 +219,9 @@ Run this checklist against every bullet before proceeding to evaluation. These a
 - [ ] **PM framing** — bullets read as PM work (systems, strategy, ownership), not operator/executor tasks
 - [ ] **PM archetype fit** — vocabulary and responsibility framing match the JD-backed PM archetype in `strategy.md`
 - [ ] **Evidence completeness** — more relevant source-backed stories outside the selected base resume were considered and either pulled in or intentionally omitted
+- [ ] **Evidence dominance** — the one or two closest evidence stories are in the first two bullets of the most relevant recent role; the Requirement-to-Evidence & Visibility table (when required) has no must-have that is merely skills-level or buried
 - [ ] **Evidence lens preserved** — source-backed work is framed through this JD's lens; analytics/data roles preserve pipeline inputs, transformation/curation, decision user, and metric where supported
+- [ ] **Claim boundaries preserved** — adjacent evidence is framed at its verified level of ownership; no candidate claim crosses the boundary recorded in `keywords.md`
 - [ ] **Claims ⊆ LinkedIn** — any new or strengthened claim exists on LinkedIn or will be added
 - [ ] **No tool dumps** — project bullets describe what was built and how, not a list of tools
 - [ ] **Older roles compressed** — Corealign and Vantix stay lean to fund proof in Summit Outfitters/Tutorly/Projects
@@ -284,7 +294,7 @@ A complete application package in `applications/<Company - Role>/` contains:
 - `keywords.md`
 - `tailoring-log.md` when material changes or omissions need review visibility
 - `cover_letter.md`
-- `answers.md` — **only when real form/screening questions exist** (pasted by the user, or scraped from the apply page). Do **not** pre-generate answers to imagined questions. Record each as **question · answer-as-submitted · date**; once submitted, the answers freeze (submitted-package freeze rule). Standard, reusable facts (work authorization, background check, "previously worked here," how-you-heard, salary band, location) are **not** regenerated per app — they live once in `application-profile.md`. Surface any new claim an answer relies on to the candidate queue in `exhaustive-experience.md`. (Full design + future automation: `application-questions-plan.md`.)
+- `answers.md` — **only when real form/screening questions exist** (pasted by the user, or scraped from the apply page). Do **not** pre-generate answers to imagined questions. Record each as **question · answer-as-submitted · date**; once submitted, the answers freeze (submitted-package freeze rule). Standard, reusable facts (work authorization, background check, "previously worked here," how-you-heard, salary band, location) are **not** regenerated per app — they live once in `application-profile.md`. Surface any new claim an answer relies on to the candidate queue in `exhaustive-experience.md`. (Full design + future automation: `os-planning/backlog-horsepower-and-reuse.md` (APP-3/APP-4); original design in `os-planning/archive/application-questions-plan.md`.)
 - saved JD and notes from Phase 0
 
 Non-resume artifacts obey the same truth gate: claims ⊆ resume ⊆ LinkedIn ⊆ reality. The cover letter draws only from resume facts and the Phase 0 vocabulary map — it may reframe and emphasize, never introduce new claims.
