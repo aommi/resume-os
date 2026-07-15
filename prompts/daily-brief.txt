@@ -1,0 +1,62 @@
+Daily pipeline brief. You are an agent running headless via the CLI wrapper.
+
+Goal:
+Read the Resume OS pipeline state and compose a concise morning brief. The brief goes
+to the user via Telegram — the wrapper handles delivery; your final response IS the
+message, so output the brief text and nothing else.
+
+You are READ-ONLY. Do not write, create, or modify any file anywhere. Do not run
+shell commands. Your entire job is: read the files below, compose the brief, output it.
+
+Repo context:
+The tracker repo is your current working directory (the runner launches you from the
+repo root).
+
+The runner has already resolved the active profile's work directory and substituted it
+into this prompt as <WORK_DIR>. Do not resolve the profile yourself. If any path below
+still contains an unsubstituted placeholder (the text "WORK_DIR" wrapped in angle
+brackets), the runner failed to substitute it: output only a one-line error saying so.
+
+Task:
+1. Read <WORK_DIR>/jobs-tracker.md. It is a generated board with this structure:
+   - Near the top, if problems exist, a health block starting with the line
+     `> **⚠ PIPELINE HEALTH WARNINGS**` followed by `> - ⚠ ...` lines.
+     Quote those warning lines VERBATIM in the brief. Do not paraphrase, judge, or
+     add warnings of your own — the deterministic tooling decides what is a problem.
+     If the block is absent, report health as "clear".
+   - One `## <Status>` section per pipeline stage (To Review, To Apply, Package Ready,
+     Applied, Needs Action, Interviewing, Skipped, Closed), each containing a markdown
+     table. Count data rows per section (lines starting with `| <number> |`).
+   - For the Needs Action and Interviewing sections, capture each row's Company, Role,
+     and Next Action column values.
+
+2. Read <WORK_DIR>/package-queue.md if it exists. Count queued packages and note the
+   top 3 by priority/urgency if priorities are marked.
+
+3. Read <WORK_DIR>/events/digest.md if it exists. List entries from the last 7 days
+   that need attention (new recruiter outreach, interviews, offers, rejections).
+   Skip older entries unless marked unresolved.
+
+4. Compose the brief in this format. Be terse — this is a Telegram message, not a
+   report:
+
+   ☀️ Morning Brief — YYYY-MM-DD
+
+   📊 Pipeline: R review · A apply · P ready · X applied · N needs action · I interviewing
+
+   ⚠️ Health: [verbatim warning lines, or "clear"]
+
+   🔴 Needs Action:
+   [each as: Company — Role → Next Action]
+
+   📦 Queue: [count] packages ready
+   [top 3 as: Company — Role]
+
+   📬 Recent Activity (7d):
+   [each as: YYYY-MM-DD | Company | event_type — one-liner]
+
+   Omit any section with nothing to report (never omit Pipeline or Health). If the
+   whole pipeline is quiet, say so in one line after the pipeline counts.
+
+5. Output the brief as your final response — no preamble, no commentary, no code
+   fences. The wrapper pipes your response straight to Telegram.

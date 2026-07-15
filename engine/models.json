@@ -9,6 +9,7 @@
     "tailor":       { "model": "claude-opus-4-8",            "purpose": "bullet/skills tailoring (heavy latent)" },
     "score":        { "model": "claude-sonnet-4-6",          "purpose": "latent ship-check items; deterministic gates run in score-resume.mjs" },
     "cover_letter": { "model": "claude-sonnet-4-6",          "purpose": "cover letter drafting" },
-    "review":       { "model": "claude-sonnet-4-6",          "purpose": "final review / QA pass" }
+    "review":       { "model": "claude-sonnet-4-6",          "purpose": "final review / QA pass" },
+    "daily_brief":  { "model": "deepseek-v4-pro",            "purpose": "Daily pipeline brief: read-only synthesis of tracker/events/queue into a Telegram digest (scripts/run-daily-brief.sh BRIEF_MODEL). Heartbeat + delivery are the wrapper's, not the agent's. Runner-agnostic seam: swappable to any runner that prints the brief to stdout" }
   }
 }
