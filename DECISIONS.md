@@ -50,3 +50,21 @@ push, briefly exposing job-tracking data. Repo was made private and the commit r
 `AGENTS.md`, and `adapters/claude-code-bootstrap.md`. The Gmail-monitor prompt
 (`prompts/claude-cowork-gmail-job-monitor.md`) was updated (2026-06-26) to write under the profile
 work dir.
+
+## Tailoring evidence dominance and claim boundaries (2026-07-15)
+**Why accepted:** Keyword coverage did not reveal when the strongest, most role-relevant evidence
+was buried below a recruiter's initial scan. Adjacent domain proof also needs an explicit ownership
+boundary so tailoring neither overclaims nor undersells it.
+**Implications:** High-fit, ambiguous, referral, and high-stakes packages add a
+Requirement-to-Evidence & Visibility table to `strategy.md`. Tailoring identifies one or two
+dominant evidence stories before editing and places them in the first two bullets of the most
+relevant recent role. Bolding favors target-role relevance over metric magnitude. `keywords.md`
+records a claim boundary for each term; it is a judgment constraint, not an ATS requirement.
+
+## Root-memory is engine-only (2026-07-15)
+**Why accepted:** Candidate and pipeline notes in root memory blur the engine/profile boundary,
+increase privacy risk, and make shared operating context less reusable.
+**Implications:** Root `memory/semantic.md`, `memory/working.md`, and candidates/decision memory
+contain only Resume OS architecture, durable engine decisions, and engine-only scratch state.
+Candidate job, application, outreach, interview, resume-content, and pipeline state belongs only
+under `profiles/<id>/`.

@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, join } from "node:path";
-import { timezone, workDir } from "../engine/config.mjs";
+import { repoRoot, timezone, workDir } from "../engine/config.mjs";
 
 const WORK = workDir();
 const INBOX_DIR = join(WORK, "inbox");
@@ -172,13 +172,53 @@ function writeTracker(jobs) {
   const emailImportDates = [...gmailRowDates, ...emailEventDates].sort();
   const latestDiscovery = discoveryDates.at(-1) || "";
   const latestEmailImport = emailImportDates.at(-1) || "";
+
+  // Execution heartbeats + staleness warnings (HLT-1). The job dates above are
+  // activity proxies; these read what the workflows actually recorded.
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const warnings = [];
+  const heartbeatPath = join(repoRoot, ".linkedin-last-checked");
+  let discoveryHeartbeat = "Unknown";
+  if (existsSync(heartbeatPath)) {
+    const epoch = Number(readFileSync(heartbeatPath, "utf8").trim());
+    if (Number.isFinite(epoch) && epoch > 0) {
+      discoveryHeartbeat = new Date(epoch).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+      const ageDays = (Date.now() - epoch) / DAY_MS;
+      if (ageDays > 1) warnings.push(`Discovery heartbeat is ${ageDays.toFixed(1)} days old (cadence: every 6h). The discovery agent is likely DOWN.`);
+    }
+  } else {
+    warnings.push("No discovery heartbeat file found; discovery agent status unknown.");
+  }
+  const pendingDir = join(WORK, "events", "pending");
+  const pendingCount = existsSync(pendingDir)
+    ? readdirSync(pendingDir).filter((n) => n.endsWith(".md") && !n.startsWith(".")).length
+    : 0;
+  if (pendingCount > 0) warnings.push(`${pendingCount} event file(s) in events/pending/ not imported. Run: node scripts/import-events.mjs`);
+  const eventDirs = [pendingDir, join(WORK, "events", "archive")];
+  const newestEventFile = eventDirs
+    .flatMap((dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".md")) : []))
+    .sort()
+    .at(-1);
+  const monitorDate = newestEventFile ? newestEventFile.slice(0, 10) : "";
+  if (monitorDate) {
+    const ageDays = (Date.now() - new Date(monitorDate).getTime()) / DAY_MS;
+    if (ageDays > 3) warnings.push(`Gmail monitor last ran ${monitorDate} (${Math.floor(ageDays)} days ago). Board may not reflect real application activity.`);
+  } else {
+    warnings.push("No Gmail monitor event files found; email sync never ran.");
+  }
+
   const body = [
     "# Jobs Tracker",
     "",
     "> Generated from `inbox/*/metadata.json`; do not hand-edit. Use `node scripts/job-board.mjs ...`.",
     "",
+    ...(warnings.length
+      ? ["> **⚠ PIPELINE HEALTH WARNINGS**", ...warnings.map((w) => `> - ⚠ ${w}`), ""]
+      : []),
     `- **Latest board render:** ${timestamp()}`,
     `- **Latest job discovery sync:** ${latestDiscovery || "Unknown"}`,
+    `- **Discovery agent heartbeat:** ${discoveryHeartbeat}`,
+    `- **Gmail monitor last run:** ${monitorDate || "Unknown"}`,
     `- **Latest email event import:** ${latestEmailImport || "Unknown"}`,
     "- **Latest application/outcome sync:** tracked per row in `Last Contact`",
     "- **Pipeline:** to_review -> to_apply -> package_ready -> applied -> needs_action / interviewing -> closed",

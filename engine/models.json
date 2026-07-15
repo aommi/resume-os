@@ -3,6 +3,9 @@
   "defaults": { "model": "claude-sonnet-4-6" },
   "steps": {
     "route":        { "model": "claude-haiku-4-5-20251001", "purpose": "base + archetype routing (light; mixed deterministic precedence + latent JD read)" },
+    "triage":       { "model": "claude-sonnet-4-6",          "purpose": "fit triage: score, base/variant, depth, skip reasons (THR-4). Downgrade to haiku only after EVAL-2 replay agreement" },
+    "enrich":       { "model": "claude-sonnet-4-6",          "purpose": "JD normalization into fields. Mid tier until EVAL-1 golden set proves cheap equivalence (review finding)" },
+    "email_monitor": { "model": "claude-sonnet-4-6",         "purpose": "Gmail event extraction (scripts/run-gmail-sync.sh MONITOR_MODEL). Runner-agnostic seam: swappable to Hermes/cheaper model once Gmail access + a compared run exist" },
     "tailor":       { "model": "claude-opus-4-8",            "purpose": "bullet/skills tailoring (heavy latent)" },
     "score":        { "model": "claude-sonnet-4-6",          "purpose": "latent ship-check items; deterministic gates run in score-resume.mjs" },
     "cover_letter": { "model": "claude-sonnet-4-6",          "purpose": "cover letter drafting" },

@@ -19,6 +19,10 @@ profiles/*
 # ...but not the example's generated/rebuildable outputs.
 profiles/example/work/resume-formats/
 profiles/example/work/jobs-tracker.md
+# Guard: real pipeline output must never land in the tracked demo profile.
+# Ignore everything in the example inbox except the fictional demo job(s).
+profiles/example/work/inbox/*
+!profiles/example/work/inbox/1000000001/
 
 # Personal/non-engine archived content (not distributed)
 archive/

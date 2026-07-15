@@ -195,8 +195,11 @@ if (options.html) {
       report.orphans.map((o) => `li#${o.index} lastLine="${o.lastLine}"`).join("; "),
     );
   } catch (error) {
-    record("SOFT", "bullet_height", "SKIPPED", String(error.message ?? error));
-    record("SOFT", "orphan_lines", "SKIPPED", String(error.message ?? error));
+    // Do not fail open: a check that errored is unverified, not skipped.
+    // Shipped packages have gone out with layout flaws under a silent SKIPPED.
+    record("SOFT", "bullet_height", "UNVERIFIED", String(error.message ?? error));
+    record("SOFT", "orphan_lines", "UNVERIFIED", String(error.message ?? error));
+    console.error("WARNING: line-wrap checks did not run (" + String(error.message ?? error) + "). Re-run before shipping or waive with a written reason.");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
@@ -213,14 +216,16 @@ for (const result of results) {
 const hardBlockers = results.filter(
   (result) => result.tier === "HARD" && (result.status === "FAIL" || result.status === "UNVERIFIED"),
 );
-const softFails = results.filter((result) => result.tier === "SOFT" && result.status === "FAIL");
+const softPending = results.filter(
+  (result) => result.tier === "SOFT" && (result.status === "FAIL" || result.status === "UNVERIFIED"),
+);
 if (hardBlockers.length) {
   console.log(`ship: BLOCKED (${hardBlockers.length} hard gate${hardBlockers.length > 1 ? "s" : ""}: ${hardBlockers.map((r) => r.name).join(", ")})`);
   process.exit(1);
 }
 console.log(
-  softFails.length
-    ? `ship: OK pending ${softFails.length} soft failure${softFails.length > 1 ? "s" : ""} (fix or waive: ${softFails.map((r) => r.name).join(", ")}) — latent checklist (eval-rubric.md §3) still applies`
+  softPending.length
+    ? `ship: OK pending ${softPending.length} soft issue${softPending.length > 1 ? "s" : ""} (fix, re-run, or waive: ${softPending.map((r) => `${r.name}[${r.status}]`).join(", ")}) — latent checklist (eval-rubric.md §3) still applies`
     : "ship: OK — latent checklist (eval-rubric.md §3) still applies",
 );
 
