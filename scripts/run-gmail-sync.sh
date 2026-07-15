@@ -5,7 +5,10 @@
 # PATH containing node and the runner CLI; the log path is overridable via
 # RESUME_OS_SYNC_LOG. The ONLY model call is the monitor itself; heartbeat +
 # import + render are deterministic.
-set -uo pipefail
+# -e: initialization must fail closed — a broken cd, node, or mkdir must abort,
+# never continue with an empty WORK. Command exits we want to inspect (the
+# monitor, the import) are captured through if-blocks, which -e permits.
+set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG="${RESUME_OS_SYNC_LOG:-$HOME/Library/Logs/resume-os-gmail-sync.log}"
@@ -13,6 +16,10 @@ cd "$REPO"
 
 # Resolve the active profile's work dir through engine config (never hardcode a profile).
 WORK="$(node --input-type=module -e "import { workDir } from './engine/config.mjs'; console.log(workDir());")"
+if [ -z "$WORK" ] || [ ! -d "$WORK" ]; then
+  echo "FATAL: could not resolve work dir (got: '$WORK')" >&2
+  exit 1
+fi
 HB_DIR="$WORK/heartbeats"
 HB_FILE="$HB_DIR/gmail-sync.json"
 PENDING_DIR="$WORK/events/pending"
@@ -29,11 +36,17 @@ write_hb() { # $1=lastSuccess $2=exitCode $3=failureCategory
 # ── Runner seam ──────────────────────────────────────────────────────────
 # The monitor is a mid-tier extraction job (see engine/models.json email_monitor);
 # it is NOT tied to Claude. To swap runners (e.g. a Hermes cron with Gmail access),
-# replace run_monitor with any command that reads the prompt file and writes the
-# event file to <work>/events/pending/. Everything else stays.
+# replace run_monitor with any command that reads $PROMPT and writes the event
+# file to $WORK/events/pending/. Everything else stays.
+#
+# The wrapper is the single authority on profile resolution: it substitutes the
+# resolved work dir into the prompt's <WORK_DIR> placeholder so the agent never
+# re-resolves the profile (and cannot desync from RESUME_OS_PROFILE).
+PROMPT="$(cat prompts/gmail-monitor-headless.txt)"
+PROMPT="${PROMPT//<WORK_DIR>/$WORK}"
 MONITOR_MODEL="${MONITOR_MODEL:-claude-sonnet-4-6}"
 run_monitor() {
-  claude -p "$(cat prompts/gmail-monitor-headless.txt)" \
+  claude -p "$PROMPT" \
     --model "$MONITOR_MODEL" \
     --allowedTools "mcp__claude_ai_Gmail__search_threads,mcp__claude_ai_Gmail__get_thread,mcp__claude_ai_Gmail__get_message,mcp__claude_ai_Gmail__list_labels,Read,Glob,Grep,Write"
 }
@@ -46,8 +59,11 @@ echo "=== gmail-sync $RUN_ID (model: $MONITOR_MODEL) ===" >> "$LOG"
 # silent "success".
 PENDING_BEFORE="$(ls -1 "$PENDING_DIR" 2>/dev/null | sort)"
 
-run_monitor >> "$LOG" 2>&1
-MONITOR_EXIT=$?
+if run_monitor >> "$LOG" 2>&1; then
+  MONITOR_EXIT=0
+else
+  MONITOR_EXIT=$?
+fi
 if [ $MONITOR_EXIT -ne 0 ]; then
   echo "monitor failed with exit $MONITOR_EXIT" >> "$LOG"
   write_hb "$LAST_SUCCESS" "$MONITOR_EXIT" "monitor_failed"
