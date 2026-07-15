@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, join } from "node:path";
-import { timezone, workDir } from "../engine/config.mjs";
+import { repoRoot, timezone, workDir } from "../engine/config.mjs";
 
 const WORK = workDir();
 const INBOX_DIR = join(WORK, "inbox");
@@ -177,7 +177,6 @@ function writeTracker(jobs) {
   // activity proxies; these read what the workflows actually recorded.
   const DAY_MS = 24 * 60 * 60 * 1000;
   const warnings = [];
-  const repoRoot = join(WORK, "..", "..", "..");
   const heartbeatPath = join(repoRoot, ".linkedin-last-checked");
   let discoveryHeartbeat = "Unknown";
   if (existsSync(heartbeatPath)) {

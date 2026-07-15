@@ -4,20 +4,21 @@ Goal:
 Review my Gmail for job-application events and write a structured event file for my resume-os-v2 tracker. Do not update the tracker directly. Do not touch any email: no send, reply, label, archive, or delete. Read only. Do not include unrelated personal email content.
 
 Repo context:
-The tracker repo is local at:
-~/Documents/Resume CV/Resume Project/resume-os-v2
+The tracker repo is your current working directory (the runner launches you from the
+repo root). All paths below are relative to it.
 
-Active profile: amirali (see resume-os.config.json -> activeProfile). ALL working data
-for this repo lives under that profile's work dir: profiles/amirali/work/. Never write to
-the repo root (root inbox/, events/, etc. are gitignored and ignored by the tooling).
+Resolve the active profile from resume-os.config.json -> activeProfile; call it
+<profile> below. ALL working data for this repo lives under that profile's work dir:
+profiles/<profile>/work/. Never write to the repo root (root inbox/, events/, etc. are
+gitignored and ignored by the tooling).
 
 The repo uses:
-- profiles/amirali/work/inbox/<job-id>/metadata.json as the source of truth. These files contain applyUrl, company, role, and lifecycle fields such as appliedAt.
-- profiles/amirali/work/jobs-tracker.md as a generated board.
-- profiles/amirali/work/events/pending/ as the event handoff queue.
+- profiles/<profile>/work/inbox/<job-id>/metadata.json as the source of truth. These files contain applyUrl, company, role, and lifecycle fields such as appliedAt.
+- profiles/<profile>/work/jobs-tracker.md as a generated board.
+- profiles/<profile>/work/events/pending/ as the event handoff queue.
 
 Task:
-1. Read tracked jobs from profiles/amirali/work/jobs-tracker.md and their profiles/amirali/work/inbox/<job-id>/metadata.json files. You need each job's job_id, company, role, applyUrl, ATS/apply domain, status, and appliedAt if present.
+1. Read tracked jobs from profiles/<profile>/work/jobs-tracker.md and their profiles/<profile>/work/inbox/<job-id>/metadata.json files. You need each job's job_id, company, role, applyUrl, ATS/apply domain, status, and appliedAt if present.
 2. Search Gmail with a fixed overlapping window: newer_than:3d. Overlap is intentional and safe because the importer dedups by message_id. Do not try to compute "since last run."
 3. Capture only these event types:
    - confirmation: application submitted / thank you for applying
@@ -42,8 +43,8 @@ Task:
 9. If an email is a password, account setup, verification code, reset link, or login credential email, never include credential content, links, codes, or passwords. Use only redacted evidence such as "[account setup email received]".
 
 Output:
-Create one file at:
-~/Documents/Resume CV/Resume Project/resume-os-v2/profiles/amirali/work/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
+Create one file at (relative to the repo root):
+profiles/<profile>/work/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
 
 Create directories if missing.
 

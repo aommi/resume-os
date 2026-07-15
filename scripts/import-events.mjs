@@ -45,6 +45,8 @@ const DEFAULT_LIFECYCLE = {
   emailEvents: [],
 };
 
+const NO_EVENTS_MARKER = /^## NO_JOB_EMAIL_EVENTS\s*$/m;
+
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
 const includeLowConfidence = args.has("--include-low-confidence");
@@ -52,6 +54,9 @@ const includeLowConfidence = args.has("--include-low-confidence");
 try {
   const result = importEvents();
   printSummary(result);
+  // Malformed monitor output must fail the run (the sync wrapper records
+  // import_failed), never disappear as a silent success.
+  if (result.malformed) process.exit(2);
 } catch (error) {
   console.error(`ERROR: ${error.message}`);
   process.exit(1);
@@ -75,6 +80,7 @@ function importEvents() {
     review: 0,
     archived: 0,
     rejected: 0,
+    malformed: 0,
     created: 0,
     dryRun,
   };
@@ -84,12 +90,27 @@ function importEvents() {
     const text = readFileSync(filePath, "utf8");
     const events = parseEventFile(text);
     if (events.length === 0) {
-      // A no-events run is valid monitor evidence, not a parse failure.
-      // Archive it so pending/ drains to zero and staleness stays measurable.
       summary.files += 1;
-      if (!dryRun) {
-        moveFile(filePath, join(ARCHIVE_DIR, basename(filePath)));
-        summary.archived += 1;
+      if (NO_EVENTS_MARKER.test(text)) {
+        // An explicit no-events run is valid monitor evidence, not a parse
+        // failure. Archive it so pending/ drains and staleness stays measurable.
+        if (!dryRun) {
+          moveFile(filePath, join(ARCHIVE_DIR, basename(filePath)));
+          summary.archived += 1;
+        }
+      } else {
+        // Zero parsed events without the NO_JOB_EMAIL_EVENTS marker means the
+        // monitor's output is malformed. Never archive it as a quiet day —
+        // quarantine for human review and fail the import.
+        console.error(
+          `MALFORMED: ${fileName} has no parseable events and no NO_JOB_EMAIL_EVENTS marker; ` +
+          (dryRun ? "would move to events/rejected/." : "moved to events/rejected/ for review."),
+        );
+        summary.malformed += 1;
+        if (!dryRun) {
+          moveFile(filePath, join(REJECTED_DIR, basename(filePath)));
+          summary.rejected += 1;
+        }
       }
       continue;
     }
@@ -422,6 +443,7 @@ function printSummary(summary) {
     `review: ${summary.review}`,
     `archived: ${summary.archived}`,
     `rejected: ${summary.rejected}`,
+    `malformed: ${summary.malformed}`,
   ].join("\n"));
 }
 

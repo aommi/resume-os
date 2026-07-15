@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
 # Gmail sync wrapper (HLT-2): monitor -> import -> render, with heartbeat contract.
-# Scheduled by LaunchAgent ai.resumeos.gmailsync (07:00 + 19:00, user-approved token cost).
-# The ONLY model call is the monitor itself; heartbeat + import + render are deterministic.
+# Scheduled by a LaunchAgent (07:00 + 19:00, user-approved token cost). Machine
+# specifics live OUTSIDE this script: the LaunchAgent/environment must provide a
+# PATH containing node and the runner CLI; the log path is overridable via
+# RESUME_OS_SYNC_LOG. The ONLY model call is the monitor itself; heartbeat +
+# import + render are deterministic.
 set -uo pipefail
 
-REPO="/Users/amirali/Documents/Resume CV/Resume Project/resume-os-v2"
-LOG="/Users/amirali/Library/Logs/resume-os-gmail-sync.log"
-export PATH="/Users/amirali/.local/bin:/Users/amirali/.nvm/versions/node/v24.13.0/bin:/usr/bin:/bin"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOG="${RESUME_OS_SYNC_LOG:-$HOME/Library/Logs/resume-os-gmail-sync.log}"
 cd "$REPO"
 
-HB_DIR="profiles/amirali/work/heartbeats"
+# Resolve the active profile's work dir through engine config (never hardcode a profile).
+WORK="$(node --input-type=module -e "import { workDir } from './engine/config.mjs'; console.log(workDir());")"
+HB_DIR="$WORK/heartbeats"
 HB_FILE="$HB_DIR/gmail-sync.json"
-mkdir -p "$HB_DIR"
+PENDING_DIR="$WORK/events/pending"
+mkdir -p "$HB_DIR" "$PENDING_DIR"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 ATTEMPT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-LAST_SUCCESS="$(node -e "try{console.log(require('$REPO/$HB_FILE').lastSuccess||'')}catch{console.log('')}" 2>/dev/null || echo "")"
+LAST_SUCCESS="$(node -e "try{console.log(require('$HB_FILE').lastSuccess||'')}catch{console.log('')}" 2>/dev/null || echo "")"
 
 write_hb() { # $1=lastSuccess $2=exitCode $3=failureCategory
   printf '{"workflow":"gmail-sync","cadenceMinutes":720,"lastAttempt":"%s","lastSuccess":"%s","exitCode":%s,"failureCategory":"%s","runId":"%s","model":"%s"}\n' \
@@ -25,8 +30,8 @@ write_hb() { # $1=lastSuccess $2=exitCode $3=failureCategory
 # The monitor is a mid-tier extraction job (see engine/models.json email_monitor);
 # it is NOT tied to Claude. To swap runners (e.g. a Hermes cron with Gmail access),
 # replace run_monitor with any command that reads the prompt file and writes the
-# event file to profiles/amirali/work/events/pending/. Everything else stays.
-MONITOR_MODEL="claude-sonnet-4-6"
+# event file to <work>/events/pending/. Everything else stays.
+MONITOR_MODEL="${MONITOR_MODEL:-claude-sonnet-4-6}"
 run_monitor() {
   claude -p "$(cat prompts/gmail-monitor-headless.txt)" \
     --model "$MONITOR_MODEL" \
@@ -34,12 +39,27 @@ run_monitor() {
 }
 
 echo "=== gmail-sync $RUN_ID (model: $MONITOR_MODEL) ===" >> "$LOG"
+
+# Output contract: every monitor run MUST write one new event file (the prompt
+# requires a NO_JOB_EMAIL_EVENTS file even on quiet days). Snapshot pending/
+# before the run so exit 0 without an artifact is recorded as a failure, not a
+# silent "success".
+PENDING_BEFORE="$(ls -1 "$PENDING_DIR" 2>/dev/null | sort)"
+
 run_monitor >> "$LOG" 2>&1
 MONITOR_EXIT=$?
 if [ $MONITOR_EXIT -ne 0 ]; then
   echo "monitor failed with exit $MONITOR_EXIT" >> "$LOG"
   write_hb "$LAST_SUCCESS" "$MONITOR_EXIT" "monitor_failed"
   exit "$MONITOR_EXIT"
+fi
+
+PENDING_AFTER="$(ls -1 "$PENDING_DIR" 2>/dev/null | sort)"
+NEW_FILES="$(comm -13 <(printf '%s\n' "$PENDING_BEFORE") <(printf '%s\n' "$PENDING_AFTER") | grep -c . || true)"
+if [ "$NEW_FILES" -eq 0 ]; then
+  echo "monitor exited 0 but wrote no event file (output contract violated)" >> "$LOG"
+  write_hb "$LAST_SUCCESS" 1 "monitor_output_missing"
+  exit 1
 fi
 
 if ! node scripts/import-events.mjs >> "$LOG" 2>&1; then

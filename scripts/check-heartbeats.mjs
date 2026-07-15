@@ -60,10 +60,15 @@ if (existsSync(hbDir)) {
   for (const name of readdirSync(hbDir).filter((n) => n.endsWith(".json"))) {
     try {
       const hb = JSON.parse(readFileSync(join(hbDir, name), "utf8"));
+      const workflow = name.replace(".json", "");
+      // A failed latest attempt is a problem NOW, not after 2x cadence.
+      if ((hb.exitCode ?? 0) !== 0) {
+        problems.push(`${workflow}: last run FAILED (exit ${hb.exitCode}${hb.failureCategory ? `, ${hb.failureCategory}` : ""}) at ${hb.lastAttempt ?? "unknown"}`);
+      }
       const cadenceMs = (hb.cadenceMinutes ?? 1440) * 60 * 1000;
       const last = new Date(hb.lastSuccess ?? 0).getTime();
       if (Date.now() - last > 2 * cadenceMs) {
-        problems.push(`${name.replace(".json", "")}: last success ${hb.lastSuccess ?? "never"} (cadence ${hb.cadenceMinutes}m)`);
+        problems.push(`${workflow}: last success ${hb.lastSuccess ?? "never"} (cadence ${hb.cadenceMinutes}m)`);
       }
     } catch {
       problems.push(`${name}: heartbeat file unreadable`);

@@ -216,14 +216,16 @@ for (const result of results) {
 const hardBlockers = results.filter(
   (result) => result.tier === "HARD" && (result.status === "FAIL" || result.status === "UNVERIFIED"),
 );
-const softFails = results.filter((result) => result.tier === "SOFT" && result.status === "FAIL");
+const softPending = results.filter(
+  (result) => result.tier === "SOFT" && (result.status === "FAIL" || result.status === "UNVERIFIED"),
+);
 if (hardBlockers.length) {
   console.log(`ship: BLOCKED (${hardBlockers.length} hard gate${hardBlockers.length > 1 ? "s" : ""}: ${hardBlockers.map((r) => r.name).join(", ")})`);
   process.exit(1);
 }
 console.log(
-  softFails.length
-    ? `ship: OK pending ${softFails.length} soft failure${softFails.length > 1 ? "s" : ""} (fix or waive: ${softFails.map((r) => r.name).join(", ")}) — latent checklist (eval-rubric.md §3) still applies`
+  softPending.length
+    ? `ship: OK pending ${softPending.length} soft issue${softPending.length > 1 ? "s" : ""} (fix, re-run, or waive: ${softPending.map((r) => `${r.name}[${r.status}]`).join(", ")}) — latent checklist (eval-rubric.md §3) still applies`
     : "ship: OK — latent checklist (eval-rubric.md §3) still applies",
 );
 

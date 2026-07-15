@@ -91,7 +91,7 @@ For referral, high-fit, ambiguous, or high-stakes applications, add a compact **
 
 | JD requirement | Candidate evidence | Resume location | Visibility | Claim boundary |
 |---|---|---|---|---|
-| search / recommender familiarity | Existing recommendation workflow | MEC bullet 2 | Top of page one | Operationalized workflow; not platform/model ownership |
+| search / recommender familiarity | Existing recommendation workflow | Summit Outfitters role, bullet 2 | Top of page one | Operationalized workflow; not platform/model ownership |
 
 Use `Top of page one`, `Mid-page`, `Skills-only`, `Absent`, or `Intentionally omitted` for visibility. A must-have that is only skills-level or below the first role block is a fix candidate, not a pass.
 
