@@ -27,6 +27,11 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   tailor -> score (deterministic gates in `score-resume.mjs` + latent checklist in
   `eval-rubric.md`) -> cover letter -> build/deliver (`build-resume-formats.mjs`) ->
   submit (computer-use, designed seam only, not built).
+- **Email-event sync:** `scripts/run-gmail-sync.sh` resolves the active profile work directory,
+  substitutes that single authoritative path into the read-only Gmail monitor prompt, enforces a
+  per-run output contract, and records a heartbeat. `scripts/import-events.mjs` deduplicates and
+  imports valid events, quarantines malformed output, archives processed files, and regenerates
+  the job board.
 - **Resolver:** `engine/resolver.json` (routing table) + `engine/resolve.mjs` (lookup) +
   `scripts/test-resolver.mjs` (deterministic test). Task type -> which skill docs to load,
   with a default/fallback route. `adapters/claude-code-bootstrap.md` is the Claude Code entry.
