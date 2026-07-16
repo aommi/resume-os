@@ -132,4 +132,32 @@ try {
   rmSync(root, { recursive: true, force: true });
 }
 
+// A job with no prior linkedinAssessment must assess cleanly on first attempt.
+const freshRoot = mkdtempSync(join(tmpdir(), "resume-os-assess-test-"));
+try {
+  const jobDir = join(freshRoot, "inbox", "200");
+  mkdirSync(jobDir, { recursive: true });
+  const metadataPath = join(jobDir, "metadata.json");
+  writeFileSync(metadataPath, JSON.stringify({
+    url: "https://www.linkedin.com/jobs/view/200/",
+    postedAt: "2026-07-15",
+    fetched: "2026-07-16",
+    lifecycle: { status: "to_apply" },
+  }));
+  const fresh = await runWorker({
+    work: freshRoot,
+    now,
+    spawnAssessment: async () => ({
+      jobMatchLevel: "high",
+      requiredQualifications: { matched: 4, total: 5 },
+    }),
+  });
+  assert.equal(fresh.outcome, "succeeded");
+  const assessment = JSON.parse(readFileSync(metadataPath, "utf8")).linkedinAssessment;
+  assert.equal(assessment.status, "succeeded");
+  assert.equal(assessment.attempts, 1);
+} finally {
+  rmSync(freshRoot, { recursive: true, force: true });
+}
+
 console.log("assessment worker tests: PASS");

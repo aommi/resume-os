@@ -75,7 +75,7 @@ export async function runWorker({
   const running = {
     ...(previous || {}),
     status: "running",
-    attempts: Number(previous.attempts || 0) + 1,
+    attempts: Number(previous?.attempts || 0) + 1,
     lastAttemptAt: now.toISOString(),
     startedAt: now.toISOString(),
     completedAt: null,
