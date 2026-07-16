@@ -56,6 +56,12 @@ if (existsSync(pendingDir)) {
 
 // 4. Contract heartbeats (work/heartbeats/*.json): { cadenceMinutes, lastSuccess, ... }.
 const hbDir = join(WORK, "heartbeats");
+const requiredHeartbeats = new Map([
+  ["linkedin-assessment.json", "LinkedIn assessment: no heartbeat file (cadence 5m)"],
+]);
+for (const [name, message] of requiredHeartbeats) {
+  if (!existsSync(join(hbDir, name))) problems.push(message);
+}
 if (existsSync(hbDir)) {
   for (const name of readdirSync(hbDir).filter((n) => n.endsWith(".json"))) {
     try {

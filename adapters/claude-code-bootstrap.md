@@ -40,3 +40,8 @@ After reading, confirm current state and pick up the tracker's next open item un
 - **Working data:** every generated/pipeline artifact (job `inbox/`, `events/`, `applications/`,
   `resume-formats/`, `jobs-tracker.md`, `package-queue.md`) goes under
   `profiles/<activeProfile>/work/`, never the repo root. See `resume-os.md` Core Rules.
+
+## Before publishing an engine change
+
+Run the six-question Architecture Boundary review in `resume-os.md`. Record `ALIGNED` in the PR
+description or handoff, or link an exception recorded in `DECISIONS.md`. Keep the review brief.

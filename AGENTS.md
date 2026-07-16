@@ -93,3 +93,9 @@ application packages `applications/`, generated resumes `resume-formats/`, `jobs
 Root copies are gitignored and invisible to the tooling, which resolves these paths via
 `engine/config.mjs`. Read `resume-os.md` for the operating model and `memory/semantic.md` for engine
 architecture.
+
+## Engine change review
+
+Before publishing a tracked engine change, run the six-question Architecture Boundary review in
+`resume-os.md` and record `ALIGNED` or a linked `DECISIONS.md` exception in the PR description or
+handoff. Keep the review manual and brief.

@@ -58,6 +58,26 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - Park cut material in `exhaustive-experience.md` with pull-in guidance and caveats. Do not discard useful source material.
 - Apply the same defensibility standard to links, projects, named tools, and side projects that you apply to employment bullets.
 
+## Architecture Boundary
+
+Resume OS follows a thin-harness, fat-skills architecture: put interpretation, adaptation, and
+domain judgment in markdown skills; put repeatable execution, validation, and state transitions in
+deterministic tools; keep resolvers and runtime adapters thin. **Any change that embeds subjective
+resume judgment in JavaScript is presumed to be in the wrong layer.**
+
+Before publishing a tracked engine change, answer these six questions in the PR description or
+handoff:
+
+1. What judgment does this change introduce or alter?
+2. Does that judgment live in markdown rather than deterministic code?
+3. What repeatable execution or validation does the change introduce?
+4. Did the resolver, adapter, or model-running harness gain domain logic or unnecessary context?
+5. Does the change add universal workflow friction that should instead be conditional?
+6. Is the verdict `ALIGNED`, or is an exception linked to a new entry in `DECISIONS.md`?
+
+Keep this a short judgment check, not a growing compliance process. Profile-only or ephemeral work
+does not require an architecture verdict.
+
 ## Content Model
 
 - Living base resumes are carved from `exhaustive-experience.md`.

@@ -9,13 +9,14 @@
 //
 // Output: NDJSON to stdout. Each job: { url, title, company, location, postedAt, postedTimeAgo }
 
-import { existsSync } from "node:fs";
+import { existsSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { createServer } from "node:net";
 import { resolveBrowserPath, loadProfile } from "../engine/config.mjs";
+import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const jobSearch = loadProfile().jobSearch || {};
@@ -33,26 +34,29 @@ const keywords = defaultTitles.map((t) => t.toLowerCase());
 const allJobs = [];
 
 // Reuse one Chrome session for both searches
+const sharedLock = acquireLinkedInLock("linkedin-discovery");
+if (!sharedLock.acquired) {
+  console.error(`skipped: lock held by ${sharedLock.holder?.workflow || "unknown"}`);
+  process.exit(0);
+}
 const lockFile = join(PROFILE_DIR, "SingletonLock");
-try { require("fs").unlinkSync(lockFile); } catch {}
-const port = await findFreePort();
-
-const chromeProc = spawn(
-  resolveBrowserPath(),
-  [
-    `--user-data-dir=${PROFILE_DIR}`,
-    `--remote-debugging-port=${port}`,
-    "--headless=new", "--disable-gpu", "--no-first-run", "--no-sandbox",
-    "--disable-blink-features=AutomationControlled", "--disable-features=TranslateUI",
-    "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "--window-size=1920,1080", "about:blank",
-  ],
-  { stdio: "ignore" }
-);
-
-await sleep(5000);
-
+let chromeProc;
 try {
+  try { unlinkSync(lockFile); } catch {}
+  const port = await findFreePort();
+  chromeProc = spawn(
+    resolveBrowserPath(),
+    [
+      `--user-data-dir=${PROFILE_DIR}`,
+      `--remote-debugging-port=${port}`,
+      "--headless=new", "--disable-gpu", "--no-first-run", "--no-sandbox",
+      "--disable-blink-features=AutomationControlled", "--disable-features=TranslateUI",
+      "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "--window-size=1920,1080", "about:blank",
+    ],
+    { stdio: "ignore" }
+  );
+  await sleep(5000);
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
   const page = browser.contexts()[0].pages()[0];
 
@@ -66,8 +70,9 @@ try {
 
   await browser.close();
 } finally {
-  chromeProc.kill("SIGTERM");
-  try { require("fs").unlinkSync(lockFile); } catch {}
+  chromeProc?.kill("SIGTERM");
+  try { unlinkSync(lockFile); } catch {}
+  sharedLock.release();
 }
 
 if (allJobs.length === 0) {

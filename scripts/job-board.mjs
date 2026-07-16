@@ -261,6 +261,7 @@ function activeColumns() {
   return [
     column("#", (_job, index) => index + 1),
     column("ID", (job) => job.id),
+    column("Posted", (job) => job.metadata.postedAt || "Unknown"),
     column("Found", (job) => job.metadata.fetched),
     column("Company", (job) => job.metadata.company),
     column("Role", (job) => job.metadata.title),
@@ -395,7 +396,9 @@ function applyType(job) {
 }
 
 function yesNo(value) {
-  return value ? "Yes" : "No";
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "Unknown";
 }
 
 function isClosedOutcome(outcome) {

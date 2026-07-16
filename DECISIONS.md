@@ -68,3 +68,22 @@ increase privacy risk, and make shared operating context less reusable.
 contain only Resume OS architecture, durable engine decisions, and engine-only scratch state.
 Candidate job, application, outreach, interview, resume-content, and pipeline state belongs only
 under `profiles/<id>/`.
+
+## Thin harness, fat skills manual publication gate (2026-07-15)
+**Why accepted:** Resume OS should keep judgment in markdown, execution in deterministic tooling,
+and runtime orchestration thin without adding an automated compliance system before the need is
+proven.
+**Implications:** Before publishing a tracked engine change, agents answer the six Architecture
+Boundary questions in `resume-os.md` and record `ALIGNED` in the PR description or handoff. Any
+exception must be recorded here and linked. The check remains manual and brief; there is no new
+skill, resolver route, hook, or CI gate.
+
+## Serialize LinkedIn automation and assess matches asynchronously (2026-07-16)
+**Why accepted:** Discovery and match assessment share one authenticated LinkedIn Chrome profile;
+overlapping sessions can corrupt the profile or trigger account defenses. Match assessment is slow
+but deterministic to orchestrate and does not need a local model.
+**Implications:** All automated scripts using the authenticated profile acquire one profile-local
+advisory lock before touching Chrome's `SingletonLock`. A scheduled worker processes at most one
+eligible job per invocation, stores its assessment in canonical job metadata, fails closed on
+explicit authentication challenges, and reports health through a deterministic heartbeat. Fit
+triage, package generation, and submission remain separate workflows.

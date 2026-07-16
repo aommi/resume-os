@@ -6,16 +6,20 @@
 //
 // Output: JSON to stdout with { url, title, company, topApplicant, applyUrl, saved, ... }
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { createServer } from "node:net";
-import { resolveBrowserPath } from "../engine/config.mjs";
+import { resolveBrowserPath, workDir } from "../engine/config.mjs";
+import { readLinkedInJobSignals } from "../engine/linkedin-job-signals.mjs";
+import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
+const PROFILE_LOCK_FILE = join(PROFILE_DIR, "SingletonLock");
 const args = parseArgs(process.argv.slice(2));
+let activeChromeProc = null;
 
 if (!args.url) {
   console.error("Usage: node scripts/process-job.mjs <url> [--out <dir>]");
@@ -27,14 +31,32 @@ if (!existsSync(PROFILE_DIR)) {
   process.exit(1);
 }
 
-const result = await processJob(args.url, args.out);
-console.log(JSON.stringify(result, null, 2));
+const sharedLock = acquireLinkedInLock(args.workflow || "process-job");
+if (!sharedLock.acquired) {
+  console.log(`skipped: lock held by ${sharedLock.holder?.workflow || "unknown"}`);
+  process.exit(0);
+}
+
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, () => {
+    activeChromeProc?.kill("SIGTERM");
+    try { unlinkSync(PROFILE_LOCK_FILE); } catch {}
+    sharedLock.release();
+    process.exit(signal === "SIGTERM" ? 143 : 130);
+  });
+}
+
+try {
+  const result = await processJob(args.url, args.out);
+  console.log(JSON.stringify(result, null, 2));
+} finally {
+  sharedLock.release();
+}
 
 // ── Core ──────────────────────────────────────────────────────────────────
 
 async function processJob(url, outDir) {
-  const lockFile = join(PROFILE_DIR, "SingletonLock");
-  try { require("fs").unlinkSync(lockFile); } catch {}
+  try { unlinkSync(PROFILE_LOCK_FILE); } catch {}
 
   const port = await findFreePort();
   const chromeProc = spawn(
@@ -48,6 +70,7 @@ async function processJob(url, outDir) {
     ],
     { stdio: "pipe" }
   );
+  activeChromeProc = chromeProc;
 
   await sleep(3000);
 
@@ -58,7 +81,18 @@ async function processJob(url, outDir) {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.waitForTimeout(5000);
 
-    const html = await page.content();
+    const authChallenge = await detectAuthChallenge(page);
+    if (authChallenge) {
+      writeLinkedInStop(authChallenge, args.workflow || "process-job");
+      await browser.close();
+      return {
+        url,
+        authChallenge: true,
+        failureCategory: "auth_challenge",
+        challengeUrl: authChallenge.url,
+        pageTitle: authChallenge.title,
+      };
+    }
 
     // 1. Extract job details
     const jobInfo = await page.evaluate(() => {
@@ -103,14 +137,33 @@ async function processJob(url, outDir) {
       // Compensation
       let comp = "";
       const fullText = bodyLines.join("\n");
-      const compMatch = fullText.match(/\$[\d,]+(?:\s*[-–]\s*\$?[\d,]+)?(?:\s*(?:CAD|USD|\/\s*year|per year|a year)?)?/i);
+      const amountPattern = /\$[\d,]+(?:\.\d+)?k?(?:\s*[-–]\s*\$?[\d,]+(?:\.\d+)?k?)?(?:\s*(?:CAD|USD|\/\s*year|per year|a year)?)?/i;
+      const compensationLine = bodyLines.find((line) =>
+        /salary|compensation|base pay|pay range|hiring range/i.test(line) && amountPattern.test(line)
+      );
+      const compMatch = (compensationLine || fullText).match(amountPattern);
       if (compMatch) comp = compMatch[0].trim();
 
       return { company, title, location, description, compensation: comp };
     });
 
-    // 2. Check for top applicant
-    const topApplicant = /top applicant/i.test(html);
+    // 2. Read only job-specific LinkedIn signals. Recommendation cards elsewhere on
+    // the page can contain "You'd be a top applicant" for a different job.
+    const observedAt = new Date();
+    const linkedInSignals = await readLinkedInJobSignals(page, url, observedAt, {
+      requestMatchDetails: args.assessMatch,
+    });
+    if (args.screenshot) {
+      await page.screenshot({ path: args.screenshot, fullPage: false });
+    }
+    if (args.signalsOnly) {
+      return {
+        url,
+        company: jobInfo.company,
+        title: jobInfo.title,
+        ...linkedInSignals,
+      };
+    }
 
     // 3. Extract Apply URL
     const applyInfo = await page.evaluate(() => {
@@ -207,14 +260,20 @@ async function processJob(url, outDir) {
       location: jobInfo.location,
       compensation: jobInfo.compensation,
       description: jobInfo.description,
-      topApplicant,
+      topApplicant: linkedInSignals.topApplicant,
+      topApplicantSignal: linkedInSignals.topApplicantSignal,
+      jobMatchLevel: linkedInSignals.jobMatchLevel,
+      requiredQualifications: linkedInSignals.requiredQualifications,
+      postedAt: linkedInSignals.postedAt,
+      postedTimeAgo: linkedInSignals.postedTimeAgo,
       applyUrl,
       isEasyApply,
       isExternalApply,
       saved,
       wasAlreadySaved,
-      fetched: new Date().toISOString().slice(0, 10),
+      fetched: observedAt.toISOString().slice(0, 10),
     };
+    if (args.debugSignals) result.linkedInSignalDiagnostics = linkedInSignals.diagnostics;
 
     // Write output files if requested
     if (outDir) {
@@ -228,7 +287,9 @@ async function processJob(url, outDir) {
         `- **Location:** ${jobInfo.location}\n` +
         `- **Compensation:** ${jobInfo.compensation || "(not stated)"}\n` +
         `- **Fetched:** ${result.fetched}\n` +
-        `- **Top Applicant:** ${topApplicant ? "Yes" : "No"}\n` +
+        `- **Top Applicant:** ${formatTopApplicant(linkedInSignals.topApplicant)}\n` +
+        `- **Top Applicant Evidence:** ${linkedInSignals.topApplicantSignal.text || linkedInSignals.topApplicantSignal.status}\n` +
+        `- **Posted:** ${linkedInSignals.postedAt || "(unknown)"}${linkedInSignals.postedTimeAgo ? ` (${linkedInSignals.postedTimeAgo})` : ""}\n` +
         `- **Apply URL:** ${applyUrl || "(on LinkedIn)"}\n` +
         `- **Apply Type:** ${isEasyApply ? "Easy Apply" : isExternalApply ? "External" : "LinkedIn"}\n` +
         `- **Saved:** ${saved ? (wasAlreadySaved ? "Already saved" : "Just saved") : "Failed"}\n\n` +
@@ -240,16 +301,18 @@ async function processJob(url, outDir) {
       const metadataPath = join(outDir, "metadata.json");
       const existing = readJsonIfExists(metadataPath);
       const metadata = {
+        ...existing,
         ...result,
         lifecycle: normalizeLifecycle(existing?.lifecycle),
       };
-      writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + "\n");
+      writeJsonAtomic(metadataPath, metadata);
     }
 
     return result;
   } finally {
     chromeProc.kill("SIGTERM");
-    try { require("fs").unlinkSync(lockFile); } catch {}
+    activeChromeProc = null;
+    try { unlinkSync(PROFILE_LOCK_FILE); } catch {}
   }
 }
 
@@ -264,6 +327,39 @@ function findFreePort() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function formatTopApplicant(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "Unknown";
+}
+
+async function detectAuthChallenge(page) {
+  const currentUrl = page.url();
+  const title = await page.title().catch(() => "");
+  if (/\/checkpoint\/|\/authwall(?:[/?]|$)|\/uas\/login(?:[/?]|$)/i.test(currentUrl) ||
+      /sign in|join linkedin/i.test(title)) {
+    return { url: currentUrl, title };
+  }
+  return null;
+}
+
+function writeLinkedInStop(challenge, workflow) {
+  const path = join(workDir(), "linkedin-stop.json");
+  writeJsonAtomic(path, {
+    reason: "auth_challenge",
+    url: challenge.url,
+    detectedAt: new Date().toISOString(),
+    workflow,
+  });
+}
+
+function writeJsonAtomic(path, value) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tempPath = `${path}.${process.pid}.tmp`;
+  writeFileSync(tempPath, JSON.stringify(value, null, 2) + "\n");
+  renameSync(tempPath, path);
+}
 
 function readJsonIfExists(path) {
   if (!existsSync(path)) return null;
@@ -291,9 +387,22 @@ function normalizeLifecycle(lifecycle = {}) {
 }
 
 function parseArgs(args) {
-  const p = { url: "", out: "" };
+  const p = {
+    url: "",
+    out: "",
+    debugSignals: false,
+    assessMatch: false,
+    signalsOnly: false,
+    screenshot: "",
+    workflow: "",
+  };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--out") p.out = args[++i] || "";
+    else if (args[i] === "--debug-signals") p.debugSignals = true;
+    else if (args[i] === "--assess-match") p.assessMatch = true;
+    else if (args[i] === "--signals-only") p.signalsOnly = true;
+    else if (args[i] === "--screenshot") p.screenshot = args[++i] || "";
+    else if (args[i] === "--workflow") p.workflow = args[++i] || "";
     else if (!args[i].startsWith("--") && !p.url) p.url = args[i];
   }
   return p;
