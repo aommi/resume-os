@@ -28,14 +28,19 @@ Task:
      Applied, Needs Action, Interviewing, Skipped, Closed), each containing a markdown
      table. Count data rows per section (lines starting with `| <number> |`).
    - For the Needs Action and Interviewing sections, capture each row's Company, Role,
-     and Next Action column values.
+     Outcome, and Last Contact column values (those sections have no Next Action column).
 
-2. Read <WORK_DIR>/package-queue.md if it exists. Count queued packages and note the
-   top 3 by priority/urgency if priorities are marked.
+2. Read <WORK_DIR>/package-queue.md if it exists. It lists enriched jobs waiting to be
+   packaged (not finished packages). Count them and note the top 3 by priority/urgency
+   if priorities are marked.
 
-3. Read <WORK_DIR>/events/digest.md if it exists. List entries from the last 7 days
-   that need attention (new recruiter outreach, interviews, offers, rejections).
-   Skip older entries unless marked unresolved.
+3. Recent activity comes from the raw monitor event files, NOT the digest (the digest
+   holds only items awaiting human review). Read every file in
+   <WORK_DIR>/events/pending/ and <WORK_DIR>/events/archive/ whose filename starts
+   with a date (YYYY-MM-DD) within the last 7 days. Each contains `## JOB_EMAIL_EVENT`
+   blocks with company, role, event, and event_date fields; a `## NO_JOB_EMAIL_EVENTS`
+   block means a quiet run — skip it. Then read <WORK_DIR>/events/digest.md and, if it
+   has entries from the last 7 days, add one line: "N item(s) awaiting human review".
 
 4. Compose the brief in this format. Be terse — this is a Telegram message, not a
    report:
@@ -47,9 +52,9 @@ Task:
    ⚠️ Health: [verbatim warning lines, or "clear"]
 
    🔴 Needs Action:
-   [each as: Company — Role → Next Action]
+   [each as: Company — Role → Outcome (last contact YYYY-MM-DD)]
 
-   📦 Queue: [count] packages ready
+   📦 Queue: [count] jobs queued for packaging
    [top 3 as: Company — Role]
 
    📬 Recent Activity (7d):

@@ -63,6 +63,28 @@ if [ -z "${BRIEF_SEND_TARGET:-}" ]; then
   exit 1
 fi
 
+# Input contract: the board must exist and carry every status heading the prompt
+# parses before we spend a model call on it. An empty pipeline under valid headings
+# is a valid (quiet) brief; a missing or malformed board is input_invalid, never a
+# green heartbeat.
+BOARD="$WORK/jobs-tracker.md"
+BOARD_OK=1
+if [ ! -s "$BOARD" ]; then
+  echo "input invalid: $BOARD missing or empty" >> "$LOG"
+  BOARD_OK=0
+else
+  for section in "## To Review" "## To Apply" "## Package Ready" "## Applied" "## Needs Action" "## Interviewing" "## Skipped" "## Closed"; do
+    if ! grep -qF "$section" "$BOARD"; then
+      echo "input invalid: $BOARD is missing section '$section'" >> "$LOG"
+      BOARD_OK=0
+    fi
+  done
+fi
+if [ "$BOARD_OK" -ne 1 ]; then
+  write_hb "$LAST_SUCCESS" 1 "input_invalid"
+  exit 1
+fi
+
 if BRIEF_TEXT="$(run_brief 2>>"$LOG")"; then
   BRIEF_EXIT=0
 else
