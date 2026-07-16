@@ -72,10 +72,8 @@ async function processJob(url, outDir) {
   );
   activeChromeProc = chromeProc;
 
-  await sleep(3000);
-
   try {
-    const browser = await chromium.connectOverCDP(`http://localhost:${port}`);
+    const browser = await connectWithRetry(port);
     const page = browser.contexts()[0].pages()[0];
 
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
@@ -327,6 +325,20 @@ function findFreePort() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Chrome needs a variable amount of time to open its CDP port on a cold
+// start; localhost may also resolve to ::1 while Chrome binds IPv4 only.
+async function connectWithRetry(port, deadlineMs = 20_000) {
+  const startedAt = Date.now();
+  for (;;) {
+    try {
+      return await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+    } catch (error) {
+      if (Date.now() - startedAt > deadlineMs) throw error;
+      await sleep(500);
+    }
+  }
+}
 
 function formatTopApplicant(value) {
   if (value === true) return "Yes";
