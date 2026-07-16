@@ -38,9 +38,17 @@ Task:
    holds only items awaiting human review). Read every file in
    <WORK_DIR>/events/pending/ and <WORK_DIR>/events/archive/ whose filename starts
    with a date (YYYY-MM-DD) within the last 7 days. Each contains `## JOB_EMAIL_EVENT`
-   blocks with company, role, event, and event_date fields; a `## NO_JOB_EMAIL_EVENTS`
-   block means a quiet run — skip it. Then read <WORK_DIR>/events/digest.md and, if it
-   has entries from the last 7 days, add one line: "N item(s) awaiting human review".
+   blocks with company, role, event, event_date, subject, and message_id fields; a
+   `## NO_JOB_EMAIL_EVENTS` block means a quiet run — skip it.
+
+   The monitor deliberately searches an overlapping window, so the SAME email appears
+   in multiple files. Deduplicate across all files before reporting: two blocks are
+   the same event if they share a nonempty message_id; where message_id is missing,
+   treat blocks with identical event_date + company + role + event + subject as one.
+   Report each event exactly once, taking the copy from the newest file.
+
+   Then read <WORK_DIR>/events/digest.md and, if it has entries from the last 7 days,
+   add one line: "N item(s) awaiting human review".
 
 4. Compose the brief in this format. Be terse — this is a Telegram message, not a
    report:
