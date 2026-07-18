@@ -2,6 +2,10 @@
 
 The systematic process for tailoring a resume to a specific job. Load this file before touching any bullet. It works for any company, any role, with or without internal feedback.
 
+Do not append session-learned rules or ad-hoc pitfalls directly to this methodology. Stage a
+qualifying observation in the active profile's `craft-candidates.md`; only human-approved triage
+may promote a sanitized rule into the specific step where future agents apply it.
+
 ---
 
 ## Phase 0: Load Context (do before any editing)
@@ -9,6 +13,9 @@ The systematic process for tailoring a resume to a specific job. Load this file 
 ### 0.1 Check locked decisions
 
 Read `resume-project-tracker.md` → "Decisions locked". Anything listed there is frozen unless the user explicitly reopens it in this session. Do not edit, reverse, or relitigate a locked decision — if a tailoring idea conflicts with one, flag the conflict and let the user decide.
+
+Then read `profiles/<activeProfile>/LEARNINGS.md` when it exists. It carries profile-specific
+tailoring judgment and taste that must remain enforced but must not become engine-wide rules.
 
 ### 0.2 Resolve the profile
 
@@ -139,7 +146,9 @@ Only map terms the base resume, `exhaustive-experience.md`, `skills-bank.md`, or
 
 Rule: JD nouns that describe the employer's internal world are not skills. Terms like a specific platform, department, stakeholder group, or operating surface can appear in `keywords.md` as context, but should not appear in the resume skills block unless there is a concrete story the candidate can defend in an interview.
 
-Before marking a term `Partial` or `No`, scan the current base resume, `exhaustive-experience.md`, `skills-bank.md`, and explicit current-session input. If evidence exists outside the selected base resume, pull it in only from those canonical sources.
+Before marking a term `Partial` or `No`, scan the current base resume, `exhaustive-experience.md`, `skills-bank.md`, and explicit current-session input. If evidence exists outside the selected base resume, pull it in only from those canonical sources. If a mandatory term remains undocumented but is plausible from the visible career history, and confirming it would materially change screening, ask the candidate one precise verification question before freezing it as a gap; record the attestation and claim boundary before using it. Do not turn implausible or low-value gaps into an interview questionnaire.
+
+*(Promoted from craft-candidates, 2026-07-18.)*
 
 ### Step 3: Discovery signal insertion
 
@@ -215,21 +224,21 @@ Run this checklist against every bullet before proceeding to evaluation. These a
 - [ ] **Bolding correct** — product names or primary metrics bolded; no implementation details bolded
 - [ ] **No duplicate openers** — adjacent bullets don't start with the same verb or phrase
 - [ ] **One idea per bullet** — scannable in a single breath, no overloaded clauses
-- [ ] **Numbers defensible** — every metric survives "how did you measure that?"; oddly specific > round
+- [ ] **Numbers defensible** — every metric survives “how did you measure that?”; denominators are clear, measured/realized results are distinguished from modeled figures, and before/after claims preserve both ends of a comparable boundary and cohort or omit the number
 - [ ] **PM framing** — bullets read as PM work (systems, strategy, ownership), not operator/executor tasks
 - [ ] **PM archetype fit** — vocabulary and responsibility framing match the JD-backed PM archetype in `strategy.md`
 - [ ] **Evidence completeness** — more relevant source-backed stories outside the selected base resume were considered and either pulled in or intentionally omitted
 - [ ] **Evidence dominance** — the one or two closest evidence stories are in the first two bullets of the most relevant recent role; the Requirement-to-Evidence & Visibility table (when required) has no must-have that is merely skills-level or buried
 - [ ] **Evidence lens preserved** — source-backed work is framed through this JD's lens; analytics/data roles preserve pipeline inputs, transformation/curation, decision user, and metric where supported
-- [ ] **Claim boundaries preserved** — adjacent evidence is framed at its verified level of ownership; no candidate claim crosses the boundary recorded in `keywords.md`
+- [ ] **Claim boundaries preserved** — adjacent evidence is framed at its verified level of ownership; for every geography, segment, or organizational scope, distinguish whether the candidate owned delivery, partnered on it, or only advised; no claim crosses the boundary recorded in `keywords.md`
 - [ ] **Claims ⊆ LinkedIn** — any new or strengthened claim exists on LinkedIn or will be added
 - [ ] **No tool dumps** — project bullets describe what was built and how, not a list of tools
-- [ ] **Older roles compressed** — Corealign and Vantix stay lean to fund proof in Summit Outfitters/Tutorly/Projects
-- [ ] **Chronology coherent** — if Vantix or all pre-2019 experience is dropped, do not keep dated pre-2016 education lines; either omit B.Eng. entirely or keep it undated only when it adds clear role value. If the headline says "8+ years," keep enough experience on-page to support it or remove the years claim.
 - [ ] **No repeated metric values** — two bullets showing "23" or "30%" adjacent reads as templated
 - [ ] **Skills pass hiring-manager smell test** — no context-only JD nouns or invented pseudo-skills in the skills block
 
 If any box is unchecked, fix it now. Do not proceed to evaluation with known taste violations.
+
+*(Claim-integrity checks promoted from craft-candidates, 2026-07-18.)*
 
 If tailoring materially changes role emphasis, pulls in a source-backed story not present in the selected base resume, or intentionally omits a visible JD gap, create/update `tailoring-log.md` with: base resume used, strategy/keywords paths, material changes, source pulls, intentional omissions, and waivers. Keep this as a separate file; do not append hidden comments to `resume.md`.
 
@@ -256,7 +265,8 @@ The eval is `eval-rubric.md`: concrete feature checks with statuses **PASS / FAI
 3. Fix every **HARD** failure — these block shipping. An UNVERIFIED hard gate also blocks (a gate you can't check is not a gate you passed).
 4. Fix **SOFT** failures, or WAIVE each with a one-line written reason. REPORT lines are informational.
 5. Run the latent checklist from `eval-rubric.md` §3 — truth/groundedness is a hard gate; outcome-first, PM framing, and natural vocabulary report failing bullets by name.
-6. Max 3 fix iterations, then ship. Present the final scorecard, true gaps / intentional omissions, and any waivers verbatim alongside the resume — real statuses, not summaries.
+6. **Conditional page-one balance check:** after content and truth are settled, inspect the rendered first page. If pagination leaves a conspicuous unused block at the bottom of page one, build one comparison with `--skills-first`. Keep that layout only when it materially improves page-one balance, the first experience role remains prominent, the resume stays exactly two pages, and visual review finds no clipping, overlap, split role headers, or orphaned bullet lines. Re-run the scorer on the comparison. If any condition fails or the six-second recruiter scan gets weaker, rebuild without the flag. This is a conditional layout fallback, never a default content rule; record its use in `tailoring-log.md`.
+7. Max 3 fix iterations, then ship. Present the final scorecard, true gaps / intentional omissions, and any waivers verbatim alongside the resume — real statuses, not summaries.
 
 ---
 
@@ -271,6 +281,8 @@ node scripts/build-resume-formats.mjs --source "applications/<Company - Role>/re
   --require-terms "<5-8 key JD terms, comma-separated>"
 ```
 
+Add `--skills-first` to both the final temp build and this delivery command only when the Phase 2 comparison passed. The delivered HTML/PDF must use the same approved section order that was scored and visually reviewed.
+
 `--deliver` copies the exact default build into the application folder as a single human-facing upload PDF that starts with `<Full Name>`, e.g. `<Full Name> - <Company Role> - Resume.pdf`, plus `resume.html`. (There is no separate generic `resume.pdf` — the named PDF is the one and only deliverable PDF; tooling that needs to score a PDF uses the temp export dir, not the package.) Never glob-copy from the export dir; it may contain optional extra variants when flags such as `--with-narrow` are used. It then runs deterministic checks and prints `verify:` lines: page count must be 2, all `--require-terms` must parse from the PDF text, and extraction must not come back empty. The command exits non-zero on failure — do not deliver a failing build.
 
 ### 3.2 Human/agent checks (the part the script can't do)
@@ -280,6 +292,7 @@ node scripts/build-resume-formats.mjs --source "applications/<Company - Role>/re
 - [ ] Role headers render cleanly: title on its own line/area, company + location separated below, dates aligned right; no title/company/team text concatenated into one run-on line
 - [ ] No widowed bullets (single line orphaned on next page)
 - [ ] First page passes a 6-second recruiter scan: role-relevant lead bullets, scannable metrics
+- [ ] No conspicuous avoidable page-one void; if one appeared, the `--skills-first` comparison was either adopted after full re-verification or rejected and rebuilt in the default order
 
 When touching `scripts/build-resume-formats.mjs` or regenerating a package after renderer changes, export at least one representative resume and inspect the generated PNG/PDF visually before delivery. Page count and PDF text extraction are necessary but not sufficient; layout regressions such as clipped bullets or collapsed role headers must block shipping.
 
@@ -305,41 +318,11 @@ Finally, record application lifecycle changes through `node scripts/job-board.mj
 
 ---
 
-## Pitfalls (from past sessions)
-
-Lessons learned from real tailoring sessions. **Do not append new pitfalls here directly.** New craft observations go to the active profile's `craft-candidates.md` staging queue (admission: concrete affected output + counterfactual correction + reusable test; no entry required at session end). Entries graduate here only via human-approved triage, in a sanitized, company-independent formulation — with recurrence across distinct outputs required except for truth/privacy/numeric-integrity failures. Do not copy these into agent-level skill/config files.
-
-**Over-compression drops essential signals.** When compressing bullets to fit the 2-page budget, agents tend to drop discovery/customer-empathy signals first. These are the hardest thing to add back and the most valued by hiring managers. Cut the least-relevant *outcome* bullet, never the discovery signal.
-
-**Wrong bolding anchors.** Agents bold implementation details (e.g., "source-of-truth profiles") instead of product names or metrics (e.g., "messaging-first AI agent"). The test is Step 7's: would a recruiter repeat it in a 6-second scan? If no, strip it.
-
-**PM craft left implicit.** Outcomes read strong but the reader can't see how the candidate works. Surface prioritization, experimentation design, and dispatch/ticketing explicitly (Step 5). The Tutorly 1M-to-3M bullet is the natural home for experimentation/prioritization; the JobForge development loop bullet for dispatch/ticketing.
-
-**Duplicate openers not caught before delivery.** Scan adjacent bullets for repeated openers before showing the user. "Ran workflow discovery..." appearing twice in Summit Outfitters is the canonical example. Fix the second occurrence, not the first.
-
-**Flattening strong evidence into generic automation.** Analytics/data/AI-insights roles need the actual data story, not a commerce shorthand. The Summit Outfitters merchandising pipeline is not merely "automated curated collections"; for analytics roles it is a data pipeline using sales data, merchant targets in Power BI, and shopper behavior signals to collect/score/curate campaign collections and drive add-to-cart. Preserve inputs, curation logic, decision user, and impact.
-
-**Older-role over-embellishment.** Corealign and Vantix are older, less strategic roles. Do not weave discovery signals or PM craft into them — keep them clean and compressed. The discovery pattern belongs in Summit Outfitters, Tutorly, and Projects.
-
-**Numbers lose their baseline in rewrites.** "Reviewed within 3 business days" means nothing without "from up to 4 weeks." When rewriting a before/after bullet, the baseline is the impact — preserve both ends or cut the number entirely.
-
-**Skills keyword stuffing is worse than a missing keyword.** Recent Fasken/BPP passes showed the failure mode: JD nouns like "procurement," "project portfolio," "LMS," or "Canadian regulatory" can get stuffed into skills to appease the scorer. This reads badly to hiring managers and can overclaim. Keep employer-context vocabulary in `keywords.md`; put only defensible capabilities in skills.
-
-**Tool-user framing is weaker than product-learning framing.** For AI/dev-tooling roles, don't reduce the story to "uses Claude/Codex/Hermes/Cursor and builds things." The stronger PM signal is that AI and agentic coding compress the loop from workflow discovery to prototype, user feedback, validation, sharper specs, and adoption/change management. Tools can be named, but the hiring-manager takeaway should be faster product learning and better decisions.
-
-**Dropping old roles can expose education-date gaps.** If a tailored resume drops Vantix or all pre-2019 experience, keeping a dated B.Eng. line can create an apparent 2012-2016 gap and make the resume look accidentally edited. Default fix: omit B.Eng. when Vantix is omitted. If the B.Eng. is genuinely useful for a technical role, keep it undated. If the headline claims "8+ years," keep compressed older experience or remove the years claim.
-
----
-
 ## Quick Reference: What To Do When...
 
 **You don't have internal feedback:** The taste rules (Phase 1, step 10) carry you. They encode the user's preferences from past sessions. The ship check (Phase 2) catches what taste rules miss.
 
 **The JD is vague:** Extract whatever you can. If the archetype is unclear, default to the role's most likely user. A "Senior PM" at a commerce company builds for merchants until proven otherwise.
-
-**You're over 2 pages:** Cut in this order: (1) compress Corealign to 1 bullet, (2) drop the weakest Summit Outfitters or Tutorly bullet, (3) compress Vantix to 1 bullet. Never cut discovery signals or builder proof to save space.
-
-**You drop Vantix or all pre-2019 work:** Remove the dated B.Eng. line by default. Keeping the B.Eng. with 2008-2012 dates while experience starts in 2019 creates an unnecessary chronology question. If B.Eng. matters for the target, keep it undated and record the decision in `tailoring-log.md`.
 
 **A soft check keeps failing after 3 iterations:** WAIVE it with a written reason and ship. Some gaps are real experience gaps, not wording problems. The methodology's job is to surface them honestly, not to paper over them. (Hard gates are never waivable — if a hard gate can't pass, stop and tell the user.)
 
@@ -358,6 +341,7 @@ Lessons learned from real tailoring sessions. **Do not append new pitfalls here 
 | `bullet-rubric.md` | 7-check bullet quality — run after every edit. Its 4-lens persona scan is optional fresh-eyes critique for *base* resumes only. |
 | `exhaustive-experience.md` | Parked bullets and backup stories. Scan before tailoring for stronger proof. |
 | `skills-bank.md` | Named tools and variant skill sets. Swap per JD. |
+| `profiles/<activeProfile>/LEARNINGS.md` | Profile-specific tailoring judgment, chronology rules, and taste loaded in Phase 0; never promote these preferences into engine-wide rules. |
 | `resume-project-tracker.md` | Current state. Check for locked decisions before editing. |
 | `cold-start-prompt.md` | Bootstrap. Tells agent to load this methodology first. |
 | `applications/<role>/resume.md` | The tailored output. What gets built. |

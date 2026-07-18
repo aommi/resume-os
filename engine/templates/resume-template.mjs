@@ -122,7 +122,20 @@ export function buildStyles(outputBaseName, resumeTitle, emitNarrow) {
 const renderBullets = (bullets) =>
   `<ul>${bullets.map((bullet) => `<li>${renderInlineMarkdown(bullet)}</li>`).join("")}</ul>`;
 
-export function renderPage(resume, style) {
+const renderSkills = (skills) => `<section>
+      <h2>Skills</h2>
+      <div class="skills">
+        ${skills
+          .map(
+            (skill) =>
+              `<div class="skill-line"><strong>${escapeHtml(skill.label)}:</strong> ${escapeHtml(skill.items)}</div>`,
+          )
+          .join("\n")}
+      </div>
+    </section>`;
+
+export function renderPage(resume, style, { skillsFirst = false } = {}) {
+  const skillsSection = style.omitSkills ? "" : renderSkills(resume.skills);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -138,6 +151,8 @@ export function renderPage(resume, style) {
       <div class="contact">${resume.contact.map(renderInlineMarkdown).join("<br>")}</div>
       <div class="headline">${escapeHtml(resume.headline)}</div>
     </header>
+
+    ${skillsFirst ? skillsSection : ""}
 
     <section>
       <h2>Experience</h2>
@@ -165,21 +180,7 @@ export function renderPage(resume, style) {
         .join("\n")}
     </section>
 
-    ${
-      style.omitSkills
-        ? ""
-        : `<section>
-      <h2>Skills</h2>
-      <div class="skills">
-        ${resume.skills
-          .map(
-            (skill) =>
-              `<div class="skill-line"><strong>${escapeHtml(skill.label)}:</strong> ${escapeHtml(skill.items)}</div>`,
-          )
-          .join("\n")}
-      </div>
-    </section>`
-    }
+    ${skillsFirst ? "" : skillsSection}
 
     <section>
       <h2>Education</h2>
