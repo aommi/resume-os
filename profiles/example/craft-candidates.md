@@ -17,7 +17,8 @@ Raw evidence stays profile-local because it may name companies, people, and appl
 - **Hygiene:** keep roughly ten or fewer entries. Triage when the queue reaches ten, with a
   monthly fallback when the profile uses `review-schedule.md`.
 - **Terminal outcomes:** `PROMOTE` and `DROP` remove the entry. `KEEP` leaves it in the queue with
-  a dated triage-history line. A second evidence-free `KEEP` becomes `DROP`.
+  a dated triage-history line. A second evidence-free `KEEP` becomes `DROP`. On `PROMOTE`, add
+  `(promoted from craft-candidates, YYYY-MM-DD)` to the destination doc before deleting the entry.
 
 **Entry format:** Date · affected output · observed failure · counterfactual correction ·
 reusable test · supporting occurrences · proposed destination · tags
