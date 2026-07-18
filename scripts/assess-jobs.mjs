@@ -15,9 +15,10 @@ import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { timezone, workDir } from "../engine/config.mjs";
 import { readLinkedInLock } from "../engine/linkedin-lock.mjs";
+import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
 const CADENCE_MINUTES = 5;
-const DAILY_CAP = 5;
+const DEFAULT_DAILY_CAP = 5;
 const MAX_ATTEMPTS = 3;
 const MAX_AGE_DAYS = 14;
 const STALE_RUNNING_MS = 10 * 60 * 1000;
@@ -26,6 +27,7 @@ const VALID_LEVELS = new Set(["top_applicant", "high", "medium", "low"]);
 export async function runWorker({
   work = workDir(),
   now = new Date(),
+  dailyCap = readDailyCap(),
   spawnAssessment = runAssessmentProcess,
 } = {}) {
   const runId = randomUUID();
@@ -60,7 +62,7 @@ export async function runWorker({
     }
   }
 
-  if (countTodayAttempts(jobs, now, timezone()) >= DAILY_CAP) {
+  if (countTodayAttempts(jobs, now, timezone()) >= dailyCap) {
     heartbeat("skipped_daily_cap");
     return { outcome: "skipped_daily_cap" };
   }
@@ -132,8 +134,18 @@ export async function runWorker({
   return { outcome: "succeeded", jobId: job.id, jobMatchLevel: result.jobMatchLevel };
 }
 
+export function readDailyCap(value = process.env.LINKEDIN_ASSESS_DAILY_CAP) {
+  if (value === undefined || value === "") return DEFAULT_DAILY_CAP;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error("LINKEDIN_ASSESS_DAILY_CAP must be a positive integer");
+  }
+  return parsed;
+}
+
 export function isEligibleJob(job, now = new Date()) {
   const metadata = job.metadata || job;
+  if (isCompanyExcluded(metadata.company)) return false;
   if (!["to_review", "to_apply"].includes(metadata.lifecycle?.status)) return false;
   const assessment = metadata.linkedinAssessment || {};
   if (assessment.status === "succeeded" && assessment.reassess !== true) return false;

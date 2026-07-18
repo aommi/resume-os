@@ -15,6 +15,7 @@ import { createServer } from "node:net";
 import { resolveBrowserPath, workDir } from "../engine/config.mjs";
 import { readLinkedInJobSignals } from "../engine/linkedin-job-signals.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
+import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const PROFILE_LOCK_FILE = join(PROFILE_DIR, "SingletonLock");
@@ -144,6 +145,11 @@ async function processJob(url, outDir) {
 
       return { company, title, location, description, compensation: comp };
     });
+
+    if (isCompanyExcluded(jobInfo.company)) {
+      await browser.close();
+      return { url, company: jobInfo.company, title: jobInfo.title, excluded: true };
+    }
 
     // 2. Read only job-specific LinkedIn signals. Recommendation cards elsewhere on
     // the page can contain "You'd be a top applicant" for a different job.

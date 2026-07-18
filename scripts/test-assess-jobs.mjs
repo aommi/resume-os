@@ -14,12 +14,18 @@ import { tmpdir } from "node:os";
 import {
   isEligibleJob,
   mergeAssessmentMetadata,
+  readDailyCap,
   reclaimStaleRunning,
   runWorker,
   selectEligibleJob,
 } from "./assess-jobs.mjs";
 
 const now = new Date("2026-07-16T12:00:00.000Z");
+
+assert.equal(readDailyCap(undefined), 5);
+assert.equal(readDailyCap("10"), 10);
+assert.throws(() => readDailyCap("0"), /positive integer/);
+assert.throws(() => readDailyCap("nope"), /positive integer/);
 
 function job(id, overrides = {}) {
   return {

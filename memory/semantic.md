@@ -80,9 +80,14 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   count, and anchors acceptance to the completed qualification block so recommendation cards cannot
   contaminate the target result. Uncaptured results remain `unknown`.
   `scripts/test-linkedin-job-signals.mjs` covers contamination and dates.
+- **Company exclusions:** Profile-specific `jobSearch.excludedCompanies` entries are normalized and
+  enforced deterministically before LinkedIn search results are emitted, before a fetched job is
+  persisted, and before the asynchronous assessment worker selects a job. The reusable engine does
+  not hardcode tenant-specific company preferences.
 - **Asynchronous LinkedIn assessment:** `scripts/assess-jobs.mjs` is a zero-local-model worker that
   assesses at most one recent `to_review` / `to_apply` job per invocation, caps initial throughput at
-  five jobs per local day, retries at most three times, reclaims `running` attempts after ten
+  five jobs per local day (with a validated `LINKEDIN_ASSESS_DAILY_CAP` command-level override for
+  controlled batches), retries at most three times, reclaims `running` attempts after ten
   minutes, and records canonical state in the job's `metadata.json`. `engine/linkedin-lock.mjs`
   serializes discovery and assessment access to the shared Chrome profile. Explicit LinkedIn
   checkpoint/auth-wall signals create profile-local `work/linkedin-stop.json`; clearing it is
@@ -137,6 +142,10 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 
 ## Maintenance gotchas
 
+- **Agent-memory runtime boundary:** Claude Code owns the tracked stop/preprompt hooks in
+  `.claude/settings.json` and `hooks/`. Codex loads the same memory system through tracked
+  `AGENTS.md` instructions; a copied `.codex/hooks.json` using `$CLAUDE_PROJECT_DIR` is invalid and
+  causes repeated stop-hook exit 127 failures.
 - **Parity bar is visual/text, not byte:** Chrome PDFs differ on metadata. Compare filenames,
   page count, extracted text, PNG within tolerance, and the `score-resume.mjs` scorecard.
 - **Gitignore negation:** to track only the demo profile, use `profiles/*` then
@@ -144,6 +153,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **Root working-state must never be tracked.** `inbox/`, `events/`, `applications/`,
   `resume-formats/`, `jobs-tracker.md`, `package-queue.md` at the repo root are gitignored.
   Real data lives in `profiles/<id>/work/`. See DECISIONS.md (the public-push leak incident).
+- **Profile-relative lifecycle paths:** Values such as `lifecycle.packagePath` are relative to the
+  active profile's `work/` directory unless absolute. Consumers such as the package-queue builder
+  must resolve them through `workDir()`, not against the repository root.
 - **Root-memory boundary:** `memory/` is engine-only. Candidate job, application, outreach,
   interview, resume-content, and pipeline details live exclusively under `profiles/<id>/`.
 - **De-personalization:** engine files must carry zero candidate data. The example profile

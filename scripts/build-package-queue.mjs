@@ -11,7 +11,7 @@
 // This script is pure routing — it knows nothing about resumes, fit, or ATS.
 
 import { readdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { workDir } from "../engine/config.mjs";
 
 const REPO_ROOT = resolve(process.cwd());
@@ -85,7 +85,13 @@ for (const jobId of readdirSync(INBOX)) {
 
   if (!existsSync(metaPath) || !existsSync(enrichPath)) continue;
 
-  const meta = JSON.parse(readFileSync(metaPath, "utf-8"));
+  let meta;
+  try {
+    meta = JSON.parse(readFileSync(metaPath, "utf-8"));
+  } catch {
+    console.error(`skipping unreadable metadata: ${metaPath}`);
+    continue; // Skip unreadable/corrupted metadata files
+  }
   const status = meta?.lifecycle?.status || "";
   const company = meta?.company || "";
   const title = meta?.title || "";
@@ -103,7 +109,8 @@ for (const jobId of readdirSync(INBOX)) {
 
   // Check if packagePath already set
   const packagePath = meta?.lifecycle?.packagePath;
-  if (packagePath && existsSync(packagePath)) continue;
+  const resolvedPackagePath = packagePath && (isAbsolute(packagePath) ? packagePath : join(WORK, packagePath));
+  if (resolvedPackagePath && existsSync(resolvedPackagePath)) continue;
 
   queue.push({ id: jobId, company, title, enrichedAt });
 }

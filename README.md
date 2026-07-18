@@ -49,6 +49,10 @@ and `tailoring-methodology.md` for package-building procedure.
 - Build application PDFs with `scripts/build-resume-formats.mjs`; do not copy random export artifacts.
 - Hermes/scrapers provide facts only. Tailoring agents own base-resume choice, keywords, fit, and judgment.
 - **All working data goes under `profiles/<activeProfile>/work/`** (job inbox, events, applications, generated resumes, tracker, package queue). Never write these to the repo root; root copies are gitignored and ignored by the tooling. This applies to every agent and external job (scrapers, Gmail monitor, job discovery).
+- Company exclusions belong in the active profile's `jobSearch.excludedCompanies`. Matching is
+  normalized but exact; discovery, ingestion, and asynchronous assessment all enforce the list.
+- Lifecycle `packagePath` values are relative to the active profile's `work/` directory unless
+  absolute. Pipeline readers must resolve them there.
 
 ## Common commands
 
@@ -57,6 +61,9 @@ and `tailoring-methodology.md` for package-building procedure.
 node scripts/job-board.mjs render
 node scripts/job-board.mjs package-ready <job-id|company> --package "<Company - Role>" --variant "<variant>"
 node scripts/job-board.mjs applied <job-id|company> --date YYYY-MM-DD --outcome Submitted
+
+# Optional controlled override; the asynchronous LinkedIn assessment default remains 5/day.
+LINKEDIN_ASSESS_DAILY_CAP=10 node scripts/assess-jobs.mjs
 
 # Build the senior/general base (source + output resolve to the active profile):
 node scripts/build-resume-formats.mjs --source resume.md --export
@@ -83,5 +90,7 @@ separate from any profile data:
 - `memory/candidates.md`: staged lessons awaiting promotion.
 - Entry points: `CLAUDE.md` (Claude Code) and `AGENTS.md` (Hermes and Codex). Configured in
   `.agent/project.yaml`; regenerate with `python .agent/memory-kit/generate.py all`.
+- Hook enforcement is Claude-only (`.claude/settings.json` → `hooks/`). Codex is instruction-driven
+  through `AGENTS.md`; do not copy Claude hooks or `$CLAUDE_PROJECT_DIR` commands into `.codex/`.
 
 Memory is about the OS (architecture, extension, maintenance), never candidate/profile content.

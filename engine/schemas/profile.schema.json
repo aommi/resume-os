@@ -97,6 +97,7 @@
       "properties": {
         "titles": { "type": "array", "items": { "type": "string" } },
         "locations": { "type": "array", "items": { "type": "string" } },
+        "excludedCompanies": { "type": "array", "items": { "type": "string" } },
         "sources": { "type": "array", "items": { "type": "string" } },
         "matchSignals": { "type": "array", "items": { "type": "string" } },
         "salaryBandCad": { "type": "string" }
