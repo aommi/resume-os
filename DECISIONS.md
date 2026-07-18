@@ -87,3 +87,27 @@ advisory lock before touching Chrome's `SingletonLock`. A scheduled worker proce
 eligible job per invocation, stores its assessment in canonical job metadata, fails closed on
 explicit authentication challenges, and reports health through a deterministic heartbeat. Fit
 triage, package generation, and submission remain separate workflows.
+
+## Craft-candidates staging queue is profile-local, human-gated (2026-07-17)
+**Why accepted:** Session-learned craft judgment was being appended directly into engine skill
+docs (methodology Pitfalls) with no recurrence test, encoding one session's recency bias or one
+profile's taste as permanent engine rules. A cold review of the initial design (an os-planning/
+inbox) correctly found: raw craft evidence names companies and application content, so it cannot
+live at the engine layer; reviewer agreement is not recurrence; and a second promotion system
+must mirror the existing `memory/candidates.md` flow rather than invent new conventions.
+**Implications:** `profiles/<id>/craft-candidates.md` stages craft observations (admission:
+concrete affected output + counterfactual + reusable test; appending is conditional, never
+mandatory at session end). Promotion into engine skill docs is human-approved, sanitized, and
+requires distinct-output recurrence — except truth/privacy/numeric-integrity failures, which
+qualify immediately. Profile taste routes to `LEARNINGS.md`; domain is a tag, not a tier. Direct
+Pitfalls appends are prohibited (methodology amended). Triage triggers at ~10 queued entries with
+a monthly fallback via `review-schedule.md`; entries expire after two triages without new
+evidence. This is not a planning artifact; the canonical backlog remains the single planning doc.
+
+**Architecture Boundary verdict (2026-07-17): ALIGNED.** (1) Judgment introduced: admission/
+promotion criteria for craft learnings. (2) It lives entirely in markdown (queue header,
+methodology note, semantic.md) — no code changed. (3) Repeatable execution introduced: none;
+triage is a human-gated manual review, deliberately not tooled. (4) Resolver/adapters/harness
+gained nothing. (5) Workflow friction is conditional, not universal: appending is optional,
+the session-end check is user-invoked, and a profile without the file is a no-op. (6) Verdict
+ALIGNED; profile-absence behavior defined in semantic.md.
