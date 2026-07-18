@@ -55,9 +55,16 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `keywords.md` records the verified claim boundary for adjacent evidence. Bolding prioritizes
   target-role relevance over metric size. See `tailoring-methodology.md` and DECISIONS.md
   (2026-07-15).
+- **Conditional skills-first layout:** `build-resume-formats.mjs --skills-first` deterministically
+  renders the Skills section below the headline instead of after Selected Projects. The tailoring
+  ship check may compare this layout only when rendered page one has a conspicuous avoidable void;
+  it is kept only after the two-page gate, scorer, six-second scan, and visual checks all pass, and
+  the same flag must be carried into `--deliver`. Default section order remains unchanged.
 - **Architecture publication check:** Before publishing a tracked engine change, agents run the
   six-question Architecture Boundary review in `resume-os.md` and record `ALIGNED` or link a
-  `DECISIONS.md` exception. This is intentionally a brief manual check, not a hook or CI system.
+  `DECISIONS.md` exception. The same pass verifies `README.md`, agent startup/resolver wiring, and
+  this semantic memory; update affected surfaces or explicitly confirm that no change is needed.
+  This is intentionally a brief manual check, not a hook or CI system.
 - **LinkedIn job signals:** `process-job.mjs` delegates personalized-signal detection to
   `engine/linkedin-job-signals.mjs`. A top-applicant result is true only for an exact visible claim
   scoped to the current job detail; recommendation-card claims are rejected, unverifiable pages
@@ -85,6 +92,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 
 ## Session hygiene (every session, not just dedicated resume-OS boots)
 
+- **Queue hygiene:** all staging queues are pending-only. Terminal outcomes leave the queue and
+  write durable information once at the canonical destination; do not preserve parallel graduated
+  or resolved lists. See the Core Rules in `resume-os.md`.
 - **Due reviews:** on session start, check the active profile's `review-schedule.md`; if any
   review's "Next due" ≤ today, surface it to the user before other work. (Previously this check
   lived only in `cold-start-prompt.md`, so ordinary sessions missed overdue reviews for weeks.)
@@ -94,7 +104,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   header); promotion into skill docs happens only at human-approved triage. Profile taste goes to
   the profile's `LEARNINGS.md`. The file is optional per profile: if absent, the session-end
   check is a no-op — create it on the first qualifying entry by copying
-  `profiles/example/craft-candidates.md`. See DECISIONS.md (2026-07-17).
+  `profiles/example/craft-candidates.md`. Tailoring Phase 0 loads the optional profile
+  `LEARNINGS.md`; promoted engine rules land directly in the applicable methodology/rubric step,
+  not in a duplicate Pitfalls appendix. See DECISIONS.md (2026-07-17).
 
 ## Planning
 

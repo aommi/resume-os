@@ -8,7 +8,8 @@ A **keeper** is mostly ✅ with **no ❌ on checks 1–4**. Everything else gets
 1. **Outcome-first** — Opens with the *result*, not the task.
    "Cut launch backlog to 0.13%" — not "Responsible for product onboarding."
 2. **Quantified & defensible** — Has a number you could defend under questioning. Oddly specific (6.4%) reads as more credible than round (12%). If you can't reconstruct *how* you got the number, don't use it.
-3. **Ownership** — Clear what *you* did, with a strong verb. Kill "helped," "responsible for," "worked on," "participated in."
+3. **Ownership** — Be precise about both the action you owned and the larger outcome you influenced. Use a strong verb for the owned lever; when the outcome had multiple drivers, scope the result as a contribution rather than implying sole causality (for example, “Built X, helping grow Y” or “Drove X, contributing to Y”). Ask: “Could another team credibly claim this same outcome?” If yes, the outcome clause must be contribution-scoped. Avoid vague formulations such as “helped with,” “responsible for,” “worked on,” or “participated in.”
+   *(Promoted from craft-candidates, 2026-07-18.)*
 4. **Scannable** — One idea, readable in a single breath. Sell the *what*; leave the *how* for the interview. No tool dumps or jargon.
 5. **Signal** — Carries a competency or keyword the *target role* actually wants. (Per-job; re-checked during tailoring.)
 6. **Distinct** — Not a near-duplicate of another bullet on the page.
@@ -18,7 +19,7 @@ A **keeper** is mostly ✅ with **no ❌ on checks 1–4**. Everything else gets
 Built · Led · Shipped · Launched · Owned · Designed · Automated · Cut · Grew · Scaled · Drove · Replaced · Reduced · Raised
 
 ## Words to avoid
-Responsible for · Helped · Worked on · Assisted · Utilized · Leveraged (overused) · Spearheaded · Synergy · "various"
+Responsible for · Helped with · Worked on · Assisted · Utilized · Leveraged (overused) · Spearheaded · Synergy · "various"
 
 ## Ordering within a role (which bullet leads)
 

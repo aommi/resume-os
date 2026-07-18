@@ -99,6 +99,8 @@ function parseArgs(args) {
       parsed.emitNarrow = true;
     } else if (arg === "--no-narrow") {
       parsed.emitNarrow = false;
+    } else if (arg === "--skills-first") {
+      parsed.skillsFirst = true;
     }
   }
 
@@ -290,7 +292,7 @@ function cleanInline(value = "") {
 const stylesToBuild = buildStyles(outputBaseName, resumeTitle, emitNarrow);
 
 for (const style of stylesToBuild) {
-  writeFileSync(join(outDir, style.file), renderPage(resume, style));
+  writeFileSync(join(outDir, style.file), renderPage(resume, style, { skillsFirst: options.skillsFirst }));
 }
 
 const readmeFormats = stylesToBuild
@@ -321,6 +323,8 @@ These live HTML files use the same resume content with the active ruled visual t
 Hard rule: these are active ready-to-send general resumes, not stale exports. Keep them available for recruiter InMail, hiring events, email requests, and low-information or stretch applications where full tailoring is not warranted.
 
 Narrow exports are ${emitNarrow ? "enabled" : "disabled"} by \`resume-format.config.json\`. Use \`--with-narrow\` or \`--no-narrow\` to override for a single build.
+
+Skills placement: ${options.skillsFirst ? "immediately below the headline (\`--skills-first\`)" : "after Selected Projects (default)"}.
 
 ${readmeFormats}
 

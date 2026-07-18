@@ -17,7 +17,8 @@ The reusable engine is profile-agnostic; each person's private data lives under 
   - `base-resumes/`: `resume.md`, `resume-pm.md`, … (the living base resumes).
   - `work/`: generated/pipeline state: `inbox/`, `applications/`, `events/`, `resume-formats/`,
     `jobs-tracker.md`, `package-queue.md`.
-  - `resume-project-tracker.md`, `LEARNINGS.md`, `review-schedule.md`, `positioning.md`: profile memory.
+  - `resume-project-tracker.md`, `LEARNINGS.md`, `craft-candidates.md`, `review-schedule.md`,
+    `positioning.md`: profile memory and staged profile-local judgment.
 
 The active profile is `resume-os.config.json` → `activeProfile`. Tooling resolves every profile path
 through `engine/config.mjs`, with the repo root as a fallback (so a profile whose data still sits at root
@@ -29,8 +30,13 @@ within the active profile.
 1. `resume-os.md`: stable operating model and file roles (engine).
 2. `tailoring-methodology.md`: the tailoring engine: phased process, scoring, export (engine).
 3. `profiles/<activeProfile>/resume-project-tracker.md`: current state and locked decisions (profile).
-4. `profiles/<activeProfile>/LEARNINGS.md`: recent pitfalls and fixes (profile).
+4. `profiles/<activeProfile>/LEARNINGS.md`: durable profile-specific judgment and taste (profile).
 5. `profiles/<activeProfile>/review-schedule.md`: recurring reviews that may be due (profile).
+
+Session-learned resume, cover-letter, outreach, or review craft does not go directly into the
+engine skill docs. When an observation passes the admission test in
+`profiles/<activeProfile>/craft-candidates.md`, stage it there for human-approved triage. The file
+is optional; copy `profiles/example/craft-candidates.md` on the first qualifying entry.
 
 If these conflict, prefer the profile tracker for current state, `resume-os.md` for stable rules,
 and `tailoring-methodology.md` for package-building procedure.
@@ -60,6 +66,10 @@ node scripts/build-resume-formats.mjs --source "<package>/resume.md" --out-dir /
   --resume-title "<Company Role>" --export --deliver "applications/<Company - Role>" --require-terms "term1,term2"
 ```
 
+When visual review finds a conspicuous avoidable gap at the bottom of page one, the tailoring
+methodology may compare a build with `--skills-first`. It is a conditional layout fallback, not
+the default; if adopted, use the flag for both the scored build and final delivery.
+
 To run a different person, set `activeProfile` in `resume-os.config.json` and create `profiles/<id>/`
 (see `profiles/example/`).
 
@@ -75,4 +85,3 @@ separate from any profile data:
   `.agent/project.yaml`; regenerate with `python .agent/memory-kit/generate.py all`.
 
 Memory is about the OS (architecture, extension, maintenance), never candidate/profile content.
-

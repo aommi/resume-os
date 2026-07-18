@@ -54,11 +54,13 @@ Term hygiene: the scorer matches case-insensitive substrings, so prefer multi-wo
 
 Output is failing bullets by name — never scores:
 
-- [ ] **Truth/groundedness** (hard gate) — every claim traceable to `exhaustive-experience.md`, the base resume, `skills-bank.md`, or explicit user input; list anything unanchored
+- [ ] **Truth/groundedness** (hard gate) — every claim traceable to `exhaustive-experience.md`, the base resume, `skills-bank.md`, or explicit user input; list anything unanchored. For numeric claims, reconcile denominators, distinguish measured/realized results from modeled figures, and preserve both ends of a comparable before/after boundary and cohort or remove the number. For geography, customer segment, or organizational scope, match the verb to whether the candidate owned delivery, partnered on it, or only advised.
+  *(Claim-integrity checks promoted from craft-candidates, 2026-07-18.)*
 - [ ] **Outcome-first** — opens with the result, not the task (bullet-rubric check 1)
 - [ ] **PM framing** — reads as PM work (systems, strategy, ownership), not an operator/executor task
 - [ ] **PM archetype fit** — responsibility language matches the JD-backed PM archetype in `strategy.md` (technical, builder-first, strategic, delivery / PO-style, growth / experimentation, domain/operator, or mixed)
 - [ ] **Vocabulary natural** — supported soft/company terms woven into bullet/summary framing, not stuffed into the skills list
+- [ ] **Page-one balance** — rendered page one has no conspicuous avoidable empty block; if it does, compare a `--skills-first` build and keep it only if the two-page layout and six-second recruiter scan remain clean
 - [ ] **PM competency sweep** (PM roles) — the JD decides which competencies matter; the sweep prevents accidental omissions, it does not require stuffing the resume. From the reference list (prioritization · roadmap · strategy · cross-functional · GTM · tradeoffs/decision-making · understanding customers + business + tech · data-driven · outcome-driven · product analytics · experimentation / A/B testing · builder fluency · AI usage), check the JD-relevant ones and report each as explicit / partial / absent / intentionally omitted. JD-emphasized items that are absent or skills-only are fix candidates; absences backed by a defensibility caveat in `exhaustive-experience.md` are honest gaps — leave them. Record the sweep in the application's `keywords.md`. Do not force all of them into every resume.
 
 Honesty note: latent checks are agent-judged; only the truth gate has an external anchor (traceability to `exhaustive-experience.md`). When practical, have a fresh context that didn't write the bullets run this checklist. The outcome log in `resume-project-tracker.md` is the only real calibration — revisit these gates after ~10 applications.
