@@ -127,7 +127,12 @@ function loadJobs({ persistLifecycle }) {
     const dir = join(INBOX_DIR, entry);
     const metadataPath = join(dir, "metadata.json");
     if (!safeIsDirectory(dir) || !existsSync(metadataPath)) continue;
-    const metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+    let metadata;
+    try {
+      metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+    } catch {
+      continue; // Skip unreadable/corrupted metadata files
+    }
     const lifecycle = normalizeLifecycle(metadata.lifecycle);
     const job = {
       id: entry,

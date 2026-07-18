@@ -17,6 +17,7 @@ import { chromium } from "playwright";
 import { createServer } from "node:net";
 import { resolveBrowserPath, loadProfile } from "../engine/config.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
+import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const jobSearch = loadProfile().jobSearch || {};
@@ -93,9 +94,9 @@ console.error(`Total: ${unique.length} unique jobs (from ${allJobs.length} raw).
 // Title filter: must contain "product manager" or "product owner"
 // Excludes: Director of Product, VP of Product, Product Designer, etc.
 const titleFilter = /product\s*(manager|owner)/i;
-const filtered = unique.filter(j => titleFilter.test(j.title));
+const titleFiltered = unique.filter(j => titleFilter.test(j.title));
 
-const skipped_titles = unique.length - filtered.length;
+const skipped_titles = unique.length - titleFiltered.length;
 if (skipped_titles > 0) {
   console.error(`Title filter: removed ${skipped_titles} non-PM/PO jobs:`);
   for (const j of unique) {
@@ -103,6 +104,13 @@ if (skipped_titles > 0) {
       console.error(`  ✗ ${j.company} — ${j.title}`);
     }
   }
+}
+
+const filtered = titleFiltered.filter((job) => !isCompanyExcluded(job.company));
+const skippedCompanies = titleFiltered.filter((job) => isCompanyExcluded(job.company));
+if (skippedCompanies.length > 0) {
+  console.error(`Company exclusion: removed ${skippedCompanies.length} job(s):`);
+  for (const job of skippedCompanies) console.error(`  ✗ ${job.company} — ${job.title}`);
 }
 
 if (opts.dryrun) {
