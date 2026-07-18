@@ -131,6 +131,7 @@ function loadJobs({ persistLifecycle }) {
     try {
       metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
     } catch {
+      console.error(`skipping unreadable metadata: ${metadataPath}`);
       continue; // Skip unreadable/corrupted metadata files
     }
     const lifecycle = normalizeLifecycle(metadata.lifecycle);

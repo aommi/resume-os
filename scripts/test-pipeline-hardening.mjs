@@ -42,10 +42,12 @@ try {
   const board = run("scripts/job-board.mjs", "list", "to_apply");
   assert.equal(board.status, 0, board.stderr);
   assert.match(board.stdout, /Example Co/);
+  assert.match(board.stderr, /skipping unreadable metadata: .*broken\/metadata\.json/);
 
   const queue = run("scripts/build-package-queue.mjs");
   assert.equal(queue.status, 0, queue.stderr);
   assert.equal(JSON.parse(queue.stdout).queued, 0);
+  assert.match(queue.stderr, /skipping unreadable metadata: .*broken\/metadata\.json/);
   assert.match(readFileSync(join(workDir, "package-queue.md"), "utf8"), /0 jobs/);
 } finally {
   rmSync(profileDir, { recursive: true, force: true });

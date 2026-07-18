@@ -89,6 +89,7 @@ for (const jobId of readdirSync(INBOX)) {
   try {
     meta = JSON.parse(readFileSync(metaPath, "utf-8"));
   } catch {
+    console.error(`skipping unreadable metadata: ${metaPath}`);
     continue; // Skip unreadable/corrupted metadata files
   }
   const status = meta?.lifecycle?.status || "";
