@@ -80,6 +80,10 @@ handoff:
 5. Does the change add universal workflow friction that should instead be conditional?
 6. Is the verdict `ALIGNED`, or is an exception linked to a new entry in `DECISIONS.md`?
 
+As part of the same publication pass, verify that `README.md`, agent startup/resolver wiring, and
+`memory/semantic.md` still describe the shipped behavior. Update affected surfaces, or state that
+each was checked and required no change; do not create a separate documentation mechanism.
+
 Keep this a short judgment check, not a growing compliance process. Profile-only or ephemeral work
 does not require an architecture verdict.
 

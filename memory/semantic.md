@@ -62,7 +62,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   the same flag must be carried into `--deliver`. Default section order remains unchanged.
 - **Architecture publication check:** Before publishing a tracked engine change, agents run the
   six-question Architecture Boundary review in `resume-os.md` and record `ALIGNED` or link a
-  `DECISIONS.md` exception. This is intentionally a brief manual check, not a hook or CI system.
+  `DECISIONS.md` exception. The same pass verifies `README.md`, agent startup/resolver wiring, and
+  this semantic memory; update affected surfaces or explicitly confirm that no change is needed.
+  This is intentionally a brief manual check, not a hook or CI system.
 - **LinkedIn job signals:** `process-job.mjs` delegates personalized-signal detection to
   `engine/linkedin-job-signals.mjs`. A top-applicant result is true only for an exact visible claim
   scoped to the current job detail; recommendation-card claims are rejected, unverifiable pages
