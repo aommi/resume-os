@@ -83,6 +83,19 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   per-job-failure runs. The machine LaunchAgent is `ai.resumeos.assess` at a five-minute cadence;
   installation/loading remains machine-local.
 
+## Session hygiene (every session, not just dedicated resume-OS boots)
+
+- **Due reviews:** on session start, check the active profile's `review-schedule.md`; if any
+  review's "Next due" ≤ today, surface it to the user before other work. (Previously this check
+  lived only in `cold-start-prompt.md`, so ordinary sessions missed overdue reviews for weeks.)
+- **Craft learnings:** session-learned craft judgment (resume/cover-letter/outreach/review craft)
+  is NOT appended to engine skill docs directly. It goes to the profile-local staging queue
+  `profiles/<id>/craft-candidates.md` (admission rules + session-end prompt are in that file's
+  header); promotion into skill docs happens only at human-approved triage. Profile taste goes to
+  the profile's `LEARNINGS.md`. The file is optional per profile: if absent, the session-end
+  check is a no-op — create it on the first qualifying entry by copying
+  `profiles/example/craft-candidates.md`. See DECISIONS.md (2026-07-17).
+
 ## Planning
 
 - **Single canonical planning doc: `os-planning/backlog-horsepower-and-reuse.md`** (stories with

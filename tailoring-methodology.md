@@ -307,7 +307,7 @@ Finally, record application lifecycle changes through `node scripts/job-board.mj
 
 ## Pitfalls (from past sessions)
 
-Lessons learned from real tailoring sessions. New pitfalls get appended here — this file is the single home for session-learned judgment; do not copy these into agent-level skill/config files.
+Lessons learned from real tailoring sessions. **Do not append new pitfalls here directly.** New craft observations go to the active profile's `craft-candidates.md` staging queue (admission: concrete affected output + counterfactual correction + reusable test; no entry required at session end). Entries graduate here only via human-approved triage, in a sanitized, company-independent formulation — with recurrence across distinct outputs required except for truth/privacy/numeric-integrity failures. Do not copy these into agent-level skill/config files.
 
 **Over-compression drops essential signals.** When compressing bullets to fit the 2-page budget, agents tend to drop discovery/customer-empathy signals first. These are the hardest thing to add back and the most valued by hiring managers. Cut the least-relevant *outcome* bullet, never the discovery signal.
 
