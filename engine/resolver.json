@@ -6,6 +6,7 @@
     "score": ["eval-rubric.md", "tailoring-methodology.md"],
     "cover_letter": ["resume-os.md", "tailoring-methodology.md"],
     "resume_maintenance": ["resume-os.md", "bullet-rubric.md"],
+    "model_eval": ["evals/model-comparison.md"],
     "pipeline_status": [],
     "discover": []
   },

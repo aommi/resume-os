@@ -5,12 +5,23 @@ A **keeper** is mostly ✅ with **no ❌ on checks 1–4**. Everything else gets
 
 ## The 7 checks
 
-1. **Outcome-first** — Opens with the *result*, not the task.
-   "Cut launch backlog to 0.13%" — not "Responsible for product onboarding."
-2. **Quantified & defensible** — Has a number you could defend under questioning. Oddly specific (6.4%) reads as more credible than round (12%). If you can't reconstruct *how* you got the number, don't use it.
+1. **Outcome-first when the outcome is owned and verified** — Usually open with the result, then the
+   method that explains it: "Cut launch backlog 90% by building…" not "Responsible for product
+   onboarding." Lead with the differentiated product/capability instead when a metric would mislead,
+   overclaim attribution, or undersell a 0→1/capability-only story.
+2. **Quantified & defensible** — Use only a number you can reconstruct and defend. Keep every metric
+   attached to its actual initiative, cohort, denominator, comparison, and attribution; never borrow,
+   merge, double-count, broaden, or strip a load-bearing qualifier. Prefer relative change when it
+   communicates comparable impact clearly; add an absolute figure when it earns credibility or
+   context. Do not force a metric into a stronger capability-led story.
 3. **Ownership** — Be precise about both the action you owned and the larger outcome you influenced. Use a strong verb for the owned lever; when the outcome had multiple drivers, scope the result as a contribution rather than implying sole causality (for example, “Built X, helping grow Y” or “Drove X, contributing to Y”). Ask: “Could another team credibly claim this same outcome?” If yes, the outcome clause must be contribution-scoped. Avoid vague formulations such as “helped with,” “responsible for,” “worked on,” or “participated in.”
    *(Promoted from craft-candidates, 2026-07-18.)*
-4. **Scannable** — One idea, readable in a single breath. Sell the *what*; leave the *how* for the interview. No tool dumps or jargon.
+4. **Scannable and credible** — One idea, readable in a single breath. Include the minimum causal
+   mechanism needed to make the outcome believable or reveal product judgment; leave implementation
+   depth for the interview. Prefer concrete, transferable specifics over generic abstraction when
+   space permits, but never add false precision. No tool dumps or jargon.
+   *(Checks 1, 2, and 4 refined through the nine-story vetted-bullet study and human-approved triage,
+   2026-07-21.)*
 5. **Signal** — Carries a competency or keyword the *target role* actually wants. (Per-job; re-checked during tailoring.)
 6. **Distinct** — Not a near-duplicate of another bullet on the page.
 7. **Invites the conversation** — Makes them want to ask "how?" rather than answering everything up front. A great bullet leaves a hook.
@@ -43,6 +54,8 @@ Order by **impact + relevance, never by chronology.** The reader scans top-down 
 
 - **Titles are the most checkable line on the page.** Never inflate level (PM ≠ Senior PM) or claim a title you didn't hold. Under-stating a real title (e.g., presenting a manager role as IC) is your call and fine. Focus descriptors ("— Cloud Lease Accounting") are fine; fake levels are not.
 - **Every metric must survive "how did you measure that?"** A round number you can't reconstruct is worse than no number.
+- **Metrics keep one home and one scope.** Preserve qualifiers, comparison boundaries, cohorts, and
+  attribution. Adjacent initiatives may sit beside each other, but their metrics never travel.
 - **Links and projects get the same scrutiny as roles.** If you link a repo or site, the resume must match what a clicker sees there. Don't headline a feature that reads "coming soon" on your own site.
 - **Match the source.** Resume ⊆ LinkedIn ⊆ reality. Anything on any resume variant must also appear on LinkedIn; titles must match across both.
 

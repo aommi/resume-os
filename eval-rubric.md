@@ -33,6 +33,7 @@ Term hygiene: the scorer matches case-insensitive substrings, so prefer multi-wo
 
 | Check | Definition |
 |---|---|
+| `protected_identity_contact_links` | parsed resume name, exact contact-block lines, required contact/project/credential links, and every emitted URL match the active profile's canonical rules |
 | `page_fit` | delivered PDF is exactly 2 pages |
 | `hard_terms` | every supported must-have term passed via `--terms-hard` parses from the PDF text |
 | `banned_words` | zero hits from the words-to-avoid list in `bullet-rubric.md` |
@@ -54,9 +55,10 @@ Term hygiene: the scorer matches case-insensitive substrings, so prefer multi-wo
 
 Output is failing bullets by name — never scores:
 
-- [ ] **Truth/groundedness** (hard gate) — every claim traceable to `exhaustive-experience.md`, the base resume, `skills-bank.md`, or explicit user input; list anything unanchored. For numeric claims, reconcile denominators, distinguish measured/realized results from modeled figures, and preserve both ends of a comparable before/after boundary and cohort or remove the number. For geography, customer segment, or organizational scope, match the verb to whether the candidate owned delivery, partnered on it, or only advised.
+- [ ] **Truth/groundedness** (hard gate) — every claim traceable to `exhaustive-experience.md`, the base resume, `skills-bank.md`, or explicit user input; list anything unanchored. For numeric claims, reconcile denominators, distinguish measured/realized results from modeled figures, and preserve qualifiers plus both ends of a comparable before/after boundary and cohort or remove the number. For geography, customer segment, or organizational scope, match the verb to whether the candidate owned delivery, partnered on it, or only advised.
   *(Claim-integrity checks promoted from craft-candidates, 2026-07-18.)*
-- [ ] **Outcome-first** — opens with the result, not the task (bullet-rubric check 1)
+- [ ] **Outcome/product lead is justified** — outcome-first when the result is owned and verified;
+  capability/product-first when a metric would mislead or undersell the story (bullet-rubric check 1)
 - [ ] **PM framing** — reads as PM work (systems, strategy, ownership), not an operator/executor task
 - [ ] **PM archetype fit** — responsibility language matches the JD-backed PM archetype in `strategy.md` (technical, builder-first, strategic, delivery / PO-style, growth / experimentation, domain/operator, or mixed)
 - [ ] **Vocabulary natural** — supported soft/company terms woven into bullet/summary framing, not stuffed into the skills list

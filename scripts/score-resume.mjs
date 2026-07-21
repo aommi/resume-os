@@ -11,7 +11,8 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveBrowserPath } from "../engine/config.mjs";
+import { loadConfig, loadProfile, resolveBrowserPath } from "../engine/config.mjs";
+import { validateResumeProtectedFacts } from "../engine/resume-protected-facts.mjs";
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const options = parseArgs(process.argv.slice(2));
@@ -25,6 +26,14 @@ function record(tier, name, status, detail = "") {
 // ---------- markdown checks ----------
 
 const markdown = readFileSync(options.source, "utf8");
+const profile = loadProfile(loadConfig());
+const protectedFactErrors = validateResumeProtectedFacts(markdown, profile);
+record(
+  "HARD",
+  "protected_identity_contact_links",
+  protectedFactErrors.length ? "FAIL" : "PASS",
+  protectedFactErrors.join("; "),
+);
 const sections = parseSections(markdown);
 const allBullets = sections.flatMap((section) =>
   section.bullets.map((text, i) => ({ section: section.title, n: i + 1, text })),

@@ -13,7 +13,7 @@ The reusable engine is profile-agnostic; each person's private data lives under 
   - `scripts/*.mjs`: deterministic tooling (job board, scoring, building, scraping).
 - **Profiles (private, per-tenant, gitignored except `profiles/example/`):** `profiles/<id>/`
   - `profile.json`: identity, contact, ATS answers, base-routing, positioning (validated by the schema).
-  - `sources/`: exhaustive experience, skills bank, LinkedIn draft.
+  - `sources/`: exhaustive experience, skills bank, LinkedIn draft, and optional human-vetted bullet bank.
   - `base-resumes/`: `resume.md`, `resume-pm.md`, … (the living base resumes).
   - `work/`: generated/pipeline state: `inbox/`, `applications/`, `events/`, `resume-formats/`,
     `jobs-tracker.md`, `package-queue.md`.
@@ -47,6 +47,9 @@ and `tailoring-methodology.md` for package-building procedure.
 - Use `node scripts/job-board.mjs` for lifecycle changes.
 - Do not update submitted application packages unless explicitly reopened.
 - Build application PDFs with `scripts/build-resume-formats.mjs`; do not copy random export artifacts.
+- Resume identity/contact/link values are profile-owned hard gates. The scorer and builder reject a
+  changed name or exact contact block, a missing required contact/project/credential link, or a
+  non-canonical URL before shipping.
 - Hermes/scrapers provide facts only. Tailoring agents own base-resume choice, keywords, fit, and judgment.
 - **All working data goes under `profiles/<activeProfile>/work/`** (job inbox, events, applications, generated resumes, tracker, package queue). Never write these to the repo root; root copies are gitignored and ignored by the tooling. This applies to every agent and external job (scrapers, Gmail monitor, job discovery).
 - Company exclusions belong in the active profile's `jobSearch.excludedCompanies`. Matching is
@@ -72,6 +75,10 @@ node scripts/build-resume-formats.mjs --source resume.md --export
 node scripts/build-resume-formats.mjs --source "<package>/resume.md" --out-dir /private/tmp/resume-export \
   --resume-title "<Company Role>" --export --deliver "applications/<Company - Role>" --require-terms "term1,term2"
 ```
+
+To assess a new model or compare models for a pipeline job, follow
+`evals/model-comparison.md`. It requires deterministic smoke/protected-fact gates and a separate
+human-vetted judgment layer before any model binding changes.
 
 When visual review finds a conspicuous avoidable gap at the bottom of page one, the tailoring
 methodology may compare a build with `--skills-first`. It is a conditional layout fallback, not

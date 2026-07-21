@@ -77,8 +77,12 @@ The scorer should receive only supported terms: `--terms-hard` for supported mus
 ### 0.4 Read the source material
 
 1. **`exhaustive-experience.md`** — scan parked bullets and backup stories for this role's domain. A parked bullet that was weak for general apply may be strong for this specific JD.
-2. **`skills-bank.md`** — check for named tools the JD mentions that are personally backed.
-3. **`bullet-rubric.md`** — refresh the 7 checks. You will apply them after editing.
+2. **Optional `sources/vetted-bullets.md`** — when present, match recurring stories by Story ID and
+   start from the approved default or relevant lens. Preserve the recorded boundaries, verify any
+   story marked stale against `exhaustive-experience.md`, and cite the Story ID in `tailoring-log.md`
+   when it materially shapes the package. This is a judgment aid, not mandatory exact wording.
+3. **`skills-bank.md`** — check for named tools the JD mentions that are personally backed.
+4. **`bullet-rubric.md`** — refresh the 7 checks. You will apply them after editing.
 
 Prior application packages are not source material unless the user explicitly asks, or the wording/story has already been promoted into a base resume, `exhaustive-experience.md`, or `skills-bank.md`. If the selected base resume is missing a stronger relevant story from canonical source material, pull it in deliberately and record it in `tailoring-log.md` when material.
 
@@ -225,6 +229,12 @@ Run this checklist against every bullet before proceeding to evaluation. These a
 - [ ] **No duplicate openers** — adjacent bullets don't start with the same verb or phrase
 - [ ] **One idea per bullet** — scannable in a single breath, no overloaded clauses
 - [ ] **Numbers defensible** — every metric survives “how did you measure that?”; denominators are clear, measured/realized results are distinguished from modeled figures, and before/after claims preserve both ends of a comparable boundary and cohort or omit the number
+- [ ] **Metric scope preserved** — no metric was borrowed, merged, double-counted, broadened, or
+  detached from its qualifier, cohort, denominator, initiative, or contribution boundary
+- [ ] **Credibility mechanism present** — consequential outcome bullets include the minimum grounded
+  mechanism that explains the result or product judgment, without a tool dump
+- [ ] **Specific but transferable** — concrete user/problem/intervention detail replaces generic
+  abstraction where space permits, without false precision or internal-context tax
 - [ ] **PM framing** — bullets read as PM work (systems, strategy, ownership), not operator/executor tasks
 - [ ] **PM archetype fit** — vocabulary and responsibility framing match the JD-backed PM archetype in `strategy.md`
 - [ ] **Evidence completeness** — more relevant source-backed stories outside the selected base resume were considered and either pulled in or intentionally omitted
