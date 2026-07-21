@@ -18,7 +18,7 @@
     "contact": {
       "type": "object",
       "description": "Contact block rendered on resumes and used to autofill applications.",
-      "required": ["email"],
+      "required": ["email", "phone", "resumeLocation", "resumeContactLines", "links"],
       "properties": {
         "email": { "type": "string", "format": "email" },
         "phone": { "type": "string" },
@@ -30,10 +30,33 @@
           "description": "Keep the candidate's exact formatting, e.g. \"V6E 4R6\" with the space."
         },
         "country": { "type": "string" },
+        "resumeLocation": {
+          "type": "string",
+          "description": "Exact location string required in the resume contact block, e.g. Toronto, ON."
+        },
+        "resumeContactLines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Exact trimmed Markdown lines required between the resume name and headline. Protects all displayed contact text and formatting."
+        },
         "links": {
           "type": "array",
           "items": { "type": "string" },
           "description": "LinkedIn, portfolio, GitHub, etc."
+        }
+      }
+    },
+    "resumeLinks": {
+      "type": "array",
+      "description": "Canonical non-contact resume URLs. Every emitted HTTP(S) URL must be in contact.links or this list; requiredWhenText makes a URL mandatory when its project/credential marker is present.",
+      "items": {
+        "type": "object",
+        "required": ["url", "requiredWhenText"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "requiredWhenText": { "type": "string" }
         }
       }
     },

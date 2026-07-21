@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadConfig, loadProfile, fullName, variantTitles, resolveBrowserPath, resolveBase, workDir } from "../engine/config.mjs";
+import { validateResumeProtectedFacts } from "../engine/resume-protected-facts.mjs";
 import { buildStyles, renderPage } from "../engine/templates/resume-template.mjs";
 
 const config = loadConfig();
@@ -18,7 +19,12 @@ const emitNarrow = options.emitNarrow ?? formatConfig.emitNarrow ?? true;
 mkdirSync(outDir, { recursive: true });
 
 const sourcePath = resolveBase(options.source, config);
-const resume = parseResumeMarkdown(readFileSync(sourcePath, "utf8"));
+const sourceMarkdown = readFileSync(sourcePath, "utf8");
+const protectedFactErrors = validateResumeProtectedFacts(sourceMarkdown, profile);
+if (protectedFactErrors.length) {
+  throw new Error(`${sourcePath}: protected identity/contact/link validation failed: ${protectedFactErrors.join("; ")}`);
+}
+const resume = parseResumeMarkdown(sourceMarkdown);
 validateResume(resume, sourcePath);
 
 function resolveResumeTitle() {

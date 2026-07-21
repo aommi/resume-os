@@ -22,6 +22,7 @@ expect("tailor", [...always, "resume-os.md", "tailoring-methodology.md", "bullet
 expect("score", [...always, "eval-rubric.md", "tailoring-methodology.md"]);
 expect("cover_letter", [...always, "resume-os.md", "tailoring-methodology.md"]);
 expect("resume_maintenance", [...always, "resume-os.md", "bullet-rubric.md"]);
+expect("model_eval", [...always, "evals/model-comparison.md"]);
 expect("pipeline_status", [...always]);
 expect("discover", [...always]);
 // Fallback: unknown/ambiguous intent -> default route (degrades to cold-start behavior).

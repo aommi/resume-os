@@ -8,7 +8,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 ## How it works
 
 1. Identify the task type. Known tasks: `tailor`, `score`, `cover_letter`, `resume_maintenance`,
-   `pipeline_status`, `discover`.
+   `model_eval`, `pipeline_status`, `discover`.
 2. Load `always` docs (the active profile's `resume-project-tracker.md`) plus the task's route.
 3. **Unknown or ambiguous intent → the `default` route** (`resume-os.md` + `tailoring-methodology.md`).
    This is the safety net: the sparse resolver degrades to roughly the old cold-start behavior, so it is
@@ -20,6 +20,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 | `score` | eval-rubric.md, tailoring-methodology.md | ship check (deterministic gates run in `score-resume.mjs`) |
 | `cover_letter` | resume-os.md, tailoring-methodology.md | cover letter skill |
 | `resume_maintenance` | resume-os.md, bullet-rubric.md | base-resume edits, not job-specific |
+| `model_eval` | evals/model-comparison.md | two-layer model comparison and approval gate |
 | `pipeline_status` | (none) | just run `node scripts/job-board.mjs` |
 | `discover` | (none) | run scrapers (Hermes); facts only |
 | _unknown_ | resume-os.md, tailoring-methodology.md | **fallback** |

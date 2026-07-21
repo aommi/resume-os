@@ -111,3 +111,43 @@ triage is a human-gated manual review, deliberately not tooled. (4) Resolver/ada
 gained nothing. (5) Workflow friction is conditional, not universal: appending is optional,
 the session-end check is user-invoked, and a profile without the file is a no-op. (6) Verdict
 ALIGNED; profile-absence behavior defined in semantic.md.
+
+## A planned human-vetted study can serve as craft-promotion triage (2026-07-21)
+**Why accepted:** The nine-story bullet study was a deliberate staging artifact rather than an
+ad-hoc session note: it predefined a distinct-story evidence threshold, recorded counterexamples
+and claim boundaries, captured human decisions for every story, and validated frozen cases across
+multiple models. Requiring its four supported cross-story findings to enter `craft-candidates.md`
+and wait for another triage would duplicate the completed evidence and human gate rather than add
+signal. The user explicitly approved adoption on 2026-07-21.
+**Supersedes/clarifies:** The 2026-07-17 craft-candidates decision still prohibits direct skill-doc
+appends from ordinary sessions. A planned study may itself be the staging artifact only when it
+predefines recurrence/counterexample criteria, meets them across distinct outputs, sanitizes the
+result, and receives explicit human promotion approval. The approved GO is that triage decision;
+profile taste still routes to `LEARNINGS.md`.
+**Implications:** Four conditional refinements are active in `bullet-rubric.md` and
+`tailoring-methodology.md`: metric/initiative/scope separation; the minimum credibility mechanism;
+concrete transferable specificity; and intentional relative-versus-absolute metric framing. The
+profile-local vetted bank preserves approved wording/lenses and staleness triggers; it does not make
+profile evidence part of the public engine.
+
+## Resume identity, contact information, and URLs are profile-owned hard gates (2026-07-21)
+**Why accepted:** The renderer previously parsed contact and links from model-editable resume
+Markdown and checked only that the contact block was non-empty. A changed phone, email, location, or
+URL could therefore pass every build gate. The profile schema already owns candidate identity, so
+these fields should be deterministic invariants rather than model judgment.
+**Implications:** Profiles define exact Markdown contact-block lines and configured contact links,
+plus canonical conditional `resumeLinks` for project/credential URLs. A profile may intentionally
+have no links; in that case any emitted URL is non-canonical and fails.
+`engine/resume-protected-facts.mjs` rejects a changed heading/contact block, missing required link,
+non-canonical emitted URL, or missing conditional URL. Scoring treats this as HARD; building fails
+before rendering or delivery. Profiles
+without the minimum identity contract retain the legacy fallback, while schema-backed active
+profiles fail closed.
+
+**Architecture Boundary verdict (2026-07-21): ALIGNED.** (1) Judgment introduced/altered: four
+sanitized writing refinements and the rule that a fully planned study may satisfy human triage.
+(2) Judgment lives in Markdown (`bullet-rubric.md`, `tailoring-methodology.md`, this decision); code
+contains only exact profile comparisons. (3) Repeatable execution: deterministic identity/contact/
+URL validation and tests. (4) The resolver/runtime harness gained no domain judgment. (5) Vetted-bank
+loading is conditional on file/story presence; the safety gate is universal only for schema-backed
+profiles where identity integrity is always required. (6) Verdict: ALIGNED.

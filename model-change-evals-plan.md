@@ -1,5 +1,8 @@
 # Model Change Evals Plan
 
+> Operational use: follow `evals/model-comparison.md`. This file preserves the design rationale,
+> phased build plan, and deferred ideas; it is not the runbook for a new comparison.
+
 Purpose: detect when changing the LLM model changes resume-tailoring quality enough that we should not assume the same workflow is still safe.
 
 The first version should not be an eval platform. Start with a tiny smoke test that needs no fixtures, no allowlists, no gold labels, and minimal manual review. Build the heavier suite only after the smoke test proves it catches useful model differences.
@@ -78,12 +81,18 @@ Use self-contained cases where the prompt contains the exact source facts the mo
 
 Protected-fact checks should cover:
 
+- full name, phone, exact displayed address/location, and email
+- LinkedIn, GitHub, portfolio, project, credential, and every other supplied URL
 - titles, especially level changes such as `Product Manager` to `Senior Product Manager`
 - employers and employer aliases
 - dates and date ranges
 - numbers and metrics
 - tools and technologies
 - schools, degrees, and credentials
+
+For live full-resume/package outputs, `scripts/score-resume.mjs` and
+`scripts/build-resume-formats.mjs` enforce identity/contact/link invariants against the active
+profile through `engine/resume-protected-facts.mjs`. These are hard gates, not novel-entity reports.
 
 In V0, this list is the coverage goal, not a typed extraction requirement. The first implementation can report token-level diffs; a later version can classify the diffs by title, employer, date, metric, tool, or credential if that proves useful.
 

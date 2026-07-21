@@ -24,6 +24,9 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - `resume-commerce-pm.md` — reusable non-senior commerce/ecommerce/retail PM 1SZFA variant; keeps the IC PM framing while foregrounding merchandising, catalog, and product-onboarding work.
 - `exhaustive-experience.md` — private experience source of truth: every role, parked bullets, caveats, raw detail, interview prep, and tailoring stories. Never submitted.
 - `skills-bank.md` — broad skills inventory and variant sets. It can contain candidate skills/tools that are not currently on the resume.
+- `sources/vetted-bullets.md` — optional profile-local bank of human-approved recurring story
+  defaults, lens variants, boundaries, and staleness triggers; tailoring consults it before rewriting
+  a matching story while `exhaustive-experience.md` remains fact-authoritative.
 - `linkedin-profile-draft.md` — LinkedIn working copy; must remain a superset of resume content.
 - `craft-candidates.md` — optional profile-local staging queue for reusable craft observations;
   only human-approved triage promotes sanitized rules into engine skill docs. New profiles copy
@@ -37,6 +40,8 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - `tailoring-methodology.md` — the full tailoring engine: phased process, taste rules, feature-scorecard ship check, and export verification. Load this before any tailoring session.
 - `eval-rubric.md` — the tailored-resume eval: keyword decision table, hard/soft/report ship gates, latent checklist. Deterministic checks run via `scripts/score-resume.mjs`.
 - `model-change-evals-plan.md` and `evals/smoke/eval-instructions.md` — V0 smoke-test process for comparing LLM model changes using saved outputs and deterministic code checks.
+- `evals/model-comparison.md` — operational two-layer protocol for assessing or comparing models:
+  deterministic smoke/protected-fact gates first, then human-vetted resume/bullet judgment.
 - `adapters/claude-code-bootstrap.md` — Claude Code session bootstrap (runtime adapter); calls the resolver. (`cold-start-prompt.md` is a retired pointer to it.)
 - `engine/resolver.md` + `engine/resolver.json` — routing table: task type → which docs to load (run `node scripts/test-resolver.mjs` to check). `engine/models.json` — per-step model config.
 
@@ -133,6 +138,9 @@ Use this when an application asks for a cover letter or the user explicitly want
 - Pull extra bullets or proof points only from `exhaustive-experience.md`, `skills-bank.md`, or already-approved project material.
 - Always scan `exhaustive-experience.md` before tailoring to a role; there may be stronger or more relevant parked bullets/stories than the default resume currently shows.
 - Keep tailored variants within the 2-page bound. If adding skills, stronger proof points, or role-specific bullets, do a relevance pass and drop or compress the least relevant existing bullets for that posting.
+- Preserve identity/contact/link invariants. The builder and scorer compare the resume heading,
+  exact Markdown contact block, required contact/project/credential links, and every emitted HTTP(S)
+  URL against canonical active-profile values; any mutation blocks shipping.
 - Rewrites must stay grounded in existing source material and remain interview-defensible.
 - Confirm tailored claims are backed by LinkedIn, or update LinkedIn before relying on them in a submitted resume.
 

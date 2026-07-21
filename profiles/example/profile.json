@@ -7,8 +7,13 @@
     "city": "Toronto",
     "province": "Ontario",
     "country": "Canada",
+    "resumeLocation": "Toronto, ON",
+    "resumeContactLines": [
+      "jordan.rivera@example.com  ·  (555) 014-2733  ·  Toronto, ON  ·  linkedin.com/in/jordanrivera-example"
+    ],
     "links": ["linkedin.com/in/jordanrivera-example"]
   },
+  "resumeLinks": [],
   "filenamePattern": "{fullName} - {companyRole} - Resume.pdf",
   "timezone": "America/Toronto",
   "atsAnswers": {

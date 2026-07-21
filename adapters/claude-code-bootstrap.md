@@ -12,6 +12,7 @@ You are continuing the Resume OS project. The active profile is `resume-os.confi
 2. **Route by task** using `engine/resolver.md`, load only the docs that task needs, not everything:
    - tailoring a job → `tailor` route (resume-os.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md)
    - ship check → `score`; cover letter → `cover_letter`; base-resume edits → `resume_maintenance`
+   - assess or compare models → `model_eval` (evals/model-comparison.md)
    - pipeline status → `pipeline_status` (just run the job board); discovery → `discover` (scrapers)
    - unsure → the default route loads `resume-os.md` + `tailoring-methodology.md`.
 3. Also read `profiles/<activeProfile>/LEARNINGS.md` and check `profiles/<activeProfile>/review-schedule.md`;
