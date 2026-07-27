@@ -184,3 +184,14 @@ durable engine knowledge.
 not add tracked planning documents. Select work from current evidence and explicit user direction.
 Record durable architectural choices here, shipped behavior in `memory/semantic.md`, and stable
 rules in the applicable skill doc.
+
+## Profile-owned exclusions and sourced upcoming events (2026-07-27)
+**Why accepted:** Hard-coded employer filters in reusable queue code exposed profile-specific data
+and could disagree with discovery. Future interviews were represented only as prose or past contact
+dates, so the board could not surface a scheduled event reliably.
+
+**Implications:** `profile.json` `jobSearch.excludedCompanies` is the sole exclusion source and is
+applied deterministically at discovery, persistence, assessment, and package-queue selection.
+`nextEventAt` is accepted only from an exact future UTC timestamp in a structured email event for a
+screen or interview; no tool or model infers it from vague language. The job board is the generated
+view of that lifecycle state.

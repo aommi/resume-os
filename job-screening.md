@@ -108,6 +108,10 @@ Screening **proposes**; it does not apply, message, or transition lifecycle stat
 facing step stays human-initiated. This is what keeps an automated screen from acting on the
 candidate's behalf, and it is not negotiable.
 
+Persist an accepted screen with `node scripts/job-board.mjs screen <job-id> --fit <tier> --reason
+"..." [--priority <value>] [--variant <base>]`. This records the proposal in existing lifecycle
+fields and deliberately does not change the job's status.
+
 For every screened job emit: job id, employer, role, tier, a one-clause reason, and the proposed
 next action. For every cull, the quoted disqualifying text from the JD. For every BUILD PACKAGE,
 the suggested base-resume variant.

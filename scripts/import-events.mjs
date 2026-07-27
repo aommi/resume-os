@@ -40,6 +40,8 @@ const DEFAULT_LIFECYCLE = {
   appliedAt: "",
   outcome: "",
   lastContactAt: "",
+  nextEventAt: "",
+  screenReason: "",
   variant: "",
   notes: "",
   emailEvents: [],
@@ -209,15 +211,24 @@ function applyEvent(job, event, sourceFile) {
   const lifecycle = job.metadata.lifecycle;
   const date = cleanValue(event.event_date) || today();
   const eventName = cleanValue(event.event).toLowerCase();
+  const nextEventAt = parseFutureEventAt(event.next_event_at);
+  if (cleanValue(event.next_event_at) && !nextEventAt) {
+    console.error(`skipping invalid next_event_at for ${job.id}; expected a future UTC timestamp ending in Z`);
+  }
   lifecycle.emailEvents.push({
     messageId: cleanValue(event.message_id),
     threadId: cleanValue(event.thread_id),
     event: eventName,
     date,
+    nextEventAt,
     confidence: cleanValue(event.confidence),
     sourceFile,
   });
   lifecycle.lastContactAt = maxDate(lifecycle.lastContactAt, date);
+
+  if (nextEventAt && ["interview", "recruiter_screen", "hiring_manager"].includes(eventName)) {
+    lifecycle.nextEventAt = earliestFutureEvent(lifecycle.nextEventAt, nextEventAt);
+  }
 
   if (eventName === "confirmation") {
     lifecycle.status = "applied";
@@ -228,6 +239,7 @@ function applyEvent(job, event, sourceFile) {
   } else if (eventName === "rejection") {
     lifecycle.status = "closed";
     lifecycle.outcome = "Rejected";
+    lifecycle.nextEventAt = "";
   } else if (["interview", "recruiter_screen", "hiring_manager"].includes(eventName)) {
     lifecycle.status = "interviewing";
     lifecycle.outcome = eventName === "recruiter_screen" ? "Recruiter screen" : "Interview";
@@ -301,6 +313,18 @@ function normalizeLifecycle(lifecycle = {}) {
   if (!VALID_STATUSES.has(normalized.status)) normalized.status = DEFAULT_LIFECYCLE.status;
   if (!Array.isArray(normalized.emailEvents)) normalized.emailEvents = [];
   return normalized;
+}
+
+function parseFutureEventAt(value) {
+  const text = cleanValue(value);
+  if (!text || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?Z$/.test(text)) return "";
+  const time = new Date(text).getTime();
+  return Number.isFinite(time) && time > Date.now() ? new Date(time).toISOString() : "";
+}
+
+function earliestFutureEvent(current, candidate) {
+  if (!parseFutureEventAt(current)) return candidate;
+  return current <= candidate ? current : candidate;
 }
 
 function parseEventFile(text) {

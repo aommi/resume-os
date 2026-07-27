@@ -66,6 +66,7 @@ Then add one block per relevant email:
 - role:
 - event: confirmation | rejection | recruiter_lead | recruiter_screen | interview | offer | other
 - event_date: YYYY-MM-DD
+- next_event_at: YYYY-MM-DDTHH:mm:ssZ (only for a clearly scheduled recruiter screen or interview; otherwise blank)
 - subject:
 - sender:
 - message_id:
@@ -75,6 +76,8 @@ Then add one block per relevant email:
 - notes:
 
 Evidence must be a short snippet only. Never include the full email body.
+Leave `next_event_at` blank unless the email gives an exact future date, time, and timezone. Never
+infer a time from vague scheduling language.
 
 If no relevant emails are found, still write the file with RUN_META plus:
 

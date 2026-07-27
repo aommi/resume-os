@@ -19,14 +19,16 @@ brackets), the runner failed to substitute it: output only a one-line error sayi
 
 Task:
 1. Read <WORK_DIR>/jobs-tracker.md. It is a generated board with this structure:
-   - Near the top, if problems exist, a health block starting with the line
-     `> **⚠ PIPELINE HEALTH WARNINGS**` followed by `> - ⚠ ...` lines.
-     Quote those warning lines VERBATIM in the brief. Do not paraphrase, judge, or
-     add warnings of your own — the deterministic tooling decides what is a problem.
-     If the block is absent, report health as "clear".
+   - Near the top, if problems exist, a health block starting with a line containing
+     `WATCHDOG` followed by `> - ⚠ ...` lines.
+     Quote that status line and any warning lines VERBATIM in the brief. Do not paraphrase, judge,
+     or add warnings of your own — the deterministic tooling decides what is a problem. Report
+     health as "clear" only when the board explicitly says the watchdog is healthy. If the status
+     says unavailable, report it verbatim; never replace it with "clear".
    - One `## <Status>` section per pipeline stage (To Review, To Apply, Package Ready,
      Applied, Needs Action, Interviewing, Skipped, Closed), each containing a markdown
      table. Count data rows per section (lines starting with `| <number> |`).
+   - Read the `## Upcoming Events` section and report every recorded event before Needs Action.
    - For the Needs Action and Interviewing sections, capture each row's Company, Role,
      Outcome, and Last Contact column values (those sections have no Next Action column).
 
@@ -58,6 +60,9 @@ Task:
    📊 Pipeline: R review · A apply · P ready · X applied · N needs action · I interviewing
 
    ⚠️ Health: [verbatim warning lines, or "clear"]
+
+   📅 Upcoming:
+   [each as: YYYY-MM-DD HH:mm timezone | Company — Role]
 
    🔴 Needs Action:
    [each as: Company — Role → Outcome (last contact YYYY-MM-DD)]
