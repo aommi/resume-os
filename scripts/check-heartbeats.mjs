@@ -14,6 +14,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { alertFingerprint, shouldSendAlert } from "../engine/watchdog-alerts.mjs";
+import { writeHealthStatus } from "../engine/watchdog-health.mjs";
 import { workDir } from "../engine/config.mjs";
 
 const WORK = workDir();
@@ -91,6 +92,16 @@ if (existsSync(hbDir)) {
       problems.push(`${name}: heartbeat file unreadable`);
     }
   }
+}
+
+// This snapshot is the contract for passive health displays. Write it before
+// notifications so a failed or slow delivery never leaves the board stale.
+try {
+  writeHealthStatus(join(WORK, "watchdog-health.json"), problems);
+} catch (error) {
+  // Keep alert delivery alive even when the passive-display contract cannot be
+  // updated; otherwise a filesystem fault would silence the watchdog itself.
+  problems.push(`Watchdog: failed to write health status (${error.message})`);
 }
 
 if (problems.length === 0) {

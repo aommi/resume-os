@@ -146,10 +146,12 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   planning docs live in `os-planning/archive/`; historical architecture/model-eval plans are
   provenance, not active roadmaps.
 - Pipeline health is zero-LLM by rule: heartbeats are files under `work/` (discovery uses
-  `.linkedin-last-checked` at repo root), the board renders staleness warnings (`job-board.mjs`),
-  and `scripts/check-heartbeats.mjs` + LaunchAgent `ai.resumeos.watchdog` fire local macOS
-  notifications. No model call may enter the watch path (it must not share failure modes with
-  the agents it watches, e.g. API credit exhaustion).
+  `.linkedin-last-checked` at repo root). `scripts/check-heartbeats.mjs` is the sole authority for
+  health thresholds and writes `work/watchdog-health.json` on every completed run; `job-board.mjs`
+  renders that result verbatim rather than re-evaluating staleness. LaunchAgent
+  `ai.resumeos.watchdog` fires local notifications and optional, bounded Telegram failure alerts.
+  No model call may enter the watch path (it must not share failure modes with the agents it watches,
+  e.g. API credit exhaustion).
 
 ## Key file locations
 
