@@ -55,32 +55,39 @@ function toNumber(digits, kSuffix) {
   return kSuffix ? n * 1000 : n;
 }
 
-function detectCurrency(line) {
-  const code = line.match(CODE);
-  if (code) return code[1].toUpperCase();
-  const prefixed = line.match(PREFIXED_SYMBOL);
+// Currency is resolved from the matched amount itself and from a code sitting
+// IMMEDIATELY after it — never from elsewhere on the line. Scanning the whole
+// line let an unrelated "£500 wellness stipend" relabel a dollar salary as GBP.
+const TRAILING_CODE = /^\s*(CAD|USD|GBP|EUR|AUD)\b/i;
+
+function currencyFor(matchedText, rest) {
+  const prefixed = matchedText.match(PREFIXED_SYMBOL);
   if (prefixed) return PREFIX_CURRENCY[prefixed[1].toUpperCase()] ?? "";
   for (const [symbol, currency] of Object.entries(SYMBOL)) {
-    if (line.includes(symbol)) return currency;
+    if (matchedText.includes(symbol)) return currency;
   }
+  const trailing = rest.match(TRAILING_CODE);
+  if (trailing) return trailing[1].toUpperCase();
   return "";
 }
 
-// A continuation line is trusted only when it is essentially just the money:
-// strip the amounts, currency and separators, and little should remain. Without
-// this, a three-line lookahead past "Salary: competitive" happily adopted
-// "Equity grant valued at $150,000" from a benefits list.
+// A continuation line is trusted only when it is *nothing but* the money.
+// Strip amounts, currency and period words; any alphabetic residue at all means
+// the line is describing something else. An earlier version allowed up to 12
+// residual characters, which still admitted "Sign-on bonus", "Bonus" and
+// "Equity" — the same confident false positive the lookahead guard exists to
+// prevent. There is no safe threshold here; the answer is zero.
 function isAmountLine(line) {
   const residue = String(line)
     .replace(/[$£€]/g, "")
     .replace(/\b(?:CAD|USD|GBP|EUR|AUD)\b/gi, "")
-    .replace(/\b(?:CA|US|A)\$?/gi, "")
+    .replace(/\b(?:CA|US|A)(?=\s*[$\d])/gi, "")
     .replace(/[\d,.]+\s*[kK]?/g, "")
-    .replace(/(?:[-–—]|\bto\b)/g, "")
-    .replace(/\b(?:per|a|an)\s*(?:year|annum|hour|hr)\b/gi, "")
-    .replace(/[^\w]/g, "")
-    .trim();
-  return residue.length <= 12;
+    .replace(/(?:[-–—]|\bto\b)/gi, "")
+    .replace(/\b(?:per|a|an)\s+(?:year|annum|month|hour|hr)\b/gi, "")
+    .replace(/\b(?:annually|yearly|monthly|hourly)\b/gi, "")
+    .replace(/[^A-Za-z]/g, "");
+  return residue.length === 0;
 }
 
 function inRange(value, period) {
@@ -119,27 +126,34 @@ export function parseCompensation(text = "") {
     }
     for (const candidate of candidates) {
       const period = HOURLY.test(candidate) ? "hour" : "year";
-      const currency = detectCurrency(candidate);
+      const currencyAt = (match) =>
+        currencyFor(match[0], candidate.slice(match.index + match[0].length));
 
       const range = candidate.match(RANGE);
       if (range) {
         const low = toNumber(range[1], range[2]);
         const high = toNumber(range[3], range[4]);
         if (inRange(low, period) && inRange(high, period) && high >= low) {
+          const currency = currencyAt(range);
           return { text: formatCompensation(low, high, currency, period), low, high, currency, period };
         }
         continue;
       }
 
-      // Bare-number range, permitted only with an explicit currency code.
-      if (currency) {
-        const bare = candidate.match(RANGE_BARE);
-        if (bare) {
-          const low = toNumber(bare[1], bare[2]);
-          const high = toNumber(bare[3], bare[4]);
-          if (inRange(low, period) && inRange(high, period) && high >= low) {
-            return { text: formatCompensation(low, high, currency, period), low, high, currency, period };
-          }
+      // Bare-number range, permitted only when a currency code sits against it.
+      const bare = candidate.match(RANGE_BARE);
+      if (bare) {
+        const bareCurrency = currencyAt(bare);
+        const low = toNumber(bare[1], bare[2]);
+        const high = toNumber(bare[3], bare[4]);
+        if (bareCurrency && inRange(low, period) && inRange(high, period) && high >= low) {
+          return {
+            text: formatCompensation(low, high, bareCurrency, period),
+            low,
+            high,
+            currency: bareCurrency,
+            period,
+          };
         }
       }
 
@@ -147,6 +161,7 @@ export function parseCompensation(text = "") {
       if (single) {
         const value = toNumber(single[1], single[2]);
         if (inRange(value, period)) {
+          const currency = currencyAt(single);
           return { text: formatCompensation(value, value, currency, period), low: value, high: value, currency, period };
         }
       }

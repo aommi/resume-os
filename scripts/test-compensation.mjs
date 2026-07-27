@@ -135,3 +135,36 @@ assert.equal(extractCompensationText("The range is listed below\n128,100 - 214,0
 assert.equal(extractCompensationText("Pay: $100,000 USD"), "$100,000 USD");
 
 console.log("compensation review-finding tests: PASS");
+
+// --- Second review round, PR #6 (2026-07-27) ---
+// Both are the same root cause: heuristics that approximated the answer instead
+// of deciding it. A residue-length threshold cannot tell salary from bonus, and
+// a line-wide currency scan cannot tell which amount a symbol belongs to.
+
+// A continuation line must be NOTHING BUT the money. A 12-character residue
+// allowance still admitted "Sign-on bonus", "Bonus" and "Equity".
+for (const label of ["Sign-on bonus", "Bonus", "Equity", "Annual bonus target"]) {
+  assert.equal(
+    extractCompensationText(`Salary: competitive\n${label}: $150,000`),
+    "",
+    `continuation line "${label}" must not be read as salary`,
+  );
+}
+
+// Currency comes from the matched amount and a code immediately after it, never
+// from elsewhere on the line.
+{
+  const r = parseCompensation("Compensation: $100,000. A £500 wellness stipend is available.");
+  assert.equal(r.low, 100000);
+  assert.equal(r.currency, "", "an unrelated symbol must not set the salary currency");
+  assert.equal(r.text, "$100,000");
+}
+{
+  const r = parseCompensation("Compensation: $100,000. A 500 CAD allowance applies.");
+  assert.equal(r.currency, "");
+}
+
+// A trailing code adjacent to the amount is still honoured.
+assert.equal(parseCompensation("Salary: $100,000 USD").currency, "USD");
+
+console.log("compensation second-review tests: PASS");
