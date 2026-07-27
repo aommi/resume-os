@@ -219,6 +219,15 @@ function writeTracker(jobs) {
 function healthSummary(health) {
   if (!health) return ["> **Watchdog status:** unavailable (no valid `watchdog-health.json` yet).", ""];
   const checkedAt = health.checkedAt.replace("T", " ").replace("Z", " UTC");
+  if (Date.now() > new Date(health.expiresAt).getTime()) {
+    return [
+      `> **⚠ WATCHDOG STATUS STALE** (last completed check ${checkedAt}).`,
+      ...(health.problems.length
+        ? ["> **Last reported problems:**", ...health.problems.map((problem) => `> - ⚠ ${problem}`)]
+        : []),
+      "",
+    ];
+  }
   if (health.healthy) return [`> **Watchdog status:** healthy as of ${checkedAt}.`, ""];
   return [
     `> **⚠ WATCHDOG-REPORTED PROBLEMS** (checked ${checkedAt})`,

@@ -45,7 +45,8 @@ try {
   assert.match(board.stderr, /skipping unreadable metadata: .*broken\/metadata\.json/);
 
   writeFileSync(join(workDir, "watchdog-health.json"), JSON.stringify({
-    checkedAt: "2026-07-27T12:34:56.000Z",
+    checkedAt: "2099-07-27T12:34:56.000Z",
+    expiresAt: "2099-07-28T00:34:56.000Z",
     healthy: false,
     problems: ["Discovery agent DOWN: last success 2.0 days ago (cadence 6h)"],
   }) + "\n");
@@ -55,6 +56,18 @@ try {
   assert.match(tracker, /WATCHDOG-REPORTED PROBLEMS/);
   assert.match(tracker, /Discovery agent DOWN: last success 2\.0 days ago \(cadence 6h\)/);
   assert.doesNotMatch(tracker, /Gmail monitor last run/);
+
+  writeFileSync(join(workDir, "watchdog-health.json"), JSON.stringify({
+    checkedAt: "2026-07-20T12:34:56.000Z",
+    expiresAt: "2026-07-21T00:34:56.000Z",
+    healthy: true,
+    problems: [],
+  }) + "\n");
+  const staleRendered = run("scripts/job-board.mjs", "render");
+  assert.equal(staleRendered.status, 0, staleRendered.stderr);
+  const staleTracker = readFileSync(join(workDir, "jobs-tracker.md"), "utf8");
+  assert.match(staleTracker, /WATCHDOG STATUS STALE/);
+  assert.doesNotMatch(staleTracker, /Watchdog status:\*\* healthy/);
 
   const queue = run("scripts/build-package-queue.mjs");
   assert.equal(queue.status, 0, queue.stderr);

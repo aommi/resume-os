@@ -147,8 +147,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   provenance, not active roadmaps.
 - Pipeline health is zero-LLM by rule: heartbeats are files under `work/` (discovery uses
   `.linkedin-last-checked` at repo root). `scripts/check-heartbeats.mjs` is the sole authority for
-  health thresholds and writes `work/watchdog-health.json` on every completed run; `job-board.mjs`
-  renders that result verbatim rather than re-evaluating staleness. LaunchAgent
+  health thresholds and writes `work/watchdog-health.json` on every completed run. Each assertion
+  expires after two scheduled watchdog intervals; `job-board.mjs` renders its result verbatim and
+  flags only an expired watchdog assertion rather than re-evaluating workflow staleness. LaunchAgent
   `ai.resumeos.watchdog` fires local notifications and optional, bounded Telegram failure alerts.
   No model call may enter the watch path (it must not share failure modes with the agents it watches,
   e.g. API credit exhaustion).
