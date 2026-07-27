@@ -30,7 +30,7 @@ LAST_SUCCESS="$(node -e "try{console.log(require('$HB_FILE').lastSuccess||'')}ca
 BRIEF_MODEL="${BRIEF_MODEL:-deepseek-v4-pro}"
 
 # The wrapper is the single authority on the heartbeat: the agent is read-only and
-# never writes it. Success is recorded only after delivery succeeds.
+# never writes it. Success means either a quiet action-gate pass or successful delivery.
 write_hb() { # $1=lastSuccess $2=exitCode $3=failureCategory
   printf '{"workflow":"daily-brief","cadenceMinutes":1440,"lastAttempt":"%s","lastSuccess":"%s","exitCode":%s,"failureCategory":"%s","runId":"%s","model":"%s"}\n' \
     "$ATTEMPT" "$1" "$2" "$3" "$RUN_ID" "$BRIEF_MODEL" > "$HB_FILE"
@@ -56,6 +56,12 @@ run_brief() {
 }
 
 echo "=== daily-brief $RUN_ID (model: $BRIEF_MODEL) ===" >> "$LOG"
+
+if [ -z "${BRIEF_SEND_TARGET:-}" ]; then
+  echo "FATAL: BRIEF_SEND_TARGET not set — refusing to run (won't guess a delivery target)" >> "$LOG"
+  write_hb "$LAST_SUCCESS" 1 "no_send_target"
+  exit 1
+fi
 
 # Input contract: the board must exist and carry every status heading the action gate
 # reads. A quiet pipeline is a valid no-op; a missing or malformed board is
@@ -95,12 +101,6 @@ if ! section_has_action "Upcoming Events" "^- [*][*]" \
   write_hb "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 0 ""
   echo "daily-brief $RUN_ID quiet (no actionable job-search work)" >> "$LOG"
   exit 0
-fi
-
-if [ -z "${BRIEF_SEND_TARGET:-}" ]; then
-  echo "FATAL: BRIEF_SEND_TARGET not set — refusing to run (won't guess a delivery target)" >> "$LOG"
-  write_hb "$LAST_SUCCESS" 1 "no_send_target"
-  exit 1
 fi
 
 if BRIEF_TEXT="$(run_brief 2>>"$LOG")"; then

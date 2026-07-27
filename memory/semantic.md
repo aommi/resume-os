@@ -38,7 +38,7 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   the read-only `daily_brief` agent composes a concise job-search digest and `hermes send` delivers
   it. Watchdog separately sends only operational failures. The wrapper owns the heartbeat with
   failure categories agent_failed / brief_output_missing / delivery_failed / no_send_target /
-  input_invalid; `BRIEF_SEND_TARGET` is required only for an actionable run and is never defaulted.
+  input_invalid; `BRIEF_SEND_TARGET` is required and never defaulted.
   Scheduled by LaunchAgent `ai.resumeos.dailybrief` (07:30, machine config outside the repo).
 - **Resolver:** `engine/resolver.json` (routing table) + `engine/resolve.mjs` (lookup) +
   `scripts/test-resolver.mjs` (deterministic test). Task type -> which skill docs to load,
