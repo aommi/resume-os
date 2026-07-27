@@ -8,6 +8,7 @@ node_modules/
 # Runtime state (machine-local, not source)
 .linkedin-last-checked
 .linkedin-chrome-profile/
+.agent/.generated_state.json
 
 # Per-tenant private data (never distributed).
 # Ignore all profiles, then re-include only the fake demo profile.
