@@ -10,7 +10,7 @@ Review my Gmail for job-application events and write a structured event file for
 
 Repo context:
 The tracker repo is local at:
-~/Documents/Resume CV/Resume Project/resume-os-v2
+~/dev/resume-os
 
 Active profile: amirali (see resume-os.config.json -> activeProfile). ALL working data
 for this repo lives under that profile's work dir: profiles/amirali/work/. Never write to
@@ -48,7 +48,7 @@ Task:
 
 Output:
 Create one file at:
-~/Documents/Resume CV/Resume Project/resume-os-v2/profiles/amirali/work/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
+~/dev/resume-os/profiles/amirali/work/events/pending/YYYY-MM-DD-HH-mm-claude-gmail.md
 
 Create directories if missing.
 
