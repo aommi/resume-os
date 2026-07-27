@@ -8,6 +8,7 @@ node_modules/
 # Runtime state (machine-local, not source)
 .linkedin-last-checked
 .linkedin-chrome-profile/
+.agent/.generated_state.json
 
 # Per-tenant private data (never distributed).
 # Ignore all profiles, then re-include only the fake demo profile.
@@ -27,10 +28,10 @@ profiles/example/work/inbox/*
 # Personal/non-engine archived content (not distributed)
 archive/
 
-# Internal planning docs (kept local). Exception: the genericized architecture
-# review is published as design documentation.
-os-planning/*
-!os-planning/resume-os-architecture-review.md
+# Planning is local and disposable. Do not track backlogs, roadmaps, or phased
+# plans: durable decisions and shipped behavior belong elsewhere in the repo.
+os-planning/
+model-change-evals-plan.md
 
 # Root working-state must NEVER be tracked. Real pipeline data lives in
 # profiles/<id>/work/. Stray copies can appear here if an external monitor or

@@ -33,9 +33,10 @@ This project uses a file-based memory system to maintain context across sessions
 
 Read `memory/semantic.md` ONCE to load project context before answering.
 
-### On Every Turn
+### Working State
 
-The preprompt hook handles reading `memory/working.md`.
+Read `memory/working.md` when beginning or resuming an active task; do not
+rely on the Claude preprompt hook.
 
 ### Task Files
 

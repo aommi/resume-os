@@ -23,7 +23,7 @@ Location: Montreal
 Dates: Aug 2022 – Sep 2023
 
 - Tripled annual sessions from 1M to 3M through activation and habitual-return experiments.
-- Gen-AI intent-capture chatbot cut time-to-value 24% and transfers 30%.
+- Gen-AI intent-capture chatbot made chatbot-initiated sessions 24% shorter than non-triaged sessions and cut session transfers ~30%.
 - NPS increased +23 points, from 39 to 62, across a 200K+ MAU platform over 3 quarters.
 - Weekly challenges and gamification improved WAU/MAU stickiness over 20%.
 - Gen-AI essay-review pipeline increased essays per tutor and cut review cost ~$100K/week.

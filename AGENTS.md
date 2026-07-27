@@ -12,9 +12,10 @@ This project uses a file-based memory system to maintain context across sessions
 
 Read `memory/semantic.md` ONCE to load project context before answering.
 
-### On Every Turn
+### Working State
 
-The preprompt hook handles reading `memory/working.md`.
+Read `memory/working.md` when beginning or resuming an active task; do not
+rely on the Claude preprompt hook.
 
 ### Task Files
 
@@ -85,6 +86,8 @@ ln -s memory/semantic.md MEMORY.md
 The project's `memory/semantic.md` remains the single source of truth.
 <!-- amk:end -->
 
+
+
 ## Working data (Hermes, Codex, Claude)
 
 Every generated or pipeline artifact (job discovery `inbox/`, Gmail/job tracking `events/`,
@@ -93,6 +96,12 @@ application packages `applications/`, generated resumes `resume-formats/`, `jobs
 Root copies are gitignored and invisible to the tooling, which resolves these paths via
 `engine/config.mjs`. Read `resume-os.md` for the operating model and `memory/semantic.md` for engine
 architecture.
+
+## Planning Policy
+
+Do not track planning documents, backlogs, roadmaps, tickets, or phased plans. `os-planning/` is
+local scratch only. Use current evidence and explicit user direction to select work; record durable
+decisions in `DECISIONS.md` and shipped behavior in `memory/semantic.md`.
 
 ## Engine change review
 

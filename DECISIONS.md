@@ -171,3 +171,16 @@ shared lock, daily cap, and LinkedIn-URL guard all still apply. The heartbeat re
 a workflow nothing schedules; restoring a sweep requires restoring a non-zero cadence in the same
 change, or nothing notices when the sweep dies. Screening judgment about which jobs merit assessment
 lives in `job-screening.md`, not in the worker.
+
+## No tracked planning artifacts (2026-07-27)
+**Supersedes:** the canonical-backlog portion of the 2026-07-17 craft-candidates decision and the
+prior convention that published architecture/planning documents are useful operating context.
+
+**Why accepted:** Backlogs, roadmaps, phased plans, and tickets age faster than code, encourage
+pre-building, and had begun to retain profile/pipeline details in a public repository. They are not
+durable engine knowledge.
+
+**Implications:** `os-planning/` and model-evaluation planning are local, ignored scratch only. Do
+not add tracked planning documents. Select work from current evidence and explicit user direction.
+Record durable architectural choices here, shipped behavior in `memory/semantic.md`, and stable
+rules in the applicable skill doc.

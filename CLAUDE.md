@@ -26,3 +26,9 @@
 
 Before implementing a feature, read `resume-os.md`. It is the canonical record of architectural principles, load-bearing assumptions, and planned capabilities — not current build state (that lives in `memory/semantic.md`).
 <!-- amk:end -->
+
+## Planning Policy
+
+Do not track planning documents, backlogs, roadmaps, tickets, or phased plans. `os-planning/` is
+local scratch only. Use current evidence and explicit user direction to select work; record durable
+decisions in `DECISIONS.md` and shipped behavior in `memory/semantic.md`.
