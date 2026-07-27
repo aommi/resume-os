@@ -151,3 +151,23 @@ contains only exact profile comparisons. (3) Repeatable execution: deterministic
 URL validation and tests. (4) The resolver/runtime harness gained no domain judgment. (5) Vetted-bank
 loading is conditional on file/story presence; the safety gate is universal only for schema-backed
 profiles where identity integrity is always required. (6) Verdict: ALIGNED.
+
+## Match assessment is pull-based, not scheduled (2026-07-27)
+**Supersedes the scheduling half of "Serialize LinkedIn automation and assess matches
+asynchronously" (2026-07-16).** The locking rationale in that entry still stands and is unchanged.
+
+**Why accepted:** Measured against a fully triaged backlog, LinkedIn's headline match level
+predicted screening outcomes poorly — top-labelled roles were culled about half the time and scored
+no better than the tier below. The required-qualification breakdown is the part that carries signal,
+and it only informs a decision at the moment a human is choosing to invest in a role. A scheduled
+sweep therefore spent continuous authenticated LinkedIn activity selecting jobs by posting date
+rather than by whether anyone cared about them. (The measurement is a single-profile observation,
+not an engine-wide constant.)
+
+**Implications:** `--job-id` targets one job so assessment runs as a screening step; the
+`ai.resumeos.assess` LaunchAgent is unloaded. Targeting does not bypass eligibility — the stop file,
+shared lock, daily cap, and LinkedIn-URL guard all still apply. The heartbeat records
+`cadenceMinutes: 0`, a convention meaning "on-demand", so the watchdog does not report staleness for
+a workflow nothing schedules; restoring a sweep requires restoring a non-zero cadence in the same
+change, or nothing notices when the sweep dies. Screening judgment about which jobs merit assessment
+lives in `job-screening.md`, not in the worker.
