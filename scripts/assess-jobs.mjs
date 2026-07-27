@@ -17,7 +17,10 @@ import { timezone, workDir } from "../engine/config.mjs";
 import { readLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
-// 0 = on-demand: assessment is now a pull-based screening step, not a sweep.
+// 0 = on-demand: assessment is a pull-based screening step, not a sweep, so the
+// watchdog must not report staleness for it. If a scheduled sweep is ever
+// restored, this MUST return to that schedule's cadence in the same change —
+// otherwise nothing notices when the sweep stops running.
 const CADENCE_MINUTES = 0;
 const DEFAULT_DAILY_CAP = 5;
 const MAX_ATTEMPTS = 3;

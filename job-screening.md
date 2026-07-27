@@ -128,8 +128,10 @@ on. Never schedule it, never batch it, and never let an unattended run perform p
 is account-endangering activity on the candidate's own identity, and its value is highest at exactly
 the moment a human has decided to apply anyway.
 
-Require both signals to agree before proposing outreach. Either signal alone is too weak: a match
-label on its own has been measured predicting screening outcomes no better than chance-adjacent.
+Require both signals to agree before proposing outreach. The reason is cost asymmetry, not a
+measured constant: outreach spends a real relationship and cannot be undone, so it should wait for
+corroboration. Treat any specific claim about how well a match label predicts fit as **provisional
+and profile-local** until a given profile has its own evidence.
 
 Group culls by reason with the ids listed per reason so they can be actioned in bulk. Do not
 enumerate every cull individually.
@@ -142,9 +144,12 @@ field that contradicted its JD.
 
 ## Anti-patterns
 
-- **Ranking on the headline match label.** Measured against a full triaged backlog, a top match
-  label predicted the screening outcome no better than the tier below it. Use required-qualification
-  completeness as a disqualifier; use the label only to order what already survived.
+- **Ranking on the headline match label.** In the one backlog measured so far, a top match label
+  predicted the screening outcome no better than the tier below it — a single-profile observation,
+  not an engine-wide constant. The general point holds regardless: a label is a summary, whereas
+  required-qualification completeness names a specific thing the candidate lacks. Prefer the
+  disqualifier; use the label only to order what already survived. Profiles should check this
+  against their own results rather than inherit the finding.
 - **Treating a missing compensation value as a low salary.** Absent means unparsed.
 - **Marking everything "maybe".** A screen that defers every call has done no work.
 - **Promoting on freshness and comp alone.** Recency and a large number are the two fields most

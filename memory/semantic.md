@@ -109,8 +109,13 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   serializes discovery and assessment access to the shared Chrome profile. Explicit LinkedIn
   checkpoint/auth-wall signals create profile-local `work/linkedin-stop.json`; clearing it is
   manual. Every invocation writes `work/heartbeats/linkedin-assessment.json`, including no-op and
-  per-job-failure runs. The machine LaunchAgent is `ai.resumeos.assess` at a five-minute cadence;
-  installation/loading remains machine-local.
+  per-job-failure runs. **Assessment is pull-based, not scheduled:** `--job-id` targets one job so it
+  runs as a screening step when a human is deciding to invest, and the `ai.resumeos.assess`
+  LaunchAgent is unloaded. Targeting does not bypass eligibility — the stop file, lock, daily cap,
+  and LinkedIn-URL guard all still apply. The heartbeat records `cadenceMinutes: 0`, which marks a
+  workflow on-demand so `check-heartbeats.mjs` does not report staleness for something nothing
+  schedules. **If the sweep is ever re-enabled, restore a non-zero cadence in the same change**, or
+  the watchdog will silently stop noticing that the sweep died.
 
 ## Session hygiene (every session, not just dedicated resume-OS boots)
 
@@ -135,10 +140,11 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 
 ## Planning
 
-- **Single canonical planning doc: `os-planning/backlog-horsepower-and-reuse.md`** (stories with
-  My proposal / Your decision columns, LLM job map, evals, build sequence; external review merged
-  2026-07-12). Superseded planning docs live in `os-planning/archive/`. Do not create parallel
-  planning docs; extend the canonical one.
+- **Single canonical planning doc: `os-planning/backlog-horsepower-and-reuse.md`**. It is a lean
+  job-seeker backlog, not a platform roadmap: keep only work that improves valid application volume,
+  factual/layout safety, review speed, outcome learning, or practical second-user reuse. Superseded
+  planning docs live in `os-planning/archive/`; historical architecture/model-eval plans are
+  provenance, not active roadmaps.
 - Pipeline health is zero-LLM by rule: heartbeats are files under `work/` (discovery uses
   `.linkedin-last-checked` at repo root), the board renders staleness warnings (`job-board.mjs`),
   and `scripts/check-heartbeats.mjs` + LaunchAgent `ai.resumeos.watchdog` fire local macOS

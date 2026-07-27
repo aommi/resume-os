@@ -93,3 +93,45 @@ assert.equal(extractCompensationText("Competitive salary and benefits\nWe serve 
 }
 
 console.log("compensation regression tests: PASS");
+
+// --- Review findings, PR #6 (2026-07-27) ---
+// Each of these previously produced a CONFIDENTLY WRONG value, which is the one
+// outcome this module exists to prevent.
+
+// Decimal tails broke range matching and silently kept only the lower bound.
+{
+  const r = parseCompensation("Salary: $129,780.00 - $256,120.00 CAD");
+  assert.equal(r.low, 129780);
+  assert.equal(r.high, 256120);
+  assert.equal(r.text, "$129,780 - $256,120 CAD");
+}
+
+// "CA$" prefixes must be consumed as part of the amount, and name the currency.
+{
+  const r = parseCompensation("Salary: CA$255.5K - CA$365K");
+  assert.equal(r.low, 255500);
+  assert.equal(r.high, 365000);
+  assert.equal(r.currency, "CAD");
+}
+
+// Non-dollar currencies must render with their own symbol, not "$".
+assert.equal(extractCompensationText("Salary range: £60,000 - £80,000"), "£60,000 - £80,000 GBP");
+
+// The lookahead must not adopt unrelated money from a benefits list.
+assert.equal(
+  extractCompensationText("Salary: competitive\nBenefits\nEquity grant valued at $150,000"),
+  "",
+);
+
+// A bare-number range is trusted only alongside an explicit currency code.
+{
+  const r = parseCompensation("The base salary range is listed below\n128,100 - 214,000 CAD annually");
+  assert.equal(r.low, 128100);
+  assert.equal(r.high, 214000);
+}
+assert.equal(extractCompensationText("The range is listed below\n128,100 - 214,000 annually"), "");
+
+// "Pay:" is a pay label.
+assert.equal(extractCompensationText("Pay: $100,000 USD"), "$100,000 USD");
+
+console.log("compensation review-finding tests: PASS");
