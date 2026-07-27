@@ -16,6 +16,7 @@ import { resolveBrowserPath, workDir } from "../engine/config.mjs";
 import { readLinkedInJobSignals } from "../engine/linkedin-job-signals.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
+import { extractCompensationText } from "../engine/compensation.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const PROFILE_LOCK_FILE = join(PROFILE_DIR, "SingletonLock");
@@ -133,18 +134,13 @@ async function processJob(url, outDir) {
       // Remove non-JD content from the description (like "Set alert", "People you can reach")
       description = description.replace(/\nSet alert for similar jobs[\s\S]*$/, "").trim();
 
-      // Compensation
-      let comp = "";
-      const fullText = bodyLines.join("\n");
-      const amountPattern = /\$[\d,]+(?:\.\d+)?k?(?:\s*[-–]\s*\$?[\d,]+(?:\.\d+)?k?)?(?:\s*(?:CAD|USD|\/\s*year|per year|a year)?)?/i;
-      const compensationLine = bodyLines.find((line) =>
-        /salary|compensation|base pay|pay range|hiring range/i.test(line) && amountPattern.test(line)
-      );
-      const compMatch = (compensationLine || fullText).match(amountPattern);
-      if (compMatch) comp = compMatch[0].trim();
-
-      return { company, title, location, description, compensation: comp };
+      // Compensation is parsed in Node from bodyText below, so the page and
+      // Node paths share one implementation (engine/compensation.mjs).
+      return { company, title, location, description, bodyText: bodyLines.join("\n") };
     });
+
+    jobInfo.compensation = extractCompensationText(jobInfo.bodyText || "");
+    delete jobInfo.bodyText;
 
     if (isCompanyExcluded(jobInfo.company)) {
       await browser.close();

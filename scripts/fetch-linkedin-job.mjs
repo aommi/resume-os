@@ -13,6 +13,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname } from "node:path";
+import { extractCompensationText } from "../engine/compensation.mjs";
 
 const options = parseArgs(process.argv.slice(2));
 if (!options.url) {
@@ -107,7 +108,7 @@ function extractJob(html, url) {
     description = decode((html.match(/<meta name="description" content="([^"]*)"/) || [])[1] || "");
   }
 
-  const comp = (description.match(/\$[\d,]+\s*[-–]\s*\$?[\d,]+(?:\s*(?:CAD|USD|\/\s*year|per year)?)?/i) || [])[0] || "";
+  const comp = extractCompensationText(description);
 
   return { source: url, company, title, location, compensation: comp, description };
 }

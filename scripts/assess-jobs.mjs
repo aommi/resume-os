@@ -17,7 +17,8 @@ import { timezone, workDir } from "../engine/config.mjs";
 import { readLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
-const CADENCE_MINUTES = 5;
+// 0 = on-demand: assessment is now a pull-based screening step, not a sweep.
+const CADENCE_MINUTES = 0;
 const DEFAULT_DAILY_CAP = 5;
 const MAX_ATTEMPTS = 3;
 const MAX_AGE_DAYS = 14;
@@ -29,6 +30,7 @@ export async function runWorker({
   now = new Date(),
   dailyCap = readDailyCap(),
   spawnAssessment = runAssessmentProcess,
+  jobId = "",
 } = {}) {
   const runId = randomUUID();
   const heartbeat = (outcome, failureCategory = "") => writeHeartbeat(work, {
@@ -67,7 +69,24 @@ export async function runWorker({
     return { outcome: "skipped_daily_cap" };
   }
 
-  const job = selectEligibleJob(jobs, now);
+  // `--job-id` makes assessment a pull-based screening step: assess the job a
+  // human is about to invest in, rather than whatever the unattended sweep
+  // happened to reach first. Eligibility still applies, so a targeted request
+  // cannot bypass the stop file, the lock, the cap, or the LinkedIn URL guard.
+  let job;
+  if (jobId) {
+    job = jobs.find((candidate) => candidate.id === jobId);
+    if (!job) {
+      heartbeat("job_not_found", "input_invalid");
+      return { outcome: "job_not_found", jobId };
+    }
+    if (!isEligibleJob(job, now)) {
+      heartbeat("job_not_eligible", "input_invalid");
+      return { outcome: "job_not_eligible", jobId };
+    }
+  } else {
+    job = selectEligibleJob(jobs, now);
+  }
   if (!job) {
     heartbeat("no_eligible_jobs");
     return { outcome: "no_eligible_jobs" };
@@ -143,8 +162,23 @@ export function readDailyCap(value = process.env.LINKEDIN_ASSESS_DAILY_CAP) {
   return parsed;
 }
 
+export function isLinkedInJobUrl(value) {
+  if (!value) return false;
+  try {
+    const { hostname, pathname } = new URL(String(value));
+    return hostname.endsWith("linkedin.com") && pathname.includes("/jobs/");
+  } catch {
+    return false;
+  }
+}
+
 export function isEligibleJob(job, now = new Date()) {
   const metadata = job.metadata || job;
+  // This worker drives LinkedIn's match panel, so a job without a LinkedIn job
+  // URL (e.g. an email-sourced recruiter lead) can never be assessed here.
+  // Without this guard such jobs stay eligible, are re-selected freshest-first,
+  // and burn attempts and cap slots ahead of real LinkedIn jobs.
+  if (!isLinkedInJobUrl(metadata.url)) return false;
   if (isCompanyExcluded(metadata.company)) return false;
   if (!["to_review", "to_apply"].includes(metadata.lifecycle?.status)) return false;
   const assessment = metadata.linkedinAssessment || {};
@@ -301,8 +335,15 @@ function writeJsonAtomic(path, value) {
 async function main() {
   const work = workDir();
   const now = new Date();
+  const args = process.argv.slice(2);
+  const flagIndex = args.indexOf("--job-id");
+  const jobId = flagIndex >= 0 ? (args[flagIndex + 1] ?? "") : "";
+  if (flagIndex >= 0 && !jobId) {
+    console.error("usage: node scripts/assess-jobs.mjs [--job-id <job-id>]");
+    process.exit(2);
+  }
   try {
-    const result = await runWorker({ work, now });
+    const result = await runWorker({ work, now, jobId });
     console.log(JSON.stringify(result));
   } catch (error) {
     try {
