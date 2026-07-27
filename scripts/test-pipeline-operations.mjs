@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -12,6 +12,14 @@ const env = { ...process.env, RESUME_OS_PROFILE: profileId };
 
 function run(script, ...args) {
   return spawnSync(process.execPath, [script, ...args], { cwd: process.cwd(), env, encoding: "utf8" });
+}
+
+function runDailyBrief(envOverrides) {
+  return spawnSync("bash", ["scripts/run-daily-brief.sh"], {
+    cwd: process.cwd(),
+    env: { ...env, ...envOverrides },
+    encoding: "utf8",
+  });
 }
 
 function writeJob(id, metadata, enrichment = true) {
@@ -27,6 +35,35 @@ try {
     profileId,
     jobSearch: { excludedCompanies: ["Excluded Corp"] },
   }) + "\n");
+
+  const hermesBin = join(profileDir, "bin");
+  const hermesCalls = join(profileDir, "hermes-calls.log");
+  const briefLog = join(profileDir, "daily-brief.log");
+  mkdirSync(hermesBin, { recursive: true });
+  writeFileSync(join(hermesBin, "hermes"), `#!/usr/bin/env bash
+printf '%s\\n' "$1" >> "$HERMES_CALLS"
+if [ "$1" = "chat" ]; then
+  printf 'Action brief\\n'
+else
+  cat >/dev/null
+fi
+`);
+  chmodSync(join(hermesBin, "hermes"), 0o755);
+  const briefEnv = {
+    BRIEF_SEND_TARGET: "telegram:test",
+    HERMES_CALLS: hermesCalls,
+    RESUME_OS_BRIEF_LOG: briefLog,
+    PATH: `${hermesBin}:${process.env.PATH}`,
+  };
+
+  const quietRender = run("scripts/job-board.mjs", "render");
+  assert.equal(quietRender.status, 0, quietRender.stderr);
+  const quietBrief = runDailyBrief(briefEnv);
+  assert.equal(quietBrief.status, 0, quietBrief.stderr);
+  assert.equal(existsSync(hermesCalls), false);
+  const quietHeartbeat = JSON.parse(readFileSync(join(work, "heartbeats", "daily-brief.json"), "utf8"));
+  assert.equal(quietHeartbeat.exitCode, 0);
+  assert.equal(quietHeartbeat.failureCategory, "");
 
   writeJob("excluded", {
     company: "Excluded Corp",
@@ -74,6 +111,10 @@ try {
   const tracker = readFileSync(join(work, "jobs-tracker.md"), "utf8");
   assert.match(tracker, /## Upcoming Events/);
   assert.match(tracker, /Example Co — Product Manager/);
+
+  const actionableBrief = runDailyBrief(briefEnv);
+  assert.equal(actionableBrief.status, 0, actionableBrief.stderr);
+  assert.deepEqual(readFileSync(hermesCalls, "utf8").trim().split("\n"), ["chat", "send"]);
 
   writeFileSync(join(pending, "2026-07-27-invalid-event.md"), `## JOB_EMAIL_EVENT
 - job_id: scheduled
