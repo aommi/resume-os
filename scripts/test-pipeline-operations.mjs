@@ -34,9 +34,15 @@ try {
     enrichedAt: "2026-07-27T00:00:00.000Z",
     lifecycle: { status: "to_apply" },
   });
+  writeJob("included", {
+    company: "Included Corp",
+    title: "Product Manager",
+    enrichedAt: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "to_apply" },
+  });
   const queue = run("scripts/build-package-queue.mjs");
   assert.equal(queue.status, 0, queue.stderr);
-  assert.equal(JSON.parse(queue.stdout).queued, 0);
+  assert.deepEqual(JSON.parse(queue.stdout).jobs, ["included"]);
 
   writeJob("scheduled", {
     company: "Example Co",
@@ -69,17 +75,60 @@ try {
   assert.match(tracker, /## Upcoming Events/);
   assert.match(tracker, /Example Co — Product Manager/);
 
+  writeFileSync(join(pending, "2026-07-27-invalid-event.md"), `## JOB_EMAIL_EVENT
+- job_id: scheduled
+- company: Example Co
+- role: Product Manager
+- event: hiring_manager
+- event_date: 2026-07-27
+- next_event_at: 2099-07-29T10:30:00-07:00
+- subject: Hiring manager conversation
+- message_id: invalid-time
+- thread_id: fixture-thread
+- confidence: high
+- evidence: Scheduled conversation
+- notes: Offset timestamp is intentionally rejected
+`);
+  const invalidImported = run("scripts/import-events.mjs");
+  assert.equal(invalidImported.status, 0, invalidImported.stderr);
+  assert.match(invalidImported.stderr, /skipping invalid next_event_at/);
+  const invalidMetadata = JSON.parse(readFileSync(join(inbox, "scheduled", "metadata.json"), "utf8"));
+  assert.equal(invalidMetadata.lifecycle.nextEventAt, "2099-07-28T17:30:00.000Z");
+  assert.equal(invalidMetadata.lifecycle.emailEvents.at(-1).nextEventAt, "");
+
   const screened = run(
-    "scripts/job-board.mjs", "screen", "scheduled",
+    "scripts/job-board.mjs", "screen", "included",
     "--fit", "build-package", "--priority", "high", "--variant", "pm", "--reason", "Strong JD match",
   );
   assert.equal(screened.status, 0, screened.stderr);
-  const screenedMetadata = JSON.parse(readFileSync(join(inbox, "scheduled", "metadata.json"), "utf8"));
-  assert.equal(screenedMetadata.lifecycle.status, "interviewing");
+  const screenedMetadata = JSON.parse(readFileSync(join(inbox, "included", "metadata.json"), "utf8"));
+  assert.equal(screenedMetadata.lifecycle.status, "to_apply");
   assert.equal(screenedMetadata.lifecycle.fit, "build_package");
   assert.equal(screenedMetadata.lifecycle.priority, "high");
   assert.equal(screenedMetadata.lifecycle.variant, "pm");
-  assert.equal(screenedMetadata.lifecycle.notes, "Strong JD match");
+  assert.equal(screenedMetadata.lifecycle.screenReason, "Strong JD match");
+  assert.equal(screenedMetadata.lifecycle.notes, "");
+
+  const invalidScreen = run("scripts/job-board.mjs", "screen", "included", "--fit", "maybe", "--reason", "Nope");
+  assert.notEqual(invalidScreen.status, 0);
+
+  writeFileSync(join(pending, "2026-07-27-rejection.md"), `## JOB_EMAIL_EVENT
+- job_id: scheduled
+- company: Example Co
+- role: Product Manager
+- event: rejection
+- event_date: 2026-07-27
+- subject: Update
+- message_id: rejection-message
+- thread_id: fixture-thread
+- confidence: high
+- evidence: Rejected
+- notes: Closed
+`);
+  const rejected = run("scripts/import-events.mjs");
+  assert.equal(rejected.status, 0, rejected.stderr);
+  const rejectedMetadata = JSON.parse(readFileSync(join(inbox, "scheduled", "metadata.json"), "utf8"));
+  assert.equal(rejectedMetadata.lifecycle.nextEventAt, "");
 } finally {
   rmSync(profileDir, { recursive: true, force: true });
 }

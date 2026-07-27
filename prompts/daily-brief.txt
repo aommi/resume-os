@@ -23,7 +23,8 @@ Task:
      `WATCHDOG` followed by `> - ⚠ ...` lines.
      Quote that status line and any warning lines VERBATIM in the brief. Do not paraphrase, judge,
      or add warnings of your own — the deterministic tooling decides what is a problem. Report
-     health as "clear" only when the board explicitly says the watchdog is healthy.
+     health as "clear" only when the board explicitly says the watchdog is healthy. If the status
+     says unavailable, report it verbatim; never replace it with "clear".
    - One `## <Status>` section per pipeline stage (To Review, To Apply, Package Ready,
      Applied, Needs Action, Interviewing, Skipped, Closed), each containing a markdown
      table. Count data rows per section (lines starting with `| <number> |`).

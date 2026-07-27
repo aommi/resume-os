@@ -395,6 +395,7 @@ function normalizeLifecycle(lifecycle = {}) {
     outcome: lifecycle.outcome || "",
     lastContactAt: lifecycle.lastContactAt || "",
     nextEventAt: lifecycle.nextEventAt || "",
+    screenReason: lifecycle.screenReason || "",
     variant: lifecycle.variant || "",
     notes: lifecycle.notes || "",
     emailEvents: Array.isArray(lifecycle.emailEvents) ? lifecycle.emailEvents : [],

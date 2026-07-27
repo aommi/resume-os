@@ -41,6 +41,7 @@ const DEFAULT_LIFECYCLE = {
   outcome: "",
   lastContactAt: "",
   nextEventAt: "",
+  screenReason: "",
   variant: "",
   notes: "",
   emailEvents: [],
@@ -210,19 +211,22 @@ function applyEvent(job, event, sourceFile) {
   const lifecycle = job.metadata.lifecycle;
   const date = cleanValue(event.event_date) || today();
   const eventName = cleanValue(event.event).toLowerCase();
+  const nextEventAt = parseFutureEventAt(event.next_event_at);
+  if (cleanValue(event.next_event_at) && !nextEventAt) {
+    console.error(`skipping invalid next_event_at for ${job.id}; expected a future UTC timestamp ending in Z`);
+  }
   lifecycle.emailEvents.push({
     messageId: cleanValue(event.message_id),
     threadId: cleanValue(event.thread_id),
     event: eventName,
     date,
-    nextEventAt: cleanValue(event.next_event_at),
+    nextEventAt,
     confidence: cleanValue(event.confidence),
     sourceFile,
   });
   lifecycle.lastContactAt = maxDate(lifecycle.lastContactAt, date);
 
-  const nextEventAt = parseFutureEventAt(event.next_event_at);
-  if (nextEventAt && ["interview", "recruiter_screen"].includes(eventName)) {
+  if (nextEventAt && ["interview", "recruiter_screen", "hiring_manager"].includes(eventName)) {
     lifecycle.nextEventAt = earliestFutureEvent(lifecycle.nextEventAt, nextEventAt);
   }
 

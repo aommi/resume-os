@@ -45,6 +45,7 @@ const DEFAULT_LIFECYCLE = {
   outcome: "",
   lastContactAt: "",
   nextEventAt: "",
+  screenReason: "",
   variant: "",
   notes: "",
   emailEvents: [],
@@ -128,7 +129,7 @@ try {
     job.lifecycle.fit = fit;
     job.lifecycle.priority = options.priority || job.lifecycle.priority;
     job.lifecycle.variant = options.variant || job.lifecycle.variant;
-    job.lifecycle.notes = reason;
+    job.lifecycle.screenReason = reason;
     saveJob(job);
     writeTracker(loadJobs({ persistLifecycle: true }));
   } else {
@@ -434,7 +435,7 @@ function formatEventTime(value) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(new Date(value));
   const get = (type) => parts.find((part) => part.type === type)?.value || "";
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")} ${TIME_ZONE}`;
@@ -503,7 +504,7 @@ function timestamp() {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(new Date());
   const get = (type) => parts.find((part) => part.type === type)?.value || "";
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${TIME_ZONE}`;
@@ -517,5 +518,6 @@ function printHelp() {
   node scripts/job-board.mjs applied <job-id|company> [--date YYYY-MM-DD] [--outcome Submitted]
   node scripts/job-board.mjs skip <job-id|company> --reason "..."
   node scripts/job-board.mjs outcome <job-id|company> --outcome "Rejected|Screen|Interview|Offer|Ghosted"
+  node scripts/job-board.mjs screen <job-id|company> --fit <build_package|base_resume|watch|cull> --reason "..." [--priority <value>] [--variant <base>]
 `);
 }

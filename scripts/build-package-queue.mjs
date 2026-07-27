@@ -12,12 +12,13 @@
 
 import { readdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { workDir } from "../engine/config.mjs";
+import { loadProfile, workDir } from "../engine/config.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
 const WORK = workDir();
 const INBOX = join(WORK, "inbox");
 const APPS = join(WORK, "applications");
+const PROFILE = loadProfile();
 
 // ── Fuzzy package detection ────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ for (const jobId of readdirSync(INBOX)) {
   if (!enrichedAt) continue;
 
   // Exclusions are profile-owned and enforced at every pipeline entry point.
-  if (isCompanyExcluded(company)) continue;
+  if (isCompanyExcluded(company, PROFILE)) continue;
 
   // Check if already packaged (fuzzy match)
   if (hasExistingPackage(company, title)) continue;
