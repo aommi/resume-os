@@ -94,6 +94,12 @@ Root copies are gitignored and invisible to the tooling, which resolves these pa
 `engine/config.mjs`. Read `resume-os.md` for the operating model and `memory/semantic.md` for engine
 architecture.
 
+## Planning Policy
+
+Do not track planning documents, backlogs, roadmaps, tickets, or phased plans. `os-planning/` is
+local scratch only. Use current evidence and explicit user direction to select work; record durable
+decisions in `DECISIONS.md` and shipped behavior in `memory/semantic.md`.
+
 ## Engine change review
 
 Before publishing a tracked engine change, run the six-question Architecture Boundary review in

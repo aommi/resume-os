@@ -138,13 +138,12 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `LEARNINGS.md`; promoted engine rules land directly in the applicable methodology/rubric step,
   not in a duplicate Pitfalls appendix. See DECISIONS.md (2026-07-17 and 2026-07-21 clarification).
 
-## Planning
+## Planning Policy
 
-- **Single canonical planning doc: `os-planning/backlog-horsepower-and-reuse.md`**. It is a lean
-  job-seeker backlog, not a platform roadmap: keep only work that improves valid application volume,
-  factual/layout safety, review speed, outcome learning, or practical second-user reuse. Superseded
-  planning docs live in `os-planning/archive/`; historical architecture/model-eval plans are
-  provenance, not active roadmaps.
+- No planning documents are tracked. `os-planning/` is local scratch only; do not create a canonical
+  backlog, roadmap, ticket list, or phased plan in the repository. Select work from current evidence
+  and explicit user direction. Durable decisions belong in `DECISIONS.md`; shipped behavior belongs
+  here; stable operating rules belong in the skill docs.
 - Pipeline health is zero-LLM by rule: heartbeats are files under `work/` (discovery uses
   `.linkedin-last-checked` at repo root). `scripts/check-heartbeats.mjs` is the sole authority for
   health thresholds and writes `work/watchdog-health.json` on every completed run. Each assertion

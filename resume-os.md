@@ -39,7 +39,6 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - `bullet-rubric.md` — bullet and whole-resume quality rules; apply before changing content.
 - `tailoring-methodology.md` — the full tailoring engine: phased process, taste rules, feature-scorecard ship check, and export verification. Load this before any tailoring session.
 - `eval-rubric.md` — the tailored-resume eval: keyword decision table, hard/soft/report ship gates, latent checklist. Deterministic checks run via `scripts/score-resume.mjs`.
-- `model-change-evals-plan.md` and `evals/smoke/eval-instructions.md` — V0 smoke-test process for comparing LLM model changes using saved outputs and deterministic code checks.
 - `evals/model-comparison.md` — operational two-layer protocol for assessing or comparing models:
   deterministic smoke/protected-fact gates first, then human-vetted resume/bullet judgment.
 - `adapters/claude-code-bootstrap.md` — Claude Code session bootstrap (runtime adapter); calls the resolver. (`cold-start-prompt.md` is a retired pointer to it.)
