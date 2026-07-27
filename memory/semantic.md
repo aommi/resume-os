@@ -48,6 +48,11 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   per run (heartbeat JSON `model` field, run logs). Any runner/model swap MUST update models.json
   in the same change — declared vs actual drift is a bug (a first sync run silently used the
   expensive CLI default model before the pin; that class of drift is what this rule prevents).
+- **Model comparison:** `evals/model-comparison.md` is the operational runbook and resolver route
+  (`model_eval`). Every comparison is task-scoped and uses two layers: deterministic smoke plus exact
+  protected identity/contact/link gates, followed by frozen human-vetted resume/bullet cases graded
+  PASS/REVIEW/FAIL. Raw outputs and exact model settings are preserved; a factual regression blocks
+  a switch, and no runtime/model dictionary change occurs without explicit user approval.
 - **High-fit tailoring hierarchy:** Before editing, identify 1–2 dominant evidence stories and
   place them in the first two bullets of the most relevant recent role. High-fit, ambiguous,
   referral, and high-stakes `strategy.md` files include a Requirement-to-Evidence & Visibility
@@ -55,6 +60,18 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `keywords.md` records the verified claim boundary for adjacent evidence. Bolding prioritizes
   target-role relevance over metric size. See `tailoring-methodology.md` and DECISIONS.md
   (2026-07-15).
+- **Vetted recurring stories:** An optional profile-local `sources/vetted-bullets.md` supplies
+  human-approved defaults, lens variants, claim boundaries, and per-story staleness triggers.
+  Tailoring consults it before rewriting a matching story and cites the Story ID when material;
+  `exhaustive-experience.md` remains fact-authoritative. The 2026-07-21 planned nine-story study
+  satisfied recurrence/counterexample review and the user's explicit GO served as human triage,
+  allowing four sanitized conditional refinements to enter the active rubric/methodology.
+- **Protected resume identity/contact/links:** `engine/resume-protected-facts.mjs` deterministically
+  validates the Markdown heading, exact profile-owned contact-block lines, required contact links,
+  an allowlist of every HTTP(S) URL, and conditional project/credential links from the active profile.
+  Both `score-resume.mjs` (HARD gate) and `build-resume-formats.mjs` (fail before render/delivery)
+  enforce it. Profile `contact.links` are required in the contact block; `resumeLinks` defines
+  canonical conditional URLs.
 - **Conditional skills-first layout:** `build-resume-formats.mjs --skills-first` deterministically
   renders the Skills section below the headline instead of after Selected Projects. The tailoring
   ship check may compare this layout only when rendered page one has a conspicuous avoidable void;
@@ -92,8 +109,13 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   serializes discovery and assessment access to the shared Chrome profile. Explicit LinkedIn
   checkpoint/auth-wall signals create profile-local `work/linkedin-stop.json`; clearing it is
   manual. Every invocation writes `work/heartbeats/linkedin-assessment.json`, including no-op and
-  per-job-failure runs. The machine LaunchAgent is `ai.resumeos.assess` at a five-minute cadence;
-  installation/loading remains machine-local.
+  per-job-failure runs. **Assessment is pull-based, not scheduled:** `--job-id` targets one job so it
+  runs as a screening step when a human is deciding to invest, and the `ai.resumeos.assess`
+  LaunchAgent is unloaded. Targeting does not bypass eligibility — the stop file, lock, daily cap,
+  and LinkedIn-URL guard all still apply. The heartbeat records `cadenceMinutes: 0`, which marks a
+  workflow on-demand so `check-heartbeats.mjs` does not report staleness for something nothing
+  schedules. **If the sweep is ever re-enabled, restore a non-zero cadence in the same change**, or
+  the watchdog will silently stop noticing that the sweep died.
 
 ## Session hygiene (every session, not just dedicated resume-OS boots)
 
@@ -103,22 +125,26 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **Due reviews:** on session start, check the active profile's `review-schedule.md`; if any
   review's "Next due" ≤ today, surface it to the user before other work. (Previously this check
   lived only in `cold-start-prompt.md`, so ordinary sessions missed overdue reviews for weeks.)
-- **Craft learnings:** session-learned craft judgment (resume/cover-letter/outreach/review craft)
-  is NOT appended to engine skill docs directly. It goes to the profile-local staging queue
+- **Craft learnings:** ad-hoc session-learned craft judgment (resume/cover-letter/outreach/review
+  craft) is NOT appended to engine skill docs directly. It goes to the profile-local staging queue
   `profiles/<id>/craft-candidates.md` (admission rules + session-end prompt are in that file's
-  header); promotion into skill docs happens only at human-approved triage. Profile taste goes to
+  header); promotion into skill docs happens only at human-approved triage. A planned, documented
+  study may itself serve as the staging artifact when it predefines recurrence/counterexample gates,
+  meets them across distinct outputs, sanitizes the rule, and the user explicitly approves promotion
+  as triage; record that exception/clarification in `DECISIONS.md`. Profile taste goes to
   the profile's `LEARNINGS.md`. The file is optional per profile: if absent, the session-end
   check is a no-op — create it on the first qualifying entry by copying
   `profiles/example/craft-candidates.md`. Tailoring Phase 0 loads the optional profile
   `LEARNINGS.md`; promoted engine rules land directly in the applicable methodology/rubric step,
-  not in a duplicate Pitfalls appendix. See DECISIONS.md (2026-07-17).
+  not in a duplicate Pitfalls appendix. See DECISIONS.md (2026-07-17 and 2026-07-21 clarification).
 
 ## Planning
 
-- **Single canonical planning doc: `os-planning/backlog-horsepower-and-reuse.md`** (stories with
-  My proposal / Your decision columns, LLM job map, evals, build sequence; external review merged
-  2026-07-12). Superseded planning docs live in `os-planning/archive/`. Do not create parallel
-  planning docs; extend the canonical one.
+- **Single canonical planning doc: `os-planning/backlog-horsepower-and-reuse.md`**. It is a lean
+  job-seeker backlog, not a platform roadmap: keep only work that improves valid application volume,
+  factual/layout safety, review speed, outcome learning, or practical second-user reuse. Superseded
+  planning docs live in `os-planning/archive/`; historical architecture/model-eval plans are
+  provenance, not active roadmaps.
 - Pipeline health is zero-LLM by rule: heartbeats are files under `work/` (discovery uses
   `.linkedin-last-checked` at repo root), the board renders staleness warnings (`job-board.mjs`),
   and `scripts/check-heartbeats.mjs` + LaunchAgent `ai.resumeos.watchdog` fire local macOS

@@ -408,7 +408,9 @@ function yesNo(value) {
 }
 
 function isClosedOutcome(outcome) {
-  return /^(rejected|closed|offer declined|withdrawn|not selected)$/i.test(outcome);
+  // "Ghosted" is terminal: it was previously accepted as an outcome but matched
+  // no branch, so the job kept its old status and stayed on the active board.
+  return /^(rejected|closed|offer declined|withdrawn|not selected|ghosted|no response)$/i.test(outcome);
 }
 
 function isInterviewOutcome(outcome) {

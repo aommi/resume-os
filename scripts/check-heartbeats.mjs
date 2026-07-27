@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// Zero-LLM pipeline watchdog (HLT-3). No model calls, no network — by rule.
+// Zero-LLM pipeline watchdog (HLT-3). No model calls — by rule, so it cannot
+// share a failure mode with the agents it watches. Remote alert delivery is
+// optional, opt-in via WATCHDOG_SEND_TARGET, and time-bounded; detection itself
+// is purely local and never depends on it.
 // Reads heartbeat files, compares against expected cadence, fires a local
 // macOS notification on staleness. Run via LaunchAgent ai.resumeos.watchdog.
 //
 // Usage: node scripts/check-heartbeats.mjs [--quiet]
 //   --quiet  print problems but do not send a notification (for testing)
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { alertFingerprint, shouldSendAlert } from "../engine/watchdog-alerts.mjs";
 import { workDir } from "../engine/config.mjs";
 
 const WORK = workDir();
@@ -56,9 +60,11 @@ if (existsSync(pendingDir)) {
 
 // 4. Contract heartbeats (work/heartbeats/*.json): { cadenceMinutes, lastSuccess, ... }.
 const hbDir = join(WORK, "heartbeats");
-const requiredHeartbeats = new Map([
-  ["linkedin-assessment.json", "LinkedIn assessment: no heartbeat file (cadence 5m)"],
-]);
+// Only *scheduled* workflows belong here. LinkedIn assessment was removed when
+// it became an on-demand screening step: demanding a recent heartbeat from a
+// workflow nothing schedules produces a permanent false alarm, which is how a
+// real alert channel gets ignored.
+const requiredHeartbeats = new Map();
 for (const [name, message] of requiredHeartbeats) {
   if (!existsSync(join(hbDir, name))) problems.push(message);
 }
@@ -71,10 +77,15 @@ if (existsSync(hbDir)) {
       if ((hb.exitCode ?? 0) !== 0) {
         problems.push(`${workflow}: last run FAILED (exit ${hb.exitCode}${hb.failureCategory ? `, ${hb.failureCategory}` : ""}) at ${hb.lastAttempt ?? "unknown"}`);
       }
-      const cadenceMs = (hb.cadenceMinutes ?? 1440) * 60 * 1000;
-      const last = new Date(hb.lastSuccess ?? 0).getTime();
-      if (Date.now() - last > 2 * cadenceMs) {
-        problems.push(`${workflow}: last success ${hb.lastSuccess ?? "never"} (cadence ${hb.cadenceMinutes}m)`);
+      // cadenceMinutes: 0 means on-demand — nothing schedules it, so staleness
+      // is not a fault. A failed last run is still reported above.
+      const cadenceMinutes = hb.cadenceMinutes ?? 1440;
+      if (cadenceMinutes > 0) {
+        const cadenceMs = cadenceMinutes * 60 * 1000;
+        const last = new Date(hb.lastSuccess ?? 0).getTime();
+        if (Date.now() - last > 2 * cadenceMs) {
+          problems.push(`${workflow}: last success ${hb.lastSuccess ?? "never"} (cadence ${cadenceMinutes}m)`);
+        }
       }
     } catch {
       problems.push(`${name}: heartbeat file unreadable`);
@@ -94,4 +105,51 @@ if (!quiet) {
     `display notification "${text.slice(0, 230)}" with title "Resume OS pipeline" subtitle "${problems.length} problem(s)" sound name "Basso"`,
   ]);
 }
+
+// Telegram alert (deterministic, zero-LLM: `hermes send` is a plain delivery
+// call, no model runner). Never fires on --quiet (test mode). De-duplicated
+// against the last-sent problem set so an unchanged failure doesn't re-alert
+// every 6h forever; the same set re-alerts at most once per 24h.
+if (!quiet) {
+  const target = process.env.WATCHDOG_SEND_TARGET;
+  if (!target) {
+    console.error("watchdog: WATCHDOG_SEND_TARGET not set — Telegram alerts unconfigured, skipping send");
+  } else {
+    const stateFile = join(WORK, "watchdog-alert-state.json");
+    const hash = alertFingerprint(problems);
+    let prevState = null;
+    try {
+      prevState = JSON.parse(readFileSync(stateFile, "utf8"));
+    } catch {
+      prevState = null;
+    }
+    if (!shouldSendAlert(problems, prevState)) {
+      console.log("watchdog: problem set unchanged within 24h — suppressing duplicate Telegram alert");
+    } else {
+      const header = `🔴 Resume OS watchdog — ${problems.length} problem(s)`;
+      const body = `${header}\n${problems.join("\n")}`;
+      // A timeout is mandatory here. The watchdog is what notices every other
+      // workflow failing, so a delivery call that blocks on a network or socket
+      // failure would silently disable all monitoring — the exact class of
+      // outage this tool exists to catch.
+      const result = spawnSync("hermes", ["send", "--to", target, "--quiet"], {
+        input: body,
+        encoding: "utf8",
+        timeout: 15000,
+      });
+      if (result.error || result.status !== 0) {
+        console.error(
+          `watchdog: Telegram alert delivery failed (${result.error?.message ?? `exit ${result.status}`}): ${result.stderr ?? ""}`.trim(),
+        );
+      } else {
+        try {
+          writeFileSync(stateFile, JSON.stringify({ hash, lastSent: new Date().toISOString() }));
+        } catch (err) {
+          console.error(`watchdog: failed to persist alert state: ${err.message}`);
+        }
+      }
+    }
+  }
+}
+
 process.exit(1);
