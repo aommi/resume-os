@@ -55,6 +55,12 @@ fi
     RESUME_OS_BRIEF_LOG: briefLog,
     PATH: `${hermesBin}:${process.env.PATH}`,
   };
+  function assertActionableBrief() {
+    rmSync(hermesCalls, { force: true });
+    const brief = runDailyBrief(briefEnv);
+    assert.equal(brief.status, 0, brief.stderr);
+    assert.deepEqual(readFileSync(hermesCalls, "utf8").trim().split("\n"), ["chat", "send"]);
+  }
 
   const quietRender = run("scripts/job-board.mjs", "render");
   assert.equal(quietRender.status, 0, quietRender.stderr);
@@ -80,6 +86,36 @@ fi
   const queue = run("scripts/build-package-queue.mjs");
   assert.equal(queue.status, 0, queue.stderr);
   assert.deepEqual(JSON.parse(queue.stdout).jobs, ["included"]);
+
+  writeJob("upcoming-only", {
+    company: "Upcoming Co",
+    title: "Product Manager",
+    fetched: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "applied", nextEventAt: "2099-07-28T17:30:00.000Z" },
+  }, false);
+  assert.equal(run("scripts/job-board.mjs", "render").status, 0);
+  assertActionableBrief();
+  rmSync(join(inbox, "upcoming-only"), { recursive: true });
+
+  writeJob("needs-action-only", {
+    company: "Action Co",
+    title: "Product Manager",
+    fetched: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "needs_action" },
+  }, false);
+  assert.equal(run("scripts/job-board.mjs", "render").status, 0);
+  assertActionableBrief();
+  rmSync(join(inbox, "needs-action-only"), { recursive: true });
+
+  writeJob("interviewing-only", {
+    company: "Interview Co",
+    title: "Product Manager",
+    fetched: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "interviewing" },
+  }, false);
+  assert.equal(run("scripts/job-board.mjs", "render").status, 0);
+  assertActionableBrief();
+  rmSync(join(inbox, "interviewing-only"), { recursive: true });
 
   writeJob("scheduled", {
     company: "Example Co",
@@ -111,10 +147,6 @@ fi
   const tracker = readFileSync(join(work, "jobs-tracker.md"), "utf8");
   assert.match(tracker, /## Upcoming Events/);
   assert.match(tracker, /Example Co — Product Manager/);
-
-  const actionableBrief = runDailyBrief(briefEnv);
-  assert.equal(actionableBrief.status, 0, actionableBrief.stderr);
-  assert.deepEqual(readFileSync(hermesCalls, "utf8").trim().split("\n"), ["chat", "send"]);
 
   writeFileSync(join(pending, "2026-07-27-invalid-event.md"), `## JOB_EMAIL_EVENT
 - job_id: scheduled
