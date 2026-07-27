@@ -166,7 +166,11 @@ export function isLinkedInJobUrl(value) {
   if (!value) return false;
   try {
     const { hostname, pathname } = new URL(String(value));
-    return hostname.endsWith("linkedin.com") && pathname.includes("/jobs/");
+    // Match the domain itself or a subdomain (ca.linkedin.com), but not a
+    // lookalike: a bare endsWith would also accept "notlinkedin.com".
+    const host = hostname.toLowerCase();
+    const isLinkedIn = host === "linkedin.com" || host.endsWith(".linkedin.com");
+    return isLinkedIn && pathname.includes("/jobs/");
   } catch {
     return false;
   }
