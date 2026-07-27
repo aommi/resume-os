@@ -24,6 +24,7 @@ const VALID_STATUSES = new Set([
   "skipped",
   "closed",
 ]);
+const VALID_SCREEN_TIERS = new Set(["build_package", "base_resume", "watch", "cull"]);
 const STATUS_ORDER = {
   to_review: 0,
   to_apply: 1,
@@ -43,6 +44,7 @@ const DEFAULT_LIFECYCLE = {
   appliedAt: "",
   outcome: "",
   lastContactAt: "",
+  nextEventAt: "",
   variant: "",
   notes: "",
   emailEvents: [],
@@ -112,6 +114,23 @@ try {
     else if (isActionRequiredOutcome(outcome)) job.lifecycle.status = "needs_action";
     saveJob(job);
     writeTracker(loadJobs({ persistLifecycle: true }));
+  } else if (command === "screen") {
+    const target = requiredArg(args[1], "screen requires <job-id|company>");
+    const options = parseOptions(args.slice(2));
+    const fit = normalizeScreenTier(requiredArg(options.fit, "screen requires --fit <build_package|base_resume|watch|cull>"));
+    if (!VALID_SCREEN_TIERS.has(fit)) {
+      throw new Error(`Unknown screening tier "${options.fit}". Valid tiers: ${[...VALID_SCREEN_TIERS].join(", ")}`);
+    }
+    const reason = requiredArg(options.reason, "screen requires --reason <reason>");
+    const jobs = loadJobs({ persistLifecycle: true });
+    const job = findJob(jobs, target);
+    // Screening is a persisted proposal, not a lifecycle transition.
+    job.lifecycle.fit = fit;
+    job.lifecycle.priority = options.priority || job.lifecycle.priority;
+    job.lifecycle.variant = options.variant || job.lifecycle.variant;
+    job.lifecycle.notes = reason;
+    saveJob(job);
+    writeTracker(loadJobs({ persistLifecycle: true }));
   } else {
     printHelp();
     process.exit(command === "help" || command === "--help" ? 0 : 2);
@@ -179,6 +198,9 @@ function writeTracker(jobs) {
   const emailImportDates = [...gmailRowDates, ...emailEventDates].sort();
   const latestDiscovery = discoveryDates.at(-1) || "";
   const latestEmailImport = emailImportDates.at(-1) || "";
+  const upcomingEvents = jobs
+    .filter((job) => isFutureTimestamp(job.lifecycle.nextEventAt))
+    .sort((a, b) => a.lifecycle.nextEventAt.localeCompare(b.lifecycle.nextEventAt));
 
   // The watchdog owns all health thresholds. The board only renders its last
   // completed result, so the two surfaces cannot silently disagree.
@@ -202,6 +224,7 @@ function writeTracker(jobs) {
     "- **Pipeline:** to_review -> to_apply -> package_ready -> applied -> needs_action / interviewing -> closed",
     "- **Dedup key:** LinkedIn job ID first, canonical URL second",
     "",
+    upcomingEventsSection(upcomingEvents),
     section("To Review", jobs, "to_review", activeColumns()),
     section("To Apply", jobs, "to_apply", activeColumns()),
     section("Package Ready", jobs, "package_ready", activeColumns()),
@@ -214,6 +237,13 @@ function writeTracker(jobs) {
   ].join("\n");
   writeFileSync(TRACKER_PATH, body);
   console.log(`rendered: ${TRACKER_PATH}`);
+}
+
+function upcomingEventsSection(jobs) {
+  const rows = jobs.map((job) =>
+    `- **${formatEventTime(job.lifecycle.nextEventAt)}** — ${job.metadata.company || "Unknown"} — ${job.metadata.title || "Unknown"}`,
+  );
+  return ["## Upcoming Events", "", ...(rows.length ? rows : ["_(none recorded)_"]), ""].join("\n");
 }
 
 function healthSummary(health) {
@@ -385,6 +415,29 @@ function nextAction(job) {
   if (job.lifecycle.status === "to_review") return "Review fit";
   if (job.lifecycle.status === "to_apply") return job.lifecycle.packagePath ? "Tailor or apply" : "Decide / tailor";
   return "";
+}
+
+function normalizeScreenTier(value) {
+  return String(value).toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function isFutureTimestamp(value) {
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && time > Date.now();
+}
+
+function formatEventTime(value) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(value));
+  const get = (type) => parts.find((part) => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")} ${TIME_ZONE}`;
 }
 
 function applyType(job) {

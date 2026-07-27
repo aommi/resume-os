@@ -99,8 +99,12 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `scripts/test-linkedin-job-signals.mjs` covers contamination and dates.
 - **Company exclusions:** Profile-specific `jobSearch.excludedCompanies` entries are normalized and
   enforced deterministically before LinkedIn search results are emitted, before a fetched job is
-  persisted, and before the asynchronous assessment worker selects a job. The reusable engine does
-  not hardcode tenant-specific company preferences.
+  persisted, before the asynchronous assessment worker selects a job, and before the package queue
+  is generated. The reusable engine does not hardcode tenant-specific company preferences.
+- **Upcoming events:** Gmail event imports accept `next_event_at` only when an event supplies an exact
+  future UTC timestamp for a recruiter screen or interview. The importer persists the earliest valid
+  value as lifecycle `nextEventAt`; the board and daily brief render it as an upcoming event. Vague
+  scheduling language remains blank rather than being inferred.
 - **Asynchronous LinkedIn assessment:** `scripts/assess-jobs.mjs` is a zero-local-model worker that
   assesses at most one recent `to_review` / `to_apply` job per invocation, caps initial throughput at
   five jobs per local day (with a validated `LINKEDIN_ASSESS_DAILY_CAP` command-level override for

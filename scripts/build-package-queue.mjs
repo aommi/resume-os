@@ -11,25 +11,13 @@
 // This script is pure routing — it knows nothing about resumes, fit, or ATS.
 
 import { readdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { workDir } from "../engine/config.mjs";
+import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 
-const REPO_ROOT = resolve(process.cwd());
 const WORK = workDir();
 const INBOX = join(WORK, "inbox");
 const APPS = join(WORK, "applications");
-
-// ── Noise filter: aggregators, recruiters, listing farms ──────────────
-const NOISE_COMPANIES = new Set([
-  "pms for hire", "jobright.ai", "jobgether", "rex.zone",
-  "mvp ventures", "sage recruiting inc.", "swim recruiting",
-  "yochana", "quantum world technologies inc.", "highbrow technology inc",
-  "veripark", "dataannotation", "openloop",
-]);
-
-function isNoise(company) {
-  return NOISE_COMPANIES.has(company.toLowerCase().trim());
-}
 
 // ── Fuzzy package detection ────────────────────────────────────────────
 
@@ -101,8 +89,8 @@ for (const jobId of readdirSync(INBOX)) {
   if (!["to_apply", "package_ready"].includes(status)) continue;
   if (!enrichedAt) continue;
 
-  // Skip noise
-  if (isNoise(company)) continue;
+  // Exclusions are profile-owned and enforced at every pipeline entry point.
+  if (isCompanyExcluded(company)) continue;
 
   // Check if already packaged (fuzzy match)
   if (hasExistingPackage(company, title)) continue;
@@ -127,7 +115,7 @@ const today = new Date().toISOString().slice(0, 10);
 const filename = "package-queue.md";
 
 let manifest = `# Package Queue — ${today}\n\n`;
-manifest += `> Generated from inbox/*/enrichment.md. Jobs enriched and ready, not yet packaged. No aggregators/recruiters.\n`;
+manifest += `> Generated from inbox/*/enrichment.md. Jobs enriched and ready, not yet packaged. Profile exclusions omitted.\n`;
 manifest += `> Tell Codex: "Build packages from ${filename}"\n\n`;
 
 if (queue.length === 0) {
