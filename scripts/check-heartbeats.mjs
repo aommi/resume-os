@@ -10,7 +10,7 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { alertFingerprint, shouldSendAlert } from "../engine/watchdog-alerts.mjs";
 import { workDir } from "../engine/config.mjs";
 
 const WORK = workDir();
@@ -113,23 +113,26 @@ if (!quiet) {
     console.error("watchdog: WATCHDOG_SEND_TARGET not set — Telegram alerts unconfigured, skipping send");
   } else {
     const stateFile = join(WORK, "watchdog-alert-state.json");
-    const hash = createHash("sha256").update(problems.join("\n")).digest("hex");
+    const hash = alertFingerprint(problems);
     let prevState = null;
     try {
       prevState = JSON.parse(readFileSync(stateFile, "utf8"));
     } catch {
       prevState = null;
     }
-    const unchanged = prevState && prevState.hash === hash;
-    const withinDay = prevState && Date.now() - Date.parse(prevState.lastSent ?? 0) < DAY_MS;
-    if (unchanged && withinDay) {
+    if (!shouldSendAlert(problems, prevState)) {
       console.log("watchdog: problem set unchanged within 24h — suppressing duplicate Telegram alert");
     } else {
       const header = `🔴 Resume OS watchdog — ${problems.length} problem(s)`;
       const body = `${header}\n${problems.join("\n")}`;
+      // A timeout is mandatory here. The watchdog is what notices every other
+      // workflow failing, so a delivery call that blocks on a network or socket
+      // failure would silently disable all monitoring — the exact class of
+      // outage this tool exists to catch.
       const result = spawnSync("hermes", ["send", "--to", target, "--quiet"], {
         input: body,
         encoding: "utf8",
+        timeout: 15000,
       });
       if (result.error || result.status !== 0) {
         console.error(
