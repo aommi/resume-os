@@ -32,14 +32,14 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   per-run output contract, and records a heartbeat. `scripts/import-events.mjs` deduplicates and
   imports valid events, quarantines malformed output, archives processed files, and regenerates
   the job board.
-- **Daily brief:** `scripts/run-daily-brief.sh` + `prompts/daily-brief.txt` (PR #2). A read-only
-  agent (models.json `daily_brief`) narrates deterministic facts — verbatim board health warnings,
-  status counts, raw monitor events deduped by message_id across the overlapping search window —
-  into a Telegram digest delivered via `hermes send` (no LLM). Wrapper owns the heartbeat (written
-  only after delivery) with failure categories agent_failed / brief_output_missing /
-  delivery_failed / no_send_target / input_invalid; board is validated before any model call;
-  `BRIEF_SEND_TARGET` is required, never defaulted. Scheduled by LaunchAgent
-  `ai.resumeos.dailybrief` (07:30, machine config outside the repo).
+- **Daily action digest:** `scripts/run-daily-brief.sh` + `prompts/daily-brief.txt`. A deterministic
+  gate reads only `Upcoming Events`, `Needs Action`, and `Interviewing`; when all are empty, it
+  writes a successful heartbeat without a model call or Telegram message. When work needs attention,
+  the read-only `daily_brief` agent composes a concise job-search digest and `hermes send` delivers
+  it. Watchdog separately sends only operational failures. The wrapper owns the heartbeat with
+  failure categories agent_failed / brief_output_missing / delivery_failed / no_send_target /
+  input_invalid; `BRIEF_SEND_TARGET` is required only for an actionable run and is never defaulted.
+  Scheduled by LaunchAgent `ai.resumeos.dailybrief` (07:30, machine config outside the repo).
 - **Resolver:** `engine/resolver.json` (routing table) + `engine/resolve.mjs` (lookup) +
   `scripts/test-resolver.mjs` (deterministic test). Task type -> which skill docs to load,
   with a default/fallback route. `adapters/claude-code-bootstrap.md` is the Claude Code entry.

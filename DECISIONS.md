@@ -195,3 +195,20 @@ applied deterministically at discovery, persistence, assessment, and package-que
 `nextEventAt` is accepted only from an exact future UTC timestamp in a structured email event for a
 screen or interview; no tool or model infers it from vague language. The job board is the generated
 view of that lifecycle state.
+
+## Telegram is an actionable job-search channel, not a pipeline feed (2026-07-27)
+**Why accepted:** Routine pipeline totals, packaging queues, and quiet daily runs do not require a
+candidate decision, but consume attention and model tokens. The user wants one concise Telegram
+channel for scheduled events, replies/decisions, active interview preparation, and genuine
+operational failures.
+
+**Implications:** The daily-brief wrapper deterministically skips the model and delivery unless the
+board has an upcoming event, a `Needs Action` row, or an `Interviewing` row. Its prompt contains
+only those actionable details. Watchdog remains responsible for deduplicated operational-failure
+alerts; it is not repeated in normal job-search digests.
+
+**Architecture Boundary verdict (2026-07-27): ALIGNED.** (1) The notification policy is an explicit
+user preference, not resume judgment. (2) The prompt owns concise action framing; code enforces the
+exact delivery gate and heartbeat. (3) The wrapper deterministically avoids unnecessary model calls
+and sends. (4) No resolver or adapter gained domain logic. (5) The gate removes routine friction
+rather than creating a new workflow. (6) Verdict: ALIGNED.

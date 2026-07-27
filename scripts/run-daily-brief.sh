@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Daily brief wrapper: read pipeline -> compose brief -> deliver to Telegram, with
+# Daily brief wrapper: send Telegram only for actionable job-search work, with a
 # heartbeat contract. Scheduled by a LaunchAgent (daily, after the morning gmail-sync).
 # Machine specifics live OUTSIDE this script: the LaunchAgent/environment must provide
 # a PATH containing node and the hermes CLI, and BRIEF_SEND_TARGET (e.g. a
 # "telegram:<dm name>" target from `hermes send --list`). The target is required
 # explicitly — never defaulted — so the brief can't fall through to a group chat.
-# The ONLY model call is the brief composition; heartbeat + delivery are deterministic
-# (`hermes send` reuses gateway credentials with no LLM and no agent loop).
+# The model runs only after a deterministic action gate; heartbeat + delivery are
+# deterministic (`hermes send` reuses gateway credentials with no LLM or agent loop).
 # -e: initialization must fail closed — a broken cd, node, or mkdir must abort,
 # never continue with an empty WORK. Exits we inspect are captured via if-blocks.
 set -euo pipefail
@@ -57,23 +57,16 @@ run_brief() {
 
 echo "=== daily-brief $RUN_ID (model: $BRIEF_MODEL) ===" >> "$LOG"
 
-if [ -z "${BRIEF_SEND_TARGET:-}" ]; then
-  echo "FATAL: BRIEF_SEND_TARGET not set — refusing to run (won't guess a delivery target)" >> "$LOG"
-  write_hb "$LAST_SUCCESS" 1 "no_send_target"
-  exit 1
-fi
-
-# Input contract: the board must exist and carry every status heading the prompt
-# parses before we spend a model call on it. An empty pipeline under valid headings
-# is a valid (quiet) brief; a missing or malformed board is input_invalid, never a
-# green heartbeat.
+# Input contract: the board must exist and carry every status heading the action gate
+# reads. A quiet pipeline is a valid no-op; a missing or malformed board is
+# input_invalid, never a green heartbeat.
 BOARD="$WORK/jobs-tracker.md"
 BOARD_OK=1
 if [ ! -s "$BOARD" ]; then
   echo "input invalid: $BOARD missing or empty" >> "$LOG"
   BOARD_OK=0
 else
-  for section in "## To Review" "## To Apply" "## Package Ready" "## Applied" "## Needs Action" "## Interviewing" "## Skipped" "## Closed"; do
+  for section in "## Upcoming Events" "## To Review" "## To Apply" "## Package Ready" "## Applied" "## Needs Action" "## Interviewing" "## Skipped" "## Closed"; do
     if ! grep -qF "$section" "$BOARD"; then
       echo "input invalid: $BOARD is missing section '$section'" >> "$LOG"
       BOARD_OK=0
@@ -82,6 +75,31 @@ else
 fi
 if [ "$BOARD_OK" -ne 1 ]; then
   write_hb "$LAST_SUCCESS" 1 "input_invalid"
+  exit 1
+fi
+
+section_has_action() { # $1: board heading, $2: row prefix regex
+  awk -v heading="$1" -v row="$2" '
+    $0 == "## " heading { in_section = 1; next }
+    in_section && /^## / { exit }
+    in_section && $0 ~ row { found = 1; exit }
+    END { exit(found ? 0 : 1) }
+  ' "$BOARD"
+}
+
+# Do not spend tokens or send routine telemetry. These are the only board states that
+# represent a current candidate decision, reply, or interview-preparation obligation.
+if ! section_has_action "Upcoming Events" "^- [*][*]" \
+  && ! section_has_action "Needs Action" "^[|] [0-9]+ [|]" \
+  && ! section_has_action "Interviewing" "^[|] [0-9]+ [|]"; then
+  write_hb "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 0 ""
+  echo "daily-brief $RUN_ID quiet (no actionable job-search work)" >> "$LOG"
+  exit 0
+fi
+
+if [ -z "${BRIEF_SEND_TARGET:-}" ]; then
+  echo "FATAL: BRIEF_SEND_TARGET not set — refusing to run (won't guess a delivery target)" >> "$LOG"
+  write_hb "$LAST_SUCCESS" 1 "no_send_target"
   exit 1
 fi
 
