@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-// Zero-LLM pipeline watchdog (HLT-3). No model calls, no network — by rule.
+// Zero-LLM pipeline watchdog (HLT-3). No model calls — by rule, so it cannot
+// share a failure mode with the agents it watches. Remote alert delivery is
+// optional, opt-in via WATCHDOG_SEND_TARGET, and time-bounded; detection itself
+// is purely local and never depends on it.
 // Reads heartbeat files, compares against expected cadence, fires a local
 // macOS notification on staleness. Run via LaunchAgent ai.resumeos.watchdog.
 //

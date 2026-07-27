@@ -118,6 +118,22 @@ Do this after the current job-seeker loop is smoother. Keep it practical: second
 | REP-3 | First-30-minutes README | Makes the open-source repo usable by a technical job seeker. | Fresh clone can run the example profile; README explains profile creation, Chrome/browser setup, PDF dependency, and first build. |
 | REP-4 | Intake skill | Removes the biggest barrier for a new user: creating source material. | A synthetic or willing second user can go from old resume/LinkedIn export to validated profile, sources, and first scored base resume in one guided session. |
 
+## HLT-4 — One Health Authority (raised in review 2026-07-27, not started)
+
+Health is currently evaluated in two places with independently maintained thresholds:
+`check-heartbeats.mjs` (the watchdog, which detects and alerts) and `job-board.mjs:182-226`
+(which recomputes a partial, overlapping set of the same staleness rules when rendering the
+board). Same conditions, duplicated constants, so they can disagree and drift.
+
+Direction: make `check-heartbeats.mjs` the sole authority for thresholds and failure detection.
+Reduce the board to a passive view of timestamps, pending-event counts, and job state, and drop
+its pipeline-health warnings. If the board should still show a health summary, have the watchdog
+persist one small status file per run and render that verbatim — never recalculate.
+
+Deliberately deferred out of PR #6: that PR touched `job-board.mjs` only for `isClosedOutcome`,
+and the duplication predates it. Note that `memory/semantic.md` currently describes the board
+rendering staleness warnings as intended design; that entry changes when this lands.
+
 ## Target Design — Proposals As The Daily To-Do (registered 2026-07-27, undecided)
 
 Direction agreed in principle; sequencing and scope deliberately not decided yet.
