@@ -2,9 +2,11 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { workDir } from "../engine/config.mjs";
+import { loadProfile, workDir } from "../engine/config.mjs";
 
 const work = workDir();
+const profile = loadProfile();
+const positiveReferenceCompanies = new Set((profile.jobSearch?.triageReview?.positiveReferenceCompanies || []).map((company) => company.toLowerCase()));
 const inbox = join(work, "inbox");
 const output = join(work, "model-evals", "job-triage-review.html");
 const active = new Set(["to_review", "to_apply"]);
@@ -50,7 +52,7 @@ const add = (jobs, cohort, cohortLabel) => {
 // Review the freshest actionable work first, while retaining a small, diverse basis for model evaluation.
 add(candidates.slice(0, 18), "review-now", "Review now — current backlog");
 add(candidates.slice(-4), "backlog-check", "Backlog check — older active role");
-add(newestFirst(allJobs.filter((job) => job.company.toLowerCase() === "ground news" && positive.has(job.status))).slice(0, 1), "positive-reference", "Reference — known strong fit (Ground News)");
+add(newestFirst(allJobs.filter((job) => positiveReferenceCompanies.has(job.company.toLowerCase()) && positive.has(job.status))).slice(0, 1), "positive-reference", "Reference — configured positive fit");
 add(newestFirst(allJobs.filter((job) => positive.has(job.status))).slice(0, 3), "positive-reference", "Reference — role pursued or in flight");
 const seenCullReasons = new Set();
 const cullReferences = newestFirst(allJobs.filter((job) => priorCull.has(job.status))).filter((job) => {
@@ -59,7 +61,7 @@ const cullReferences = newestFirst(allJobs.filter((job) => priorCull.has(job.sta
   seenCullReasons.add(key);
   return true;
 }).slice(0, 4);
-add(duplicateReferences.filter((job) => job.company.toLowerCase() !== "ground news").slice(0, 2), "cull-reference", "Reference — duplicate of a role already in flight");
+add(duplicateReferences.filter((job) => !positiveReferenceCompanies.has(job.company.toLowerCase())).slice(0, 2), "cull-reference", "Reference — duplicate of a role already in flight");
 add(cullReferences, "cull-reference", "Reference — previously eliminated");
 
 const jobs = selected;
@@ -121,11 +123,6 @@ const page = `<!doctype html>
         <label>Disposition<select class="decision" id="disposition"><option value="">Choose…</option><option value="skipped">Skip — clear non-fit</option><option value="needs_input">Needs my input</option><option value="base_resume">Apply with base resume</option><option value="tailor">Apply with tailoring</option></select></label>
         <label>Optional note<textarea id="note" placeholder="Only add context if this is an edge case or you want the evaluator to notice something specific."></textarea></label>\`;
       document.getElementById("disposition").value = label.disposition || "";
-      document.getElementById("reason").value = label.reason || "";
-      document.getElementById("evidence").value = label.evidence || "";
-      document.getElementById("question").value = label.question || "";
-      const outreach = document.querySelector(\`input[name="outreach"][value="\${label.outreach || "none"}"]\`);
-      if (outreach) outreach.checked = true;
       review.querySelectorAll("select, textarea, input").forEach((field) => field.addEventListener("input", save));
       review.querySelectorAll("input[type=radio]").forEach((field) => field.addEventListener("change", save));
     }

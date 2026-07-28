@@ -92,7 +92,7 @@ fi
   });
   const queue = run("scripts/build-package-queue.mjs");
   assert.equal(queue.status, 0, queue.stderr);
-  assert.deepEqual(JSON.parse(queue.stdout).jobs, ["included"]);
+  assert.deepEqual(JSON.parse(queue.stdout).jobs, []);
 
   writeJob("upcoming-only", {
     company: "Upcoming Co",
@@ -216,7 +216,8 @@ fi
   assert.equal(needsInputMetadata.lifecycle.pursue, "needs_input");
   assert.equal(needsInputMetadata.lifecycle.strategy, "");
   assert.equal(needsInputMetadata.lifecycle.applicationMode, "");
-  assert.equal(needsInputMetadata.lifecycle.notes, "Would you commute to Burnaby?");
+  assert.equal(needsInputMetadata.lifecycle.notes, "");
+  assert.equal(needsInputMetadata.lifecycle.screenQuestion, "Would you commute to Burnaby?");
 
   const invalidScreen = run("scripts/job-board.mjs", "screen", "included", "--pursue", "apply", "--reason", "No strategy");
   assert.notEqual(invalidScreen.status, 0);

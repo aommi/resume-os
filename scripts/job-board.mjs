@@ -45,6 +45,8 @@ const DEFAULT_LIFECYCLE = {
   pursue: "",
   strategy: "",
   applicationMode: "",
+  screenQuestion: "",
+  tailorApprovedAt: "",
   priority: "",
   packagePath: "",
   packageReadyAt: "",
@@ -122,6 +124,26 @@ try {
     else if (isActionRequiredOutcome(outcome)) job.lifecycle.status = "needs_action";
     saveJob(job);
     writeTracker(loadJobs({ persistLifecycle: true }));
+  } else if (command === "approve-tailor") {
+    const target = requiredArg(args[1], "approve-tailor requires <job-id|company>");
+    const jobs = loadJobs({ persistLifecycle: true });
+    const job = findJob(jobs, target);
+    if (job.lifecycle.pursue !== "apply" || job.lifecycle.strategy !== "tailor") throw new Error("approve-tailor requires an apply + tailor screening result");
+    job.lifecycle.tailorApprovedAt = new Date().toISOString();
+    saveJob(job);
+    writeTracker(loadJobs({ persistLifecycle: true }));
+  } else if (command === "migrate-screening") {
+    const apply = args.includes("--apply");
+    const jobs = loadJobs({ persistLifecycle: false });
+    const candidates = jobs.filter((job) => job.lifecycle.status === "to_apply" && !job.lifecycle.pursue && !job.lifecycle.packagePath);
+    if (apply) {
+      for (const job of candidates) {
+        job.lifecycle.status = "to_review";
+        saveJob(job);
+      }
+      writeTracker(loadJobs({ persistLifecycle: true }));
+    }
+    console.log(JSON.stringify({ candidates: candidates.map((job) => job.id), applied: apply }, null, 2));
   } else if (command === "screen") {
     const target = requiredArg(args[1], "screen requires <job-id|company>");
     const options = parseOptions(args.slice(2));
@@ -151,10 +173,12 @@ try {
     job.lifecycle.pursue = pursue;
     job.lifecycle.strategy = strategy;
     job.lifecycle.applicationMode = pursue === "apply" ? requestedApplicationMode || "focused" : "";
+    job.lifecycle.screenQuestion = pursue === "needs_input" ? question : "";
+    job.lifecycle.tailorApprovedAt = "";
     job.lifecycle.priority = options.priority || job.lifecycle.priority;
     job.lifecycle.variant = options.variant || job.lifecycle.variant;
     job.lifecycle.screenReason = reason;
-    job.lifecycle.notes = question || job.lifecycle.notes;
+
     if (pursue === "apply") job.lifecycle.status = "to_apply";
     else if (pursue === "skip") {
       job.lifecycle.status = "skipped";
@@ -212,21 +236,33 @@ function normalizeLifecycle(lifecycle = {}) {
   if (!VALID_PURSUITS.has(normalized.pursue)) normalized.pursue = "";
   if (!VALID_STRATEGIES.has(normalized.strategy)) normalized.strategy = "";
   if (!VALID_APPLICATION_MODES.has(normalized.applicationMode)) normalized.applicationMode = "";
+  if (typeof normalized.screenQuestion !== "string") normalized.screenQuestion = "";
+  if (typeof normalized.tailorApprovedAt !== "string") normalized.tailorApprovedAt = "";
   if (!normalized.pursue) {
     const legacy = normalizeScreenValue(normalized.fit);
+    const mutableStatus = ["to_review", "to_apply"].includes(normalized.status);
     if (legacy === "build_package") {
       normalized.pursue = "apply";
       normalized.strategy = "tailor";
+      if (mutableStatus) normalized.status = "to_apply";
     } else if (legacy === "base_resume") {
       normalized.pursue = "apply";
       normalized.strategy = "base_resume";
-    } else if (legacy === "watch") normalized.pursue = "needs_input";
-    else if (legacy === "cull") normalized.pursue = "skip";
+      if (mutableStatus) normalized.status = "to_apply";
+    } else if (legacy === "watch") {
+      normalized.pursue = "needs_input";
+      if (mutableStatus) normalized.status = "to_review";
+    } else if (legacy === "cull") {
+      normalized.pursue = "skip";
+      if (mutableStatus) normalized.status = "skipped";
+    }
   }
   if (normalized.pursue !== "apply") {
     normalized.strategy = "";
     normalized.applicationMode = "";
+    normalized.tailorApprovedAt = "";
   }
+  if (normalized.strategy !== "tailor") normalized.tailorApprovedAt = "";
   if (normalized.applicationMode === "opportunistic" && normalized.strategy !== "base_resume") normalized.applicationMode = "";
   if (!Array.isArray(normalized.emailEvents)) normalized.emailEvents = [];
   return normalized;
@@ -574,6 +610,8 @@ function printHelp() {
   node scripts/job-board.mjs applied <job-id|company> [--date YYYY-MM-DD] [--outcome Submitted]
   node scripts/job-board.mjs skip <job-id|company> --reason "..."
   node scripts/job-board.mjs outcome <job-id|company> --outcome "Rejected|Screen|Interview|Offer|Ghosted"
+  node scripts/job-board.mjs approve-tailor <job-id|company>
+  node scripts/job-board.mjs migrate-screening [--apply]
   node scripts/job-board.mjs screen <job-id|company> --pursue <apply|skip|needs_input> --reason "..." [--strategy <base_resume|tailor>] [--question "..."] [--application-mode <focused|opportunistic>] [--priority <value>] [--variant <base>]
 `);
 }

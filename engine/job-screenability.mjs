@@ -1,6 +1,6 @@
 import { isCompanyExcluded } from "./job-exclusions.mjs";
 
-const UNAVAILABLE_STATUSES = new Set(["package_ready", "applied", "needs_action", "interviewing", "skipped", "closed"]);
+const UNAVAILABLE_STATUSES = new Set(["package_ready", "applied", "needs_action", "interviewing", "closed"]);
 
 export function assessScreenability(job, jobs, profile) {
   const metadata = job.metadata || {};
@@ -16,11 +16,19 @@ export function assessScreenability(job, jobs, profile) {
 function canonicalDuplicate(job, jobs) {
   const url = canonicalUrl(job.metadata?.url);
   if (!url) return null;
-  const matches = jobs.filter((candidate) => candidate.id !== job.id && canonicalUrl(candidate.metadata?.url) === url)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const matches = jobs.filter((candidate) => candidate.id !== job.id && canonicalUrl(candidate.metadata?.url) === url);
   if (!matches.length) return null;
-  const canonical = [job, ...matches].sort((a, b) => a.id.localeCompare(b.id))[0];
+  const canonical = [job, ...matches].sort(compareCanonical)[0];
   return canonical.id === job.id ? null : canonical;
+}
+
+function compareCanonical(a, b) {
+  const freshness = jobFreshness(b).localeCompare(jobFreshness(a));
+  return freshness || a.id.localeCompare(b.id);
+}
+
+function jobFreshness(job) {
+  return String(job.metadata?.fetched || job.metadata?.postedAt || job.metadata?.enrichedAt || "");
 }
 
 function canonicalUrl(value) {

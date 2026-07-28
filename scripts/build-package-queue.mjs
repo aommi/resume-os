@@ -84,14 +84,15 @@ for (const jobId of readdirSync(INBOX)) {
   const status = meta?.lifecycle?.status || "";
   const strategy = meta?.lifecycle?.strategy || "";
   const applicationMode = meta?.lifecycle?.applicationMode || "";
+  const pursue = meta?.lifecycle?.pursue || "";
+  const tailorApprovedAt = meta?.lifecycle?.tailorApprovedAt || "";
   const company = meta?.company || "";
   const title = meta?.title || "";
   const enrichedAt = meta?.enrichedAt || "";
 
   // Only queue jobs that are enriched and not yet applied/closed
   if (!["to_apply", "package_ready"].includes(status)) continue;
-  // A base-resume application is intentionally not a package-building task.
-  if (status === "to_apply" && (strategy === "base_resume" || applicationMode === "opportunistic")) continue;
+  if (status === "to_apply" && (pursue !== "apply" || strategy !== "tailor" || !tailorApprovedAt || applicationMode === "opportunistic")) continue;
   if (!enrichedAt) continue;
 
   // Exclusions are profile-owned and enforced at every pipeline entry point.
