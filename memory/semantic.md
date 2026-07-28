@@ -105,6 +105,7 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   future UTC timestamp for a recruiter screen or interview. The importer persists the earliest valid
   value as lifecycle `nextEventAt`; the board and daily brief render it as an upcoming event. Vague
   scheduling language remains blank rather than being inferred.
+- **Evaluation collection boundary:** Frozen private labels, cases, raw outputs, and scorecards are durable evaluation evidence. One-off collection interfaces are removed after use unless a recurring workflow and explicit owner exist; do not parameterize profile-specific sampling logic into the engine merely to preserve a temporary aid.
 - **Screening lifecycle:** `lifecycle.status` is execution state, while screening records `pursue`
   (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).
   `job-board.mjs screen` validates that only `apply` receives a strategy; it moves `apply` to

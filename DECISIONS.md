@@ -241,3 +241,14 @@ form; outreach remains a separate human proposal. Existing legacy tiers are read
 `approve-tailor` command records approval; re-screening clears it. A dedicated `screenQuestion`
 field preserves general notes. `migrate-screening` is dry-run by default and explicitly returns
 legacy unscreened `to_apply` rows to review; it never runs during board rendering.
+
+## Preserve evaluation evidence; do not productize one-off labeling aids (2026-07-27)
+**Why accepted:** The first job-screening labels needed a small, temporary review aid. Once the
+private frozen evaluation set existed, its generator had no recurring user or engine consumer and
+introduced tenant-specific cohort logic into tracked code. Adding configuration, schema surface,
+and tests would have maintained a feature whose value had already been consumed.
+
+**Implications:** Keep frozen private labels, cases, raw model outputs, and scorecards when they are
+the durable evaluation evidence. Remove one-off collection interfaces after use unless a recurring
+workflow and an explicit owner are established. When a temporary feature leaks profile-specific
+policy into reusable code, deletion is preferred to parameterization by default.
