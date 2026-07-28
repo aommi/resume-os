@@ -15,8 +15,12 @@ taste here (that belongs in the profile's `LEARNINGS.md`).
 - The job records under the active profile's `work/inbox/<job-id>/metadata.json`, including the
   full `description`.
 - The profile's `LEARNINGS.md` (candidate-specific taste: domains, comp floor, location reality).
-- The profile's `positioning.md` and `profile.json` `jobSearch` block.
+- The profile's `positioning.md`, `profile.json` `jobSearch` block, and verified evidence sources: `sources/exhaustive-experience.md`, `sources/skills-bank.md`, and the applicable base resume. Do not decide that a required domain is absent without checking this evidence packet.
 - The current tracker, to detect roles already in flight.
+
+## Screenability gate — before strategic judgment
+
+The screening model receives only a **new, screenable** job. `unavailable` means already applied/interviewing/closed, duplicate, excluded, or confirmed closed: do not screen it. `incomplete` means a JD or decisive fact is missing: return `needs_input` with one focused question. Only `ready` jobs receive a strategic recommendation.
 
 ## Deterministic gates run first — do not re-judge them
 
@@ -24,6 +28,7 @@ These are settled in code before judgment begins. Treat their output as fact:
 
 | Gate | Owner |
 |---|---|
+| Screenability from stored facts | `engine/job-screenability.mjs` |
 | Excluded companies | `engine/job-exclusions.mjs` |
 | Compensation parse (fails closed to "not available") | `engine/compensation.mjs` |
 | LinkedIn assessment eligibility | `scripts/assess-jobs.mjs` |
@@ -62,16 +67,10 @@ Cull without further judgment when the JD shows any of:
 - **An unmatched *required* qualification the candidate cannot claim.** Where an assessment panel
   records required-qualification counts, a shortfall blocks the tier regardless of any headline
   match label. Quote the specific requirement in the rejection.
-- **A location requirement the candidate cannot meet.** Named offices with mandatory attendance,
-  or a country the candidate is not authorized to work in.
 - **A domain that requires credentials or a profession the candidate does not have.** Distinguish
   this from an unfamiliar industry: a workflow platform in a new vertical is learnable; a role
   demanding practising-professional background or a distinct engineering discipline is not.
-- **The posting is stale.** Age thresholds are profile taste; see `LEARNINGS.md`.
-- **The listing is not a real employer posting.** Aggregators and staffing intermediaries where the
-  hiring employer is unidentifiable.
-- **A role already in flight.** Cross-check company and title against the tracker before pursuing.
-  Duplicate requisitions and records from different sources for one role are common.
+- **A confirmed location or work-authorisation requirement the candidate cannot meet.** This is a real blocker, not a cheap long shot. A missing or unclear location is `needs_input`, not a skip.
 - **Unpaid, volunteer, or below-entry roles.** These are not "overqualified", they are out of scope.
 
 ## Not a disqualifier
@@ -85,57 +84,52 @@ Cull without further judgment when the JD shows any of:
 
 ---
 
-## Tiers
+## Disposition and strategy
 
-Assign exactly one. Prefer a short, high-conviction top tier over a long one.
+Screening answers two separate questions. Do not overload either one with lifecycle state.
 
-**BUILD PACKAGE** — strong fit, worth a tailored resume and cover letter. The candidate clears the
-stated bar, the domain is claimable from real evidence, and the location and comp are workable.
+1. **Should we pursue this role?** `apply`, `skip`, or `needs_input`.
+2. **If we pursue it, what material strategy is justified?** `base_resume` or `tailor`.
 
-**BASE RESUME** — the candidate qualifies but the strategic fit is loose. Worth an application
-using an existing base resume variant, not bespoke work. This tier exists so that qualifying roles
-are not lost to a fit bar set for a different purpose; it is a volume play and its cost per
-application must stay near zero.
+`to_review`, `to_apply`, and later lifecycle statuses remain execution state, not screening labels.
+A strategically strong role that is closed or expired is not viable and must never enter
+`to_apply`; viability is checked separately from strategic route.
 
-**WATCH** — the employer matters but this requisition is weak, or a disqualifier is suspected but
-unconfirmed. Name the specific thing to confirm.
+| Pursue | Strategy | Meaning |
+|---|---|---|
+| `apply` | `base_resume` | A viable, credible fit where bespoke work is unlikely to change the odds. It is a recommendation, not a proxy for "the form is easy" or a personal time-budget decision. |
+| `apply` | `tailor` | A targeted evidence story can materially improve the odds; tailoring still needs human confirmation before costly package work. |
+| `needs_input` | — | One missing fact would change the decision. Ask exactly one focused question. |
+| `skip` | — | Clear non-fit. Quote the JD evidence and retain the record; never delete it. |
 
-**CULL** — quote the disqualifier.
+## Output contract
 
-## Output contract — a proposal, never an action
+Screening never applies, sends outreach, or submits a form. It may persist a reversible internal
+disposition using:
 
-Screening **proposes**; it does not apply, message, or transition lifecycle state. Every outward-
-facing step stays human-initiated. This is what keeps an automated screen from acting on the
-candidate's behalf, and it is not negotiable.
+```bash
+node scripts/job-board.mjs screen <job-id> \
+  --pursue <apply|skip|needs_input> \
+  --strategy <base_resume|tailor> \
+  --reason "..." \
+  [--question "..."] [--application-mode <focused|opportunistic>] [--priority <value>] [--variant <base>]
+```
 
-Persist an accepted screen with `node scripts/job-board.mjs screen <job-id> --fit <tier> --reason
-"..." [--priority <value>] [--variant <base>]`. This records the proposal in existing lifecycle
-fields and deliberately does not change the job's status.
+`apply` moves the record to `to_apply`; `skip` moves it to `skipped`; `needs_input` stays in
+`to_review`. A human may override any screen. Until the triage model has earned autonomous use,
+model output should be reviewed or replayed against the private evaluation set before issuing this
+command.
 
-For every screened job emit: job id, employer, role, tier, a one-clause reason, and the proposed
-next action. For every cull, the quoted disqualifying text from the JD. For every BUILD PACKAGE,
-the suggested base-resume variant.
+`applicationMode` is valid only for `apply`: `focused` is part of the active search; `opportunistic` is an eligible, plausible low-effort long shot. Opportunistic must use `base_resume` and never enters tailoring, outreach, or priority workflows.
 
-Proposed actions by tier:
+For every screened job emit: job id, employer, role, pursue value, strategy and application mode when applicable, and a
+one-clause reason. Every skip includes a quoted disqualifying JD passage. Every `needs_input` result
+contains exactly one question.
 
-| Tier | Proposal |
-|---|---|
-| BUILD PACKAGE | Build a tailored package. Then run the match assessment on this job specifically, as corroboration before further investment. |
-| BASE RESUME | Apply with the named base-resume variant. No tailoring. |
-| WATCH | Confirm the named uncertainty. |
-| CULL | None. |
-
-**Referral and outreach proposals.** When the screen rates a job a strong fit *and* an independent
-match assessment agrees at its top level, additionally propose: identify existing connections at the
-employer, and identify the recruiter or hiring manager. Emit this as a prompt for the human to act
-on. Never schedule it, never batch it, and never let an unattended run perform people search — that
-is account-endangering activity on the candidate's own identity, and its value is highest at exactly
-the moment a human has decided to apply anyway.
-
-Require both signals to agree before proposing outreach. The reason is cost asymmetry, not a
-measured constant: outreach spends a real relationship and cannot be undone, so it should wait for
-corroboration. Treat any specific claim about how well a match label predicts fit as **provisional
-and profile-local** until a given profile has its own evidence.
+**Referral and outreach proposals.** For a strong `apply` + `tailor` result, screening may propose
+outreach as a separate human decision. Never schedule it, batch it, search people automatically, or
+send it. Match assessment is optional corroboration, not a gate; its ranking signal is provisional
+and profile-local.
 
 Group culls by reason with the ids listed per reason so they can be actioned in bulk. Do not
 enumerate every cull individually.

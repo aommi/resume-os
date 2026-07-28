@@ -212,3 +212,24 @@ user preference, not resume judgment. (2) The prompt owns concise action framing
 exact delivery gate and heartbeat. (3) The wrapper deterministically avoids unnecessary model calls
 and sends. (4) No resolver or adapter gained domain logic. (5) The gate removes routine friction
 rather than creating a new workflow. (6) Verdict: ALIGNED.
+
+## Screening separates pursue from material strategy (2026-07-27)
+**Why accepted:** “Should we pursue this role?” and “how much customization is justified?” have
+different cost and automation boundaries. A low-cost base-resume attempt can be worthwhile without
+being a strong fit, while a tailoring recommendation can require meaningful human time. Encoding
+both in one screening tier made lifecycle state ambiguous and could send base-resume jobs into a
+tailoring queue.
+
+**Implications:** Lifecycle status is execution state (`to_review`, `to_apply`, and later states).
+Screening persists `pursue` (`apply`, `skip`, or `needs_input`) separately from `strategy`
+(`base_resume` or `tailor`, only when pursuing). `apply` moves a record to `to_apply`; `skip` moves
+it to `skipped`; `needs_input` remains `to_review` and carries one focused question. Base-resume
+jobs do not enter the package-build queue. Screening never applies, sends outreach, or submits a
+form; outreach remains a separate human proposal. Existing legacy tiers are read compatibly.
+
+## Screening separates focused and opportunistic applies (2026-07-27)
+**Why accepted:** A candidate may submit a low-effort application to an eligible long shot, but that capacity choice must not redefine the screening recommendation.
+
+**Implications:** Stored-fact screenability blocks in-flight/closed rows, exclusions, exact URL duplicates, and missing JDs before screening. `applicationMode` is apply-only: `focused` follows the recommended route; `opportunistic` is base-resume-only and excluded from package, tailoring, outreach, and priority work. Screening must read the profile evidence sources before rejecting a domain as absent.
+
+**Architecture Boundary verdict (2026-07-27): ALIGNED.** Judgment remains in the skill/profile; code validates deterministic stored facts and lifecycle combinations only.

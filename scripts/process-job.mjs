@@ -386,8 +386,10 @@ function readJsonIfExists(path) {
 
 function normalizeLifecycle(lifecycle = {}) {
   return {
-    status: lifecycle.status || "to_apply",
+    status: lifecycle.status || "to_review",
     fit: lifecycle.fit || "",
+    pursue: lifecycle.pursue || "",
+    strategy: lifecycle.strategy || "",
     priority: lifecycle.priority || "",
     packagePath: lifecycle.packagePath || "",
     packageReadyAt: lifecycle.packageReadyAt || "",
