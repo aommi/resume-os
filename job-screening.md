@@ -154,3 +154,14 @@ field that contradicted its JD.
   likely to be present, which makes them the two most likely to be the only thing considered.
 - **Re-deriving the criteria per run.** Rules learned while screening belong in this doc (general)
   or the profile's `LEARNINGS.md` (candidate-specific), not in the next ad-hoc prompt.
+
+### Tailoring approval and legacy recovery
+
+`apply + tailor` is a recommendation, not package approval. A human must run
+`node scripts/job-board.mjs approve-tailor <job-id|company>` before the role enters the package queue.
+Any later re-screen clears that approval. `lifecycle.screenQuestion` stores the single focused
+question for `needs_input`; it never overwrites general `notes`.
+
+For old discovery rows that entered `to_apply` before screening existed, run
+`node scripts/job-board.mjs migrate-screening` to inspect candidates, then add `--apply` to move only
+rows with no `pursue` value and no package path back to `to_review`.

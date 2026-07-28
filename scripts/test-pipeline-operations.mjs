@@ -190,6 +190,18 @@ fi
   assert.equal(screenedMetadata.lifecycle.variant, "pm");
   assert.equal(screenedMetadata.lifecycle.screenReason, "Strong JD match");
   assert.equal(screenedMetadata.lifecycle.notes, "");
+  const beforeApprovalQueue = run("scripts/job-board.mjs", "list", "to_apply");
+  assert.equal(beforeApprovalQueue.status, 0, beforeApprovalQueue.stderr);
+  const emptyTailorQueue = run("scripts/build-package-queue.mjs");
+  assert.deepEqual(JSON.parse(emptyTailorQueue.stdout).jobs, []);
+  const approveTailor = run("scripts/job-board.mjs", "approve-tailor", "included");
+  assert.equal(approveTailor.status, 0, approveTailor.stderr);
+  const approvedTailorQueue = run("scripts/build-package-queue.mjs");
+  assert.deepEqual(JSON.parse(approvedTailorQueue.stdout).jobs, ["included"]);
+  const rescreenTailor = run("scripts/job-board.mjs", "screen", "included", "--pursue", "apply", "--strategy", "tailor", "--reason", "Updated reasoning");
+  assert.equal(rescreenTailor.status, 0, rescreenTailor.stderr);
+  const reapprovalRequiredQueue = run("scripts/build-package-queue.mjs");
+  assert.deepEqual(JSON.parse(reapprovalRequiredQueue.stdout).jobs, []);
 
   const invalidOpportunistic = run(
     "scripts/job-board.mjs", "screen", "included",

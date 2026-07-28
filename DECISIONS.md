@@ -233,3 +233,11 @@ form; outreach remains a separate human proposal. Existing legacy tiers are read
 **Implications:** Stored-fact screenability blocks in-flight/closed rows, exclusions, exact URL duplicates, and missing JDs before screening. `applicationMode` is apply-only: `focused` follows the recommended route; `opportunistic` is base-resume-only and excluded from package, tailoring, outreach, and priority work. Screening must read the profile evidence sources before rejecting a domain as absent.
 
 **Architecture Boundary verdict (2026-07-27): ALIGNED.** Judgment remains in the skill/profile; code validates deterministic stored facts and lifecycle combinations only.
+
+## Tailoring approval and legacy-screening recovery (2026-07-27)
+**Clarifies:** Screening separates pursue from material strategy (2026-07-27).
+
+**Implications:** `apply + tailor` does not enter the package queue until an explicit
+`approve-tailor` command records approval; re-screening clears it. A dedicated `screenQuestion`
+field preserves general notes. `migrate-screening` is dry-run by default and explicitly returns
+legacy unscreened `to_apply` rows to review; it never runs during board rendering.
