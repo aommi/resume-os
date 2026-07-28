@@ -81,11 +81,18 @@ fi
     company: "Included Corp",
     title: "Product Manager",
     enrichedAt: "2026-07-27T00:00:00.000Z",
+    description: "A complete product management job description.",
     lifecycle: { status: "to_apply" },
+  });
+  writeJob("base-only", {
+    company: "Base Only Corp",
+    title: "Product Manager",
+    enrichedAt: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "to_apply", pursue: "apply", strategy: "base_resume" },
   });
   const queue = run("scripts/build-package-queue.mjs");
   assert.equal(queue.status, 0, queue.stderr);
-  assert.deepEqual(JSON.parse(queue.stdout).jobs, ["included"]);
+  assert.deepEqual(JSON.parse(queue.stdout).jobs, []);
 
   writeJob("upcoming-only", {
     company: "Upcoming Co",
@@ -171,18 +178,60 @@ fi
 
   const screened = run(
     "scripts/job-board.mjs", "screen", "included",
-    "--fit", "build-package", "--priority", "high", "--variant", "pm", "--reason", "Strong JD match",
+    "--pursue", "apply", "--strategy", "tailor", "--application-mode", "focused", "--priority", "high", "--variant", "pm", "--reason", "Strong JD match",
   );
   assert.equal(screened.status, 0, screened.stderr);
   const screenedMetadata = JSON.parse(readFileSync(join(inbox, "included", "metadata.json"), "utf8"));
   assert.equal(screenedMetadata.lifecycle.status, "to_apply");
-  assert.equal(screenedMetadata.lifecycle.fit, "build_package");
+  assert.equal(screenedMetadata.lifecycle.pursue, "apply");
+  assert.equal(screenedMetadata.lifecycle.strategy, "tailor");
+  assert.equal(screenedMetadata.lifecycle.applicationMode, "focused");
   assert.equal(screenedMetadata.lifecycle.priority, "high");
   assert.equal(screenedMetadata.lifecycle.variant, "pm");
   assert.equal(screenedMetadata.lifecycle.screenReason, "Strong JD match");
   assert.equal(screenedMetadata.lifecycle.notes, "");
+  const beforeApprovalQueue = run("scripts/job-board.mjs", "list", "to_apply");
+  assert.equal(beforeApprovalQueue.status, 0, beforeApprovalQueue.stderr);
+  const emptyTailorQueue = run("scripts/build-package-queue.mjs");
+  assert.deepEqual(JSON.parse(emptyTailorQueue.stdout).jobs, []);
+  const approveTailor = run("scripts/job-board.mjs", "approve-tailor", "included");
+  assert.equal(approveTailor.status, 0, approveTailor.stderr);
+  const approvedTailorQueue = run("scripts/build-package-queue.mjs");
+  assert.deepEqual(JSON.parse(approvedTailorQueue.stdout).jobs, ["included"]);
+  const rescreenTailor = run("scripts/job-board.mjs", "screen", "included", "--pursue", "apply", "--strategy", "tailor", "--reason", "Updated reasoning");
+  assert.equal(rescreenTailor.status, 0, rescreenTailor.stderr);
+  const reapprovalRequiredQueue = run("scripts/build-package-queue.mjs");
+  assert.deepEqual(JSON.parse(reapprovalRequiredQueue.stdout).jobs, []);
 
-  const invalidScreen = run("scripts/job-board.mjs", "screen", "included", "--fit", "maybe", "--reason", "Nope");
+  const invalidOpportunistic = run(
+    "scripts/job-board.mjs", "screen", "included",
+    "--pursue", "apply", "--strategy", "tailor", "--application-mode", "opportunistic", "--reason", "Invalid mode",
+  );
+  assert.notEqual(invalidOpportunistic.status, 0);
+
+  const opportunistic = run(
+    "scripts/job-board.mjs", "screen", "included",
+    "--pursue", "apply", "--strategy", "base_resume", "--application-mode", "opportunistic", "--reason", "Eligible long shot",
+  );
+  assert.equal(opportunistic.status, 0, opportunistic.stderr);
+  const opportunisticMetadata = JSON.parse(readFileSync(join(inbox, "included", "metadata.json"), "utf8"));
+  assert.equal(opportunisticMetadata.lifecycle.applicationMode, "opportunistic");
+  assert.equal(opportunisticMetadata.lifecycle.strategy, "base_resume");
+
+  const needsInput = run(
+    "scripts/job-board.mjs", "screen", "included",
+    "--pursue", "needs_input", "--reason", "Location missing", "--question", "Would you commute to Burnaby?",
+  );
+  assert.equal(needsInput.status, 0, needsInput.stderr);
+  const needsInputMetadata = JSON.parse(readFileSync(join(inbox, "included", "metadata.json"), "utf8"));
+  assert.equal(needsInputMetadata.lifecycle.status, "to_review");
+  assert.equal(needsInputMetadata.lifecycle.pursue, "needs_input");
+  assert.equal(needsInputMetadata.lifecycle.strategy, "");
+  assert.equal(needsInputMetadata.lifecycle.applicationMode, "");
+  assert.equal(needsInputMetadata.lifecycle.notes, "");
+  assert.equal(needsInputMetadata.lifecycle.screenQuestion, "Would you commute to Burnaby?");
+
+  const invalidScreen = run("scripts/job-board.mjs", "screen", "included", "--pursue", "apply", "--reason", "No strategy");
   assert.notEqual(invalidScreen.status, 0);
 
   writeFileSync(join(pending, "2026-07-27-rejection.md"), `## JOB_EMAIL_EVENT

@@ -8,9 +8,11 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import { readHealthStatus } from "../engine/watchdog-health.mjs";
-import { timezone, workDir } from "../engine/config.mjs";
+import { loadProfile, timezone, workDir } from "../engine/config.mjs";
+import { assessScreenability } from "../engine/job-screenability.mjs";
 
 const WORK = workDir();
+const PROFILE = loadProfile();
 const INBOX_DIR = join(WORK, "inbox");
 const TRACKER_PATH = join(WORK, "jobs-tracker.md");
 const TIME_ZONE = timezone();
@@ -24,7 +26,9 @@ const VALID_STATUSES = new Set([
   "skipped",
   "closed",
 ]);
-const VALID_SCREEN_TIERS = new Set(["build_package", "base_resume", "watch", "cull"]);
+const VALID_PURSUITS = new Set(["apply", "skip", "needs_input"]);
+const VALID_STRATEGIES = new Set(["base_resume", "tailor"]);
+const VALID_APPLICATION_MODES = new Set(["focused", "opportunistic"]);
 const STATUS_ORDER = {
   to_review: 0,
   to_apply: 1,
@@ -36,8 +40,13 @@ const STATUS_ORDER = {
   closed: 7,
 };
 const DEFAULT_LIFECYCLE = {
-  status: "to_apply",
+  status: "to_review",
   fit: "",
+  pursue: "",
+  strategy: "",
+  applicationMode: "",
+  screenQuestion: "",
+  tailorApprovedAt: "",
   priority: "",
   packagePath: "",
   packageReadyAt: "",
@@ -115,21 +124,66 @@ try {
     else if (isActionRequiredOutcome(outcome)) job.lifecycle.status = "needs_action";
     saveJob(job);
     writeTracker(loadJobs({ persistLifecycle: true }));
+  } else if (command === "approve-tailor") {
+    const target = requiredArg(args[1], "approve-tailor requires <job-id|company>");
+    const jobs = loadJobs({ persistLifecycle: true });
+    const job = findJob(jobs, target);
+    if (job.lifecycle.pursue !== "apply" || job.lifecycle.strategy !== "tailor") throw new Error("approve-tailor requires an apply + tailor screening result");
+    job.lifecycle.tailorApprovedAt = new Date().toISOString();
+    saveJob(job);
+    writeTracker(loadJobs({ persistLifecycle: true }));
+  } else if (command === "migrate-screening") {
+    const apply = args.includes("--apply");
+    const jobs = loadJobs({ persistLifecycle: false });
+    const candidates = jobs.filter((job) => job.lifecycle.status === "to_apply" && !job.lifecycle.pursue && !job.lifecycle.packagePath);
+    if (apply) {
+      for (const job of candidates) {
+        job.lifecycle.status = "to_review";
+        saveJob(job);
+      }
+      writeTracker(loadJobs({ persistLifecycle: true }));
+    }
+    console.log(JSON.stringify({ candidates: candidates.map((job) => job.id), applied: apply }, null, 2));
   } else if (command === "screen") {
     const target = requiredArg(args[1], "screen requires <job-id|company>");
     const options = parseOptions(args.slice(2));
-    const fit = normalizeScreenTier(requiredArg(options.fit, "screen requires --fit <build_package|base_resume|watch|cull>"));
-    if (!VALID_SCREEN_TIERS.has(fit)) {
-      throw new Error(`Unknown screening tier "${options.fit}". Valid tiers: ${[...VALID_SCREEN_TIERS].join(", ")}`);
+    const pursue = normalizeScreenValue(requiredArg(options.pursue, "screen requires --pursue <apply|skip|needs_input>"));
+    if (!VALID_PURSUITS.has(pursue)) {
+      throw new Error(`Unknown pursue value "${options.pursue}". Valid values: ${[...VALID_PURSUITS].join(", ")}`);
     }
+    const strategy = normalizeScreenValue(options.strategy || "");
+    if (pursue === "apply" && !VALID_STRATEGIES.has(strategy)) {
+      throw new Error(`screen with --pursue apply requires --strategy <${[...VALID_STRATEGIES].join("|")}>`);
+    }
+    if (pursue !== "apply" && strategy) throw new Error("--strategy is valid only with --pursue apply");
+    const requestedApplicationMode = normalizeScreenValue(options["application-mode"] || "");
+    if (requestedApplicationMode && !VALID_APPLICATION_MODES.has(requestedApplicationMode)) throw new Error("Unknown application mode \"" + options["application-mode"] + "\". Valid values: " + [...VALID_APPLICATION_MODES].join(", "));
+    if (pursue !== "apply" && requestedApplicationMode) throw new Error("--application-mode is valid only with --pursue apply");
+    if (requestedApplicationMode === "opportunistic" && strategy !== "base_resume") throw new Error("--application-mode opportunistic requires --strategy base_resume");
     const reason = requiredArg(options.reason, "screen requires --reason <reason>");
+    const question = options.question || "";
+    if (pursue === "needs_input" && !question) {
+      throw new Error("screen with --pursue needs_input requires --question <focused question>");
+    }
     const jobs = loadJobs({ persistLifecycle: true });
     const job = findJob(jobs, target);
-    // Screening is a persisted proposal, not a lifecycle transition.
-    job.lifecycle.fit = fit;
+    const screenability = assessScreenability(job, jobs, PROFILE);
+    if (screenability.state === "unavailable") throw new Error("job is not screenable: " + screenability.reason);
+    if (screenability.state === "incomplete" && pursue !== "needs_input") throw new Error("job has incomplete screening input: " + screenability.reason + "; use --pursue needs_input with one question");
+    job.lifecycle.pursue = pursue;
+    job.lifecycle.strategy = strategy;
+    job.lifecycle.applicationMode = pursue === "apply" ? requestedApplicationMode || "focused" : "";
+    job.lifecycle.screenQuestion = pursue === "needs_input" ? question : "";
+    job.lifecycle.tailorApprovedAt = "";
     job.lifecycle.priority = options.priority || job.lifecycle.priority;
     job.lifecycle.variant = options.variant || job.lifecycle.variant;
     job.lifecycle.screenReason = reason;
+
+    if (pursue === "apply") job.lifecycle.status = "to_apply";
+    else if (pursue === "skip") {
+      job.lifecycle.status = "skipped";
+      job.lifecycle.outcome = "Skipped";
+    } else job.lifecycle.status = "to_review";
     saveJob(job);
     writeTracker(loadJobs({ persistLifecycle: true }));
   } else {
@@ -179,6 +233,37 @@ function saveJob(job) {
 function normalizeLifecycle(lifecycle = {}) {
   const normalized = { ...DEFAULT_LIFECYCLE, ...lifecycle };
   if (!VALID_STATUSES.has(normalized.status)) normalized.status = DEFAULT_LIFECYCLE.status;
+  if (!VALID_PURSUITS.has(normalized.pursue)) normalized.pursue = "";
+  if (!VALID_STRATEGIES.has(normalized.strategy)) normalized.strategy = "";
+  if (!VALID_APPLICATION_MODES.has(normalized.applicationMode)) normalized.applicationMode = "";
+  if (typeof normalized.screenQuestion !== "string") normalized.screenQuestion = "";
+  if (typeof normalized.tailorApprovedAt !== "string") normalized.tailorApprovedAt = "";
+  if (!normalized.pursue) {
+    const legacy = normalizeScreenValue(normalized.fit);
+    const mutableStatus = ["to_review", "to_apply"].includes(normalized.status);
+    if (legacy === "build_package") {
+      normalized.pursue = "apply";
+      normalized.strategy = "tailor";
+      if (mutableStatus) normalized.status = "to_apply";
+    } else if (legacy === "base_resume") {
+      normalized.pursue = "apply";
+      normalized.strategy = "base_resume";
+      if (mutableStatus) normalized.status = "to_apply";
+    } else if (legacy === "watch") {
+      normalized.pursue = "needs_input";
+      if (mutableStatus) normalized.status = "to_review";
+    } else if (legacy === "cull") {
+      normalized.pursue = "skip";
+      if (mutableStatus) normalized.status = "skipped";
+    }
+  }
+  if (normalized.pursue !== "apply") {
+    normalized.strategy = "";
+    normalized.applicationMode = "";
+    normalized.tailorApprovedAt = "";
+  }
+  if (normalized.strategy !== "tailor") normalized.tailorApprovedAt = "";
+  if (normalized.applicationMode === "opportunistic" && normalized.strategy !== "base_resume") normalized.applicationMode = "";
   if (!Array.isArray(normalized.emailEvents)) normalized.emailEvents = [];
   return normalized;
 }
@@ -297,7 +382,9 @@ function activeColumns() {
     column("Location", (job) => job.metadata.location),
     column("Top", (job) => yesNo(job.metadata.topApplicant)),
     column("Apply", (job) => applyType(job)),
-    column("Fit", (job) => job.lifecycle.fit),
+    column("Pursue", (job) => job.lifecycle.pursue),
+    column("Strategy", (job) => job.lifecycle.strategy),
+    column("Mode", (job) => job.lifecycle.applicationMode),
     column("Priority", (job) => job.lifecycle.priority),
     column("Package", (job) => job.lifecycle.packagePath),
     column("Variant", (job) => job.lifecycle.variant),
@@ -347,7 +434,8 @@ function printList(jobs) {
       (job.metadata.company || "?").padEnd(18),
       job.metadata.title || "?",
       `apply:${applyType(job)}`,
-      `fit:${lifecycle.fit || "-"}`,
+      `pursue:${lifecycle.pursue || "-"}`,
+      `strategy:${lifecycle.strategy || "-"}`,
       `package:${lifecycle.packagePath || "-"}`,
     ].join("  "));
   }
@@ -413,12 +501,16 @@ function nextAction(job) {
   if (job.lifecycle.status === "package_ready") return "Apply";
   if (job.lifecycle.status === "needs_action") return "Follow up";
   if (job.lifecycle.status === "interviewing") return "Prepare / schedule";
+  if (job.lifecycle.status === "to_review" && job.lifecycle.pursue === "needs_input") return "Answer screening question";
   if (job.lifecycle.status === "to_review") return "Review fit";
-  if (job.lifecycle.status === "to_apply") return job.lifecycle.packagePath ? "Tailor or apply" : "Decide / tailor";
+  if (job.lifecycle.status === "to_apply" && job.lifecycle.strategy === "tailor") return "Tailor";
+  if (job.lifecycle.status === "to_apply" && job.lifecycle.applicationMode === "opportunistic") return "Apply opportunistic base resume";
+  if (job.lifecycle.status === "to_apply" && job.lifecycle.strategy === "base_resume") return "Apply base resume";
+  if (job.lifecycle.status === "to_apply") return "Decide / prepare";
   return "";
 }
 
-function normalizeScreenTier(value) {
+function normalizeScreenValue(value) {
   return String(value).toLowerCase().replace(/[\s-]+/g, "_");
 }
 
@@ -518,6 +610,8 @@ function printHelp() {
   node scripts/job-board.mjs applied <job-id|company> [--date YYYY-MM-DD] [--outcome Submitted]
   node scripts/job-board.mjs skip <job-id|company> --reason "..."
   node scripts/job-board.mjs outcome <job-id|company> --outcome "Rejected|Screen|Interview|Offer|Ghosted"
-  node scripts/job-board.mjs screen <job-id|company> --fit <build_package|base_resume|watch|cull> --reason "..." [--priority <value>] [--variant <base>]
+  node scripts/job-board.mjs approve-tailor <job-id|company>
+  node scripts/job-board.mjs migrate-screening [--apply]
+  node scripts/job-board.mjs screen <job-id|company> --pursue <apply|skip|needs_input> --reason "..." [--strategy <base_resume|tailor>] [--question "..."] [--application-mode <focused|opportunistic>] [--priority <value>] [--variant <base>]
 `);
 }
