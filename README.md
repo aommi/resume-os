@@ -6,7 +6,7 @@ The reusable engine is profile-agnostic; each person's private data lives under 
 ## Repository layout
 
 - **Engine (reusable, shareable):**
-  - `resume-os.md`, `tailoring-methodology.md`, `bullet-rubric.md`, `eval-rubric.md`, `job-screening.md`: skill docs (judgment/process).
+  - `resume-os.md`, `tailoring-methodology.md`, `bullet-rubric.md`, `eval-rubric.md`, `job-screening.md`, `application-form-assist.md`: skill docs (judgment/process).
   - `resume-os.config.json`: machine/env config: `activeProfile`, timezone, browser path, variant→title map.
   - `engine/config.mjs`: config + profile resolver (used by all tooling).
   - `engine/schemas/profile.schema.json`: the per-tenant data contract.
@@ -74,6 +74,9 @@ node scripts/build-resume-formats.mjs --source resume.md --export
 # Build a tailored package PDF and deliver it into the package folder:
 node scripts/build-resume-formats.mjs --source "<package>/resume.md" --out-dir /private/tmp/resume-export \
   --resume-title "<Company Role>" --export --deliver "applications/<Company - Role>" --require-terms "term1,term2"
+
+# Review a browser-assisted application-form fill plan; the runner never submits.
+RESUME_OS_PROFILE=example node scripts/apply-form-assist.mjs --manifest profiles/example/work/application-form-example.json --dry-run
 ```
 
 To assess a new model or compare models for a pipeline job, follow

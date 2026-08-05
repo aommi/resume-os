@@ -1,0 +1,67 @@
+{
+  "url": "https://example.com/careers/product-manager/apply",
+  "holdMinutes": 30,
+  "clickBeforeFill": [
+    {
+      "label": "Open application form",
+      "text": "Apply for this job",
+      "purpose": "open_form"
+    }
+  ],
+  "fields": [
+    {
+      "label": "First name",
+      "selectors": ["input[name='firstName']", "input[name='first_name']"],
+      "valueFrom": "profile.firstName"
+    },
+    {
+      "label": "Last name",
+      "selectors": ["input[name='lastName']", "input[name='last_name']"],
+      "valueFrom": "profile.lastName"
+    },
+    {
+      "label": "Email",
+      "selectors": ["input[type='email']", "input[name='email']"],
+      "valueFrom": "profile.email"
+    },
+    {
+      "label": "Phone",
+      "selectors": ["input[type='tel']", "input[name='phone']"],
+      "valueFrom": "profile.phone"
+    },
+    {
+      "label": "Location",
+      "selectors": ["input[name='location']", "input[name='candidate_location']"],
+      "valueFrom": "profile.resumeLocation",
+      "required": false
+    },
+    {
+      "label": "LinkedIn",
+      "selectors": ["input[name='linkedin']", "input[name='linkedinUrl']", "input[type='url']"],
+      "valueFrom": "profile.linkedin",
+      "required": false
+    },
+    {
+      "label": "How did you hear about us?",
+      "selectors": ["input[name='source']", "select[name='source']"],
+      "valueFrom": "ats.howDidYouHear",
+      "type": "text",
+      "required": false
+    },
+    {
+      "label": "Work authorization",
+      "selectors": ["select[name='work_authorization']"],
+      "valueFrom": "ats.legallyAbleToWork",
+      "type": "select",
+      "required": false
+    }
+  ],
+  "fileUploads": [
+    {
+      "label": "Resume PDF",
+      "selectors": ["input[type='file'][name='resume']", "input[type='file']"],
+      "path": "applications/ExampleCo - Product Manager/Jordan Rivera - ExampleCo Product Manager - Resume.pdf",
+      "required": false
+    }
+  ]
+}

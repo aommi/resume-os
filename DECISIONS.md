@@ -252,3 +252,23 @@ and tests would have maintained a feature whose value had already been consumed.
 the durable evaluation evidence. Remove one-off collection interfaces after use unless a recurring
 workflow and an explicit owner are established. When a temporary feature leaks profile-specific
 policy into reusable code, deletion is preferred to parameterization by default.
+
+## Application form assist is browser prep, not submission automation (2026-08-05)
+**Why accepted:** Computer-use can reduce repetitive application-form filling, but the reusable
+engine must not publish private candidate data, job-specific answers, or a submit-capable fat
+harness. The recurring capability is to prepare a browser session for human review; the decision to
+submit remains outside the script.
+
+**Implications:** `application-form-assist.md` owns judgment and no-submit rules. The resolver has an
+`application_form` route. `scripts/apply-form-assist.mjs` is a thin deterministic harness that reads
+the active profile plus a manifest, fills known fields, uploads files, refuses final-submit-like
+clicks, and holds the browser open. Real manifests with job-specific answers live under
+`profiles/<activeProfile>/work/` or other ignored scratch; tracked examples use fictional data only.
+
+**Architecture Boundary verdict (2026-08-05): ALIGNED.** (1) Judgment introduced: application-form
+assist may prepare but never submit, and ambiguous answers stay blank. (2) Judgment lives in
+Markdown (`application-form-assist.md`, this decision); code performs deterministic browser actions
+and safety refusal only. (3) Repeatable execution: manifest dry-run, deterministic profile-value
+mapping, field fill/upload operations, and tests. (4) Resolver gains only a route to the skill doc;
+the harness gains no resume/application judgment. (5) Workflow friction is conditional: only invoked
+for package-ready application work. (6) Verdict: ALIGNED.

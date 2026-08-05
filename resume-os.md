@@ -41,6 +41,8 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - `eval-rubric.md` — the tailored-resume eval: keyword decision table, hard/soft/report ship gates, latent checklist. Deterministic checks run via `scripts/score-resume.mjs`.
 - `evals/model-comparison.md` — operational two-layer protocol for assessing or comparing models:
   deterministic smoke/protected-fact gates first, then human-vetted resume/bullet judgment.
+- `application-form-assist.md` — browser-assisted application form filling rules; deterministic
+  harness fills known fields and uploads files, but never submits.
 - `adapters/claude-code-bootstrap.md` — Claude Code session bootstrap (runtime adapter); calls the resolver. (`cold-start-prompt.md` is a retired pointer to it.)
 - `engine/resolver.md` + `engine/resolver.json` — routing table: task type → which docs to load (run `node scripts/test-resolver.mjs` to check). `engine/models.json` — per-step model config.
 
@@ -100,6 +102,11 @@ does not require an architecture verdict.
 - Job lifecycle state lives with the imported job, not the application package: update `inbox/<job-id>/metadata.json` through `node scripts/job-board.mjs`. `jobs-tracker.md` is a generated board, so manual edits there will be overwritten on render.
 - The generated board separates active streams: `Applied` is submitted/waiting, `Needs Action` is follow-up required, `Interviewing` is screen/interview activity, and `Closed` is final outcomes such as rejection or withdrawal.
 - Email tracking uses event handoff files, not direct tracker edits. Interactive Cowork/Claude runs use `prompts/claude-cowork-gmail-job-monitor.md`; scheduled runs use `prompts/gmail-monitor-headless.txt` through `scripts/run-gmail-sync.sh`. Both write read-only Gmail findings into `events/pending/`. `scripts/import-events.mjs` deterministically deduplicates and imports valid events into lifecycle metadata, quarantines malformed output, archives processed files, and regenerates the job board.
+- Application form assist is a browser-prep workflow, not submission automation. The tracked harness
+  (`scripts/apply-form-assist.mjs`) reads a manifest plus the active profile, fills known fields,
+  uploads files, and leaves the browser open for human review. It must never submit. Private
+  manifests with real jobs/answers belong under `profiles/<activeProfile>/work/`; tracked manifests
+  must be fictional examples.
 - Event files are immutable. Review/import status belongs in `events/reviews.md` with reviewer, model, timestamp, decision, and notes; do not edit old event blocks to mark them reviewed.
 - Older packages may only contain generated HTML/PDF or replies. Leave them with their company folders as historical records; package conventions guide new work but are not a cleanup mandate.
 - Submitted application packages are frozen. Do not edit their resume, PDF, HTML, cover letter, answers, or notes unless the user explicitly says the submitted package is reopened or asks to amend that exact package. Improvements after submission go into base resumes, reusable variants, or future packages only.
