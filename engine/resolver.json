@@ -7,6 +7,7 @@
     "cover_letter": ["resume-os.md", "tailoring-methodology.md"],
     "resume_maintenance": ["resume-os.md", "bullet-rubric.md"],
     "job_screening": ["job-screening.md"],
+    "application_form": ["resume-os.md", "application-form-assist.md"],
     "model_eval": ["evals/model-comparison.md"],
     "pipeline_status": [],
     "discover": []
