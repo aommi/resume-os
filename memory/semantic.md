@@ -14,7 +14,7 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 ## Architecture
 
 - **Engine (reusable):** root skill docs (`resume-os.md`, `tailoring-methodology.md`,
-  `bullet-rubric.md`, `eval-rubric.md`), `resume-os.config.json`, `engine/` (config loader,
+  `bullet-rubric.md`, `eval-rubric.md`, `job-screening.md`, `application-form-assist.md`), `resume-os.config.json`, `engine/` (config loader,
   schema, templates, resolver, models), `scripts/` (tooling), `adapters/` (runtime entry points).
 - **Profiles (per-tenant, private):** `profiles/<id>/` holds `profile.json` (identity/contact/
   ATS answers/routing/positioning, validated by `engine/schemas/profile.schema.json`),
@@ -26,7 +26,7 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **Pipeline (the "agents"):** discover/ingest (Hermes scrapers, facts only) -> route ->
   tailor -> score (deterministic gates in `score-resume.mjs` + latent checklist in
   `eval-rubric.md`) -> cover letter -> build/deliver (`build-resume-formats.mjs`) ->
-  submit (computer-use, designed seam only, not built).
+  application form assist (`apply-form-assist.mjs`, browser prep only; never submits).
 - **Email-event sync:** `scripts/run-gmail-sync.sh` resolves the active profile work directory,
   substitutes that single authoritative path into the read-only Gmail monitor prompt, enforces a
   per-run output contract, and records a heartbeat. `scripts/import-events.mjs` deduplicates and
@@ -43,6 +43,11 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **Resolver:** `engine/resolver.json` (routing table) + `engine/resolve.mjs` (lookup) +
   `scripts/test-resolver.mjs` (deterministic test). Task type -> which skill docs to load,
   with a default/fallback route. `adapters/claude-code-bootstrap.md` is the Claude Code entry.
+- **Application form assist:** `application-form-assist.md` owns the judgment/no-submit rules.
+  `scripts/apply-form-assist.mjs` is a deterministic Playwright harness that reads a manifest and
+  active profile values, fills fields/uploads files, refuses final-submit-like clicks, and holds the
+  browser for manual review. Real manifests/answers are profile-local; the tracked example is
+  fictional.
 - **Models:** `engine/models.json` maps pipeline steps to model ids. Schema/IDs only, no
   runtime binding. **Audit rule:** models.json is the declared dictionary; actuals are recorded
   per run (heartbeat JSON `model` field, run logs). Any runner/model swap MUST update models.json
@@ -175,6 +180,7 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 ## Common workflows
 
 - Build a base: `node scripts/build-resume-formats.mjs --source resume.md --export`.
+- Dry-run form assist: `RESUME_OS_PROFILE=example node scripts/apply-form-assist.mjs --manifest profiles/example/work/application-form-example.json --dry-run`.
 - Render board: `node scripts/job-board.mjs render`. Resolver test: `node scripts/test-resolver.mjs`.
 - New profile: create `profiles/<id>/` like `profiles/example/`, set `activeProfile`.
 
