@@ -139,6 +139,34 @@ Use this when an application asks for a cover letter or the user explicitly want
 - Package artifacts: keep editable `cover_letter.md`, generated `cover_letter.html`, and a name-leading upload PDF such as `<Full Name> - <Company Role> - Cover Letter.pdf` beside the resume package.
 - Render cover-letter PDFs with Chrome header/footer disabled (`--no-pdf-header-footer --print-to-pdf-no-header`); this is part of the cover-letter skill, not an optional cleanup step. After generation, verify the PDF is 1 page and does not show browser headers/footers such as file path, date, page number, or document title. Keep the style simple: candidate header, subtle rule, readable body, no decorative layout.
 
+## LinkedIn Outreach Templates
+
+Use these only when the user wants to reach out. Read the application package first; every
+experience and fit claim in a message must be supported by the tailored resume, strategy, keyword
+map, cover letter, or approved source material. A template is a starting shape, not a reason to
+invent a connection or send a message without user approval.
+
+Before drafting outreach, run the Phase 4 contact opportunity assessment in
+`tailoring-methodology.md`. The check decides whether contact is warranted at this lifecycle stage;
+it does not authorize sending, Gmail drafts, LinkedIn actions, or message copy. Write copy only
+after the user asks for a draft or the assessment decision is `Draft for user review`.
+
+Keep the library small. Add a new template only after a profile-local craft candidate is supported
+by concrete output evidence and a human explicitly approves its sanitized promotion.
+
+### 1. Post-application signal to a relevant hiring-side contact
+
+Use for a concise, no-ask note to a relevant hiring manager, functional leader, or recruiter after
+the application is submitted. Adapt the two evidence phrases to the actual package; omit any line
+that does not have a natural, defensible fit.
+
+> Hi [Name],
+>
+> I saw the [Role] opening at [Company] and applied today. It stood out as closely aligned with my
+> recent [directly relevant work] and my broader [adjacent experience].
+
+Do not add coffee-chat language, a call to action, or a hard sell unless the user asks for one.
+
 ## Tailoring Discipline
 
 - Tailoring is job-specific and separate from the canonical resume.

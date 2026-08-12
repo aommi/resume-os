@@ -78,6 +78,16 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `exhaustive-experience.md` remains fact-authoritative. The 2026-07-21 planned nine-story study
   satisfied recurrence/counterexample review and the user's explicit GO served as human triage,
   allowing four sanitized conditional refinements to enter the active rubric/methodology.
+- **LinkedIn outreach templates:** `resume-os.md` holds a small, profile-agnostic template library.
+  The initial post-application signal template is a concise, no-ask note for relevant hiring-side
+  contacts; both evidence phrases must be backed by the current application package. New templates
+  enter only through a profile-local craft candidate and explicit human approval.
+- **Contact opportunity assessment:** `tailoring-methodology.md` Phase 4 includes a lifecycle
+  check that asks whether contact is warranted before applying, after applying, after recruiter
+  screens/interviews, while waiting, and after rejection/close. It is a decision record, not
+  authorization to send or draft copy. If the decision is Hold, No contact, or Ask user, stop after
+  the assessment. Contact claims must come from the package, interview transcript, recruiter email,
+  or explicit user input.
 - **Protected resume identity/contact/links:** `engine/resume-protected-facts.mjs` deterministically
   validates the Markdown heading, exact profile-owned contact-block lines, required contact links,
   an allowlist of every HTTP(S) URL, and conditional project/credential links from the active profile.
