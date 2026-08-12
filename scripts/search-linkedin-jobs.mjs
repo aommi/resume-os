@@ -57,7 +57,7 @@ try {
     ],
     { stdio: "ignore" }
   );
-  await sleep(5000);
+  await sleep(10000);
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
   const page = browser.contexts()[0].pages()[0];
 

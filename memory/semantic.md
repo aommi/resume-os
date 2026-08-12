@@ -82,6 +82,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `DECISIONS.md` exception. The same pass verifies `README.md`, agent startup/resolver wiring, and
   this semantic memory; update affected surfaces or explicitly confirm that no change is needed.
   This is intentionally a brief manual check, not a hook or CI system.
+- **LinkedIn discovery cold starts:** `search-linkedin-jobs.mjs` allows a longer Chrome CDP startup
+  window before connecting; Chrome 151 on macOS can take more than five seconds to open the remote
+  debugging endpoint from the shared LinkedIn profile.
 - **LinkedIn job signals:** `process-job.mjs` delegates personalized-signal detection to
   `engine/linkedin-job-signals.mjs`. A top-applicant result is true only for an exact visible claim
   scoped to the current job detail; recommendation-card claims are rejected, unverifiable pages
