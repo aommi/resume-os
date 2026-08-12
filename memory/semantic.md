@@ -27,18 +27,23 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   tailor -> score (deterministic gates in `score-resume.mjs` + latent checklist in
   `eval-rubric.md`) -> cover letter -> build/deliver (`build-resume-formats.mjs`) ->
   submit (computer-use, designed seam only, not built).
-- **Email-event sync:** `scripts/run-gmail-sync.sh` resolves the active profile work directory,
-  substitutes that single authoritative path into the read-only Gmail monitor prompt, enforces a
-  per-run output contract, and records a heartbeat. `scripts/import-events.mjs` deduplicates and
-  imports valid events, quarantines malformed output, archives processed files, and regenerates
-  the job board.
+- **Email-event sync:** `scripts/run-gmail-sync.sh` is the one scheduled Gmail path. Himalaya
+  reads a bounded, three-day overlapping IMAP window into a short-lived profile-work snapshot;
+  Hermes/OpenAI (`gpt-5.6-terra`) reads only that snapshot and writes one event handoff file.
+  The wrapper enforces the output contract and heartbeat, then `scripts/import-events.mjs`
+  deterministically deduplicates/imports valid events, quarantines malformed output, archives
+  processed files, and regenerates the job board. LaunchAgent `ai.resumeos.gmailsync` runs at
+  07:00 and 19:00 local time (machine config outside the repo). Claude and the paused Hermes
+  Gmail cron are not active paths; the Codex Gmail connector remains interactive-only.
 - **Daily action digest:** `scripts/run-daily-brief.sh` + `prompts/daily-brief.txt`. A deterministic
   gate reads only `Upcoming Events`, `Needs Action`, and `Interviewing`; when all are empty, it
   writes a successful heartbeat without a model call or Telegram message. When work needs attention,
   the read-only `daily_brief` agent composes a concise job-search digest and `hermes send` delivers
   it. Watchdog separately sends only operational failures. The wrapper owns the heartbeat with
   failure categories agent_failed / brief_output_missing / delivery_failed / no_send_target /
-  input_invalid; `BRIEF_SEND_TARGET` is required and never defaulted.
+  input_invalid; `BRIEF_SEND_TARGET` is required and never defaulted. Its runner order is
+  configurable: OpenAI Codex (`gpt-5.6-terra`) is primary and DeepSeek is attempted only after a
+  nonzero or blank OpenAI result; the heartbeat records the runner that actually succeeded.
   Scheduled by LaunchAgent `ai.resumeos.dailybrief` (07:30, machine config outside the repo).
 - **Resolver:** `engine/resolver.json` (routing table) + `engine/resolve.mjs` (lookup) +
   `scripts/test-resolver.mjs` (deterministic test). Task type -> which skill docs to load,
@@ -66,6 +71,16 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `exhaustive-experience.md` remains fact-authoritative. The 2026-07-21 planned nine-story study
   satisfied recurrence/counterexample review and the user's explicit GO served as human triage,
   allowing four sanitized conditional refinements to enter the active rubric/methodology.
+- **LinkedIn outreach templates:** `resume-os.md` holds a small, profile-agnostic template library.
+  The initial post-application signal template is a concise, no-ask note for relevant hiring-side
+  contacts; both evidence phrases must be backed by the current application package. New templates
+  enter only through a profile-local craft candidate and explicit human approval.
+- **Contact opportunity assessment:** `tailoring-methodology.md` Phase 4 includes a lifecycle
+  check that asks whether contact is warranted before applying, after applying, after recruiter
+  screens/interviews, while waiting, and after rejection/close. It is a decision record, not
+  authorization to send or draft copy. If the decision is Hold, No contact, or Ask user, stop after
+  the assessment. Contact claims must come from the package, interview transcript, recruiter email,
+  or explicit user input.
 - **Protected resume identity/contact/links:** `engine/resume-protected-facts.mjs` deterministically
   validates the Markdown heading, exact profile-owned contact-block lines, required contact links,
   an allowlist of every HTTP(S) URL, and conditional project/credential links from the active profile.
@@ -118,6 +133,10 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   because identities can be derived from stored URLs; `backfill-job-identities.mjs --apply`
   persists the explicit fields. `--allow-existing` permits intentional refreshes and the existing
   on-demand signal-assessment path.
+- **Gmail event canonical matching:** When a Gmail-created placeholder and a real posting share the
+  same normalized company + title, `import-events.mjs` attaches future unmatched events to the single
+  non-placeholder canonical posting. Placeholder rows are only for genuinely unmatched events; do not
+  let them duplicate real applied/interviewing tracker rows.
 - **Evaluation collection boundary:** Frozen private labels, cases, raw outputs, and scorecards are durable evaluation evidence. One-off collection interfaces are removed after use unless a recurring workflow and explicit owner exist; do not parameterize profile-specific sampling logic into the engine merely to preserve a temporary aid.
 - **Screening lifecycle:** `lifecycle.status` is execution state, while screening records `pursue`
   (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).

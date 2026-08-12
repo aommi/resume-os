@@ -356,7 +356,19 @@ function findMatchingJob(event, jobs) {
     normalize(job.metadata.company) === company &&
     normalize(job.metadata.title) === role
   );
-  return matches.length === 1 ? matches[0] : null;
+  if (matches.length === 1) return matches[0];
+
+  // Gmail-only placeholder jobs are created only when no canonical tracker row
+  // exists yet. If later imports see both a real posting and an email placeholder
+  // for the same company + role, keep applying events to the real posting instead
+  // of creating another duplicate row.
+  const canonicalMatches = matches.filter((job) => !isEmailPlaceholderJob(job));
+  return canonicalMatches.length === 1 ? canonicalMatches[0] : null;
+}
+
+function isEmailPlaceholderJob(job) {
+  const metadata = job.metadata || {};
+  return metadata.source === "gmail_event" || String(job.id || "").startsWith("email-");
 }
 
 function existingMessageIds(jobs) {

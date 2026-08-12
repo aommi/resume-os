@@ -5,11 +5,11 @@
     "route":        { "model": "claude-haiku-4-5-20251001", "purpose": "base + archetype routing (light; mixed deterministic precedence + latent JD read)" },
     "triage":       { "model": "claude-sonnet-4-6",          "purpose": "fit triage: score, base/variant, depth, skip reasons (THR-4). Downgrade to haiku only after EVAL-2 replay agreement" },
     "enrich":       { "model": "claude-sonnet-4-6",          "purpose": "JD normalization into fields. Mid tier until EVAL-1 golden set proves cheap equivalence (review finding)" },
-    "email_monitor": { "model": "claude-sonnet-4-6",         "purpose": "Gmail event extraction (scripts/run-gmail-sync.sh MONITOR_MODEL). Runner-agnostic seam: swappable to Hermes/cheaper model once Gmail access + a compared run exist" },
+    "email_monitor": { "model": "gpt-5.6-terra",             "purpose": "Gmail event extraction from a bounded local IMAP snapshot (scripts/run-gmail-sync.sh). Himalaya reads the mailbox; Hermes/OpenAI classifies only the snapshot into an event handoff file; the deterministic importer updates the tracker." },
     "tailor":       { "model": "claude-opus-4-8",            "purpose": "bullet/skills tailoring (heavy latent)" },
     "score":        { "model": "claude-sonnet-4-6",          "purpose": "latent ship-check items; deterministic gates run in score-resume.mjs" },
     "cover_letter": { "model": "claude-sonnet-4-6",          "purpose": "cover letter drafting" },
     "review":       { "model": "claude-sonnet-4-6",          "purpose": "final review / QA pass" },
-    "daily_brief":  { "model": "deepseek-v4-pro",            "purpose": "Daily pipeline brief: read-only synthesis of tracker/events/queue into a Telegram digest (scripts/run-daily-brief.sh BRIEF_MODEL). Heartbeat + delivery are the wrapper's, not the agent's. Runner-agnostic seam: swappable to any runner that prints the brief to stdout" }
+    "daily_brief":  { "model": "gpt-5.6-terra", "fallbackModels": ["deepseek-v4-pro"], "purpose": "Daily pipeline brief: read-only synthesis of tracker/events/queue into a Telegram digest (scripts/run-daily-brief.sh). The wrapper tries configured runners in order, beginning with authenticated OpenAI Codex and falling back only on a failed or blank run; heartbeat + delivery are the wrapper's, not the agent's." }
   }
 }
