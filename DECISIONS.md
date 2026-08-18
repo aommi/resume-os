@@ -389,3 +389,16 @@ or sufficiently mature cases, and prohibits anchor or weight changes mid-cohort.
 **Architecture Boundary verdict (2026-08-14): ALIGNED.** Judgment remains in
 `job-screening.md`; cohort evidence remains profile-local. No schema, resolver, board parser,
 ranking command, or deterministic screening logic was added.
+## Incremental discovery boundary (2026-08-14)
+**Why accepted:** A rolling 24-hour LinkedIn window is not the same as discovering jobs since the
+previous successful sweep, and LinkedIn can surface older promoted listings even inside a recency
+filter.
+
+**Implications:** `search-linkedin-jobs.mjs` accepts an explicit `--since` timestamp. Incremental
+discovery uses the stored previous-success boundary, verifies page-level posting dates, deduplicates
+by job ID, and advances the heartbeat only after reconciliation.
+
+**Architecture Boundary verdict (2026-08-14): ALIGNED.** (1) No job-fit judgment moved into code.
+(2) Judgment remains in `job-screening.md`; candidate observations remain profile-local. (3)
+`--since` is deterministic search-window plumbing. (4) No resolver or model harness changed. (5)
+The option is used only for incremental discovery. (6) Verdict: ALIGNED.

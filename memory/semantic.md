@@ -121,6 +121,10 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   count, and anchors acceptance to the completed qualification block so recommendation cards cannot
   contaminate the target result. Uncaptured results remain `unknown`.
   `scripts/test-linkedin-job-signals.mjs` covers contamination and dates.
+- **Incremental LinkedIn discovery:** use
+  `node scripts/search-linkedin-jobs.mjs --since <ISO timestamp>`; verify page-level posting dates
+  because LinkedIn can return older promoted listings inside a recency-filtered result, deduplicate
+  by job ID, and advance `.linkedin-last-checked` only after the sweep is successfully reconciled.
 - **Company exclusions:** Profile-specific `jobSearch.excludedCompanies` entries are normalized and
   enforced deterministically before LinkedIn search results are emitted, before a fetched job is
   persisted, before the asynchronous assessment worker selects a job, and before the package queue
