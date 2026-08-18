@@ -252,3 +252,26 @@ and tests would have maintained a feature whose value had already been consumed.
 the durable evaluation evidence. Remove one-off collection interfaces after use unless a recurring
 workflow and an explicit owner are established. When a temporary feature leaks profile-specific
 policy into reusable code, deletion is preferred to parameterization by default.
+
+## Exact job identity precedes ingestion and screening deduplication (2026-08-17)
+
+**Why accepted:** Company and title matching cannot distinguish multiple openings at the same
+employer, while LinkedIn posting IDs and employer requisition IDs can establish exact identity.
+Checking identity after scraping also wastes time and can obscure whether the candidate already
+applied to the same requisition.
+
+**Implications:** Job metadata stores `linkedinJobId`, `employerRequisitionId`, and
+`employerRequisitionSource` as separate fields. Ingestion checks LinkedIn ID first, employer-scoped
+requisition ID second, and canonical URL third. An exact existing identity stops normal ingestion;
+prior application evidence is reported. Different requisition IDs remain different jobs even when
+company and title match. Legacy records are comparable through URL-derived identities and can be
+persisted with the deterministic backfill command. Intentional refresh and signal assessment use
+the explicit `--allow-existing` escape hatch.
+
+**Architecture Boundary verdict (2026-08-17): ALIGNED.** (1) No job-fit judgment changed. (2) The
+change introduces no subjective judgment. (3) ID extraction, lookup precedence, duplicate stopping,
+and backfill are deterministic execution. (4) No resolver, adapter, or model harness gained domain
+logic. (5) The preflight is universal because it prevents duplicate work; the explicit override is
+conditional on an intentional refresh. (6) Verdict: ALIGNED. README, startup/resolver wiring, and
+semantic memory were checked; README and semantic memory were updated, while startup and resolver
+wiring required no change.

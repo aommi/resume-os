@@ -98,6 +98,11 @@ does not require an architecture verdict.
 - Application packages are disposable snapshots. Create new ones under `applications/<Company - Role>/`. The detailed process lives in `tailoring-methodology.md`; this file only records the convention.
 - Current packages usually keep `job.md`, `strategy.md`, `keywords.md`, `resume.md`, `resume.html`, a single human-facing upload PDF, and optional `tailoring-log.md` / `cover_letter.md` / `answers.md` at the package root. The upload PDF filename must start with `<Full Name>`, e.g. `<Full Name> - <Company Role> - Resume.pdf`. There is no separate generic `resume.pdf` (dropped 2026-06-15; tooling scores the temp export dir, not the package).
 - Job lifecycle state lives with the imported job, not the application package: update `inbox/<job-id>/metadata.json` through `node scripts/job-board.mjs`. `jobs-tracker.md` is a generated board, so manual edits there will be overwritten on render.
+- Job identity is exact before it is fuzzy: LinkedIn job ID first, then
+  employer-scoped `employerRequisitionSource` + `employerRequisitionId`, then canonical URL.
+  Company and title similarity alone never proves a duplicate: separate employer requisitions at
+  the same company remain separate opportunities. `process-job.mjs --allow-existing` is reserved
+  for an intentional refresh or signal assessment of an existing record.
 - The generated board separates active streams: `Applied` is submitted/waiting, `Needs Action` is follow-up required, `Interviewing` is screen/interview activity, and `Closed` is final outcomes such as rejection or withdrawal.
 - Email tracking uses event handoff files, not direct tracker edits. Interactive Cowork/Claude runs use `prompts/claude-cowork-gmail-job-monitor.md`; scheduled runs use `prompts/gmail-monitor-headless.txt` through `scripts/run-gmail-sync.sh`. Both write read-only Gmail findings into `events/pending/`. `scripts/import-events.mjs` deterministically deduplicates and imports valid events into lifecycle metadata, quarantines malformed output, archives processed files, and regenerates the job board.
 - Event files are immutable. Review/import status belongs in `events/reviews.md` with reviewer, model, timestamp, decision, and notes; do not edit old event blocks to mark them reviewed.

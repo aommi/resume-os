@@ -108,6 +108,16 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   future UTC timestamp for a recruiter screen or interview. The importer persists the earliest valid
   value as lifecycle `nextEventAt`; the board and daily brief render it as an upcoming event. Vague
   scheduling language remains blank rather than being inferred.
+- **Exact job identity and ingestion deduplication:** Job metadata stores `linkedinJobId` separately
+  from the employer's `employerRequisitionId` and its scoped `employerRequisitionSource`.
+  `process-job.mjs` checks existing records before launching Chrome when the LinkedIn ID or URL is
+  available, checks the employer requisition immediately after extracting the apply URL, and stops
+  before saving a duplicate. Screenability uses the same precedence: LinkedIn ID, employer-scoped
+  requisition ID, then canonical URL. Company/title similarity is not an identity key, so multiple
+  roles or distinct requisitions at one company stay separate. Legacy metadata remains comparable
+  because identities can be derived from stored URLs; `backfill-job-identities.mjs --apply`
+  persists the explicit fields. `--allow-existing` permits intentional refreshes and the existing
+  on-demand signal-assessment path.
 - **Evaluation collection boundary:** Frozen private labels, cases, raw outputs, and scorecards are durable evaluation evidence. One-off collection interfaces are removed after use unless a recurring workflow and explicit owner exist; do not parameterize profile-specific sampling logic into the engine merely to preserve a temporary aid.
 - **Screening lifecycle:** `lifecycle.status` is execution state, while screening records `pursue`
   (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).

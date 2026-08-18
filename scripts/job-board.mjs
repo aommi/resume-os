@@ -308,7 +308,7 @@ function writeTracker(jobs) {
     `- **Pending event files:** ${pendingCount}`,
     "- **Latest application/outcome sync:** tracked per row in `Last Contact`",
     "- **Pipeline:** to_review -> to_apply -> package_ready -> applied -> needs_action / interviewing -> closed",
-    "- **Dedup key:** LinkedIn job ID first, canonical URL second",
+    "- **Dedup key:** LinkedIn job ID first, employer requisition ID second, canonical URL third",
     "",
     upcomingEventsSection(upcomingEvents),
     section("To Review", jobs, "to_review", activeColumns()),
