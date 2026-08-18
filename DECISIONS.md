@@ -335,3 +335,55 @@ logic. (5) The preflight is universal because it prevents duplicate work; the ex
 conditional on an intentional refresh. (6) Verdict: ALIGNED. README, startup/resolver wiring, and
 semantic memory were checked; README and semantic memory were updated, while startup and resolver
 wiring required no change.
+## Q/I/A/V screening score, lanes, and act-now rule (2026-08-14)
+**Why accepted:** Screening decided pursue/strategy but gave no defensible apply order, and a
+single scalar score hides why a job ranked where it did. The user's coaching input (candidate-
+market-fit layers) and application history support separating qualification from interest, and
+letting access compensate for a lower qualification score once hard gates pass.
+
+**Implications:** `job-screening.md` now defines a four-axis tuple — Q (qualification), I
+(interest), A (access, 0–4), V (value) — plus a separate low-confidence PV platform-visibility
+flag, with written anchors. Lanes (Focus / Stretch / Qualified) derive from Q and I only. Rank
+within a lane is an additive `screenChanceIndex` (Q + A, no interaction term; an index, not a
+calibrated probability) times a freshness multiplier times value, giving a 0–130 `rankIndex`.
+An act-now rule surfaces gate-passed, high-interest jobs with warm access at the top of their
+lane; when Q < 4 it places them in Stretch as an explicit exception, and hard gates are never
+overridden. The compact record lives in the existing `lifecycle.priority` string, including PV,
+the freshness multiplier, and the scoring date; freshness goes stale and is recomputed at each
+application session. Every gate pass persists a compact pass basis with named assumptions in the
+screen reason. **This documents a scoring method, not a ranking capability:** the board renders
+the priority string but does not parse, sort, or group by it; queue assembly stays manual, and a
+deterministic rank command is considered only after anchors survive validation. Company history
+is stored as facts plus a relationship wrap-up in a profile-local `company-history.md` with a
+categorical summary feeding the A anchor; facts and inference are kept distinct, and any
+restriction carries an explicit scope (company / business unit / team / role family / person)
+and blocks only within it. Recorded assumptions: additive access and starting weights, revisited
+only through the blind retro-validation protocol. Design constraint: a job must be scoreable in
+about five minutes; decisive unknowns become `needs_input`, never silent passes.
+
+**Architecture Boundary verdict (2026-08-14): ALIGNED.** (1) No judgment moved into code; the
+method is markdown consumed via the existing `job_screening` resolver route. (2) All scoring
+judgment stays in the skill doc; candidate taste stays in profile files. (3) No new deterministic
+tooling was added; the record reuses `lifecycle.priority`. (4) No resolver, adapter, or model
+harness changed. (5) No new scheduled or universal workflow friction. (6) Verdict: ALIGNED.
+
+## Prospective validation and qualification-anchor revision r2 (2026-08-14)
+**Clarifies:** Q/I/A/V screening score, lanes, and act-now rule (2026-08-14).
+
+**Why accepted:** The first 16-case historical pass compressed every gate-passing role into Q8–10,
+so Q measured whether a transfer story could be told more than how direct the evidence was. The
+same pass showed that A2 reaching a human process was partly definitional because each A2 case
+entered through a recruiter or referral. A second historical holdout would remain contaminated by
+familiar outcomes; new discoveries provide a cleaner blind-by-construction cohort.
+
+**Implications:** Qualification revision `r2` grades recent evidence at the requested altitude,
+direct core-customer/commercial context, and the number of non-gating requirements that rely on
+transfer assumptions. Weights and lane thresholds do not change, and the frozen historical
+worksheet remains `r1`. New priority strings carry the scoring revision. Prospective validation
+records `stageAtScore` and `maxStageAfterScore` separately so pre-existing access is not counted as
+new progress, keeps terminal outcome and relationship residue separate, waits for about 15 resolved
+or sufficiently mature cases, and prohibits anchor or weight changes mid-cohort.
+
+**Architecture Boundary verdict (2026-08-14): ALIGNED.** Judgment remains in
+`job-screening.md`; cohort evidence remains profile-local. No schema, resolver, board parser,
+ranking command, or deterministic screening logic was added.

@@ -145,6 +145,18 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   placeholder.
 - **Evaluation collection boundary:** Frozen private labels, cases, raw outputs, and scorecards are durable evaluation evidence. One-off collection interfaces are removed after use unless a recurring workflow and explicit owner exist; do not parameterize profile-specific sampling logic into the engine merely to preserve a temporary aid.
 - **Screening lifecycle:** `lifecycle.status` is execution state, while screening records `pursue`
+- **Screening scoring method (documented, not yet a ranking capability):** `job-screening.md`
+  defines the Q/I/A/V tuple (qualification, interest, access 0–4, value) plus a separate PV
+  platform-visibility flag, versioned anchor rubrics, lanes from Q and I only (Focus / Stretch /
+  Qualified), an additive `screenChanceIndex` (not a calibrated probability) with a freshness
+  multiplier yielding a 0–130 `rankIndex`, and an act-now rule: warm access + I ≥ 7 tops its lane
+  and, when Q < 4, enters Stretch as an explicit exception (hard gates never overridden). The
+  compact record is a `lifecycle.priority` string like `F-58 r2 (Q8 I9 A2 V4 PV1 f1.0 @2026-08-14)`;
+  **the board displays this string but does not parse, sort, or group by it** — v1 queue assembly is
+  manual, and a deterministic rank command comes only after anchors survive validation. Every gate
+  pass persists a compact pass basis with named assumptions in the screen reason. Company process
+  facts and relationship wrap-ups live profile-locally in `company-history.md`; restrictions carry
+  a scope and block only within it. Validation is prospective after the frozen `r1` retro baseline.
   (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).
   `job-board.mjs screen` validates that only `apply` receives a strategy; it moves `apply` to
   `to_apply`, `skip` to `skipped`, and leaves `needs_input` in `to_review` with one focused question.
