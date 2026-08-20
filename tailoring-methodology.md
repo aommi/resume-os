@@ -326,12 +326,14 @@ Cover letters are short by default and follow `resume-os.md` → "Cover Letter S
 
 ### 4.1 Contact opportunity assessment
 
-At each lifecycle step, assess whether contact is warranted. This is a decision check, not a nudge
-to send. The default outcome can be "no contact."
+For focused applications, assess whether contact is warranted at the applicable lifecycle points
+below. Skip this assessment for opportunistic applications unless the user explicitly requests it
+or the application is re-screened as focused. This is a decision check, not a nudge to send. The
+default outcome can be "no contact."
 
-The required output is the decision record only. Do not write message copy during this check unless
-the decision is explicitly `Draft for user review`. If the decision is `Hold`, `No contact`, or
-`Ask user`, stop after the assessment and explain the reason.
+The required output is the decision record only. `Recommend draft` means the agent should stop and
+ask whether the user wants copy; it does not authorize drafting. For every decision, stop after the
+assessment and explain the reason unless the user has separately and explicitly requested a draft.
 
 Run the check at these points:
 
@@ -347,11 +349,13 @@ Run the check at these points:
 - **After rejection or close:** If the reply or process was warm, decide whether to preserve the
   relationship through a short email, LinkedIn connection, or both.
 
-Use this decision record in `tailoring-log.md`, `strategy.md`, or a stage-specific follow-up note:
+Before submission, keep this decision record in `tailoring-log.md` or `strategy.md`. After
+submission, keep it in a profile-local `inbox/<job-id>/contact-log.md` so the submitted application
+package remains frozen. Never add later-stage contact notes to a submitted package.
 
 | Stage | Contact path | Evidence | Value to recipient | Risk | Decision | Owner/date |
 |---|---|---|---|---|---|---|
-| Applied | LinkedIn to hiring manager | High-fit package, submitted today | Short signal, no ask | Too soon / weak contact | Hold / No contact / Ask user / Draft for user review | User, YYYY-MM-DD |
+| Applied | LinkedIn to hiring manager | High-fit package, submitted today | Short signal, no ask | Too soon / weak contact | Hold / No contact / Ask user / Recommend draft | User, YYYY-MM-DD |
 
 Assessment rules:
 
@@ -359,7 +363,7 @@ Assessment rules:
 - Do not invent a contact path. If the person is not relevant to the hiring process, record "no
   contact."
 - Do not write suggested wording as part of the assessment. Wording belongs to the next step only
-  after the user asks for a draft or the decision is `Draft for user review`.
+  after the user explicitly asks for a draft.
 - Any message claim must be supported by the application package, interview transcript, recruiter
   email, or explicit user input.
 - Prefer one high-quality touchpoint over several thin ones.
