@@ -19,13 +19,24 @@ import { createServer } from "node:net";
 import { resolveBrowserPath, loadProfile } from "../engine/config.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
+import {
+  buildLinkedInSearchUrl,
+  dedupeSearchResults,
+  resolveRecencySeconds,
+} from "../engine/linkedin-discovery-query.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const jobSearch = loadProfile().jobSearch || {};
 const defaultTitles = jobSearch.titles?.length ? jobSearch.titles : ["product manager", "product owner"];
 const defaultLocation = jobSearch.locations?.[0] || "Vancouver, British Columbia, Canada";
 const opts = parseArgs(process.argv.slice(2));
-const recencySeconds = resolveRecencySeconds(opts.since);
+let recencySeconds;
+try {
+  recencySeconds = resolveRecencySeconds(opts.since);
+} catch (error) {
+  console.error(error.message);
+  process.exit(2);
+}
 
 if (!existsSync(PROFILE_DIR)) {
   console.error("No LinkedIn Chrome profile. Run: node scripts/save-linkedin-cookies.mjs");
@@ -64,7 +75,7 @@ try {
   const page = browser.contexts()[0].pages()[0];
 
   for (const kw of keywords) {
-    const url = buildSearchUrl(kw, opts.location, recencySeconds);
+    const url = buildLinkedInSearchUrl(kw, opts.location, recencySeconds);
     if (!opts.dryrun) console.error(`Search [${kw}]: ${url}`);
     const jobs = await searchPage(page, url);
     console.error(`  ${kw}: ${jobs.length} jobs`);
@@ -84,13 +95,7 @@ if (allJobs.length === 0) {
 }
 
 // Dedup across both searches
-const seen = new Set();
-const unique = allJobs.filter(j => {
-  const key = j.linkedinJobId || j.url;
-  if (seen.has(key)) return false;
-  seen.add(key);
-  return true;
-});
+const unique = dedupeSearchResults(allJobs);
 
 console.error(`Total: ${unique.length} unique jobs (from ${allJobs.length} raw).`);
 
@@ -205,19 +210,6 @@ async function searchPage(page, url) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function buildSearchUrl(keywords, location, recencySeconds) {
-  return (
-    "https://www.linkedin.com/jobs/search/?" +
-    new URLSearchParams({
-      keywords,
-      location,
-      f_TPR: `r${recencySeconds}`,
-      sortBy: "DD",
-      start: "0",
-    }).toString()
-  );
-}
-
 function parseTimeAgo(text) {
   if (!text) return null;
   const now = Date.now();
@@ -235,21 +227,6 @@ function parseTimeAgo(text) {
   return ms ? now - num * ms : null;
 }
 
-
-function resolveRecencySeconds(since) {
-  if (!since) return 86_400;
-  const sinceMs = Date.parse(since);
-  if (!Number.isFinite(sinceMs)) {
-    console.error(`Invalid --since timestamp: ${since}`);
-    process.exit(2);
-  }
-  const seconds = Math.ceil((Date.now() - sinceMs) / 1000);
-  if (seconds <= 0) {
-    console.error(`--since must be earlier than now: ${since}`);
-    process.exit(2);
-  }
-  return seconds;
-}
 
 function findFreePort() {
   return new Promise((resolve, reject) => {
