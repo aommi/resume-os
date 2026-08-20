@@ -308,6 +308,7 @@ async function runAssessmentProcess(job) {
     job.metadata.url,
     "--assess-match",
     "--signals-only",
+    "--allow-existing",
     "--workflow",
     "linkedin-assessment",
   ], {

@@ -6,7 +6,7 @@
 //
 // Output: JSON to stdout with { url, title, company, topApplicant, applyUrl, saved, ... }
 
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { spawn } from "node:child_process";
@@ -17,6 +17,7 @@ import { readLinkedInJobSignals } from "../engine/linkedin-job-signals.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 import { extractCompensationText } from "../engine/compensation.mjs";
+import { findExactJobDuplicate, resolveJobIdentity } from "../engine/job-identity.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const PROFILE_LOCK_FILE = join(PROFILE_DIR, "SingletonLock");
@@ -24,8 +25,16 @@ const args = parseArgs(process.argv.slice(2));
 let activeChromeProc = null;
 
 if (!args.url) {
-  console.error("Usage: node scripts/process-job.mjs <url> [--out <dir>]");
+  console.error("Usage: node scripts/process-job.mjs <url> [--out <dir>] [--allow-existing]");
   process.exit(2);
+}
+
+if (!args.allowExisting) {
+  const duplicate = findExistingDuplicate({ url: args.url });
+  if (duplicate) {
+    console.log(JSON.stringify(formatDuplicateResult(args.url, duplicate), null, 2));
+    process.exit(0);
+  }
 }
 
 if (!existsSync(PROFILE_DIR)) {
@@ -208,6 +217,20 @@ async function processJob(url, outDir) {
       }
     }
 
+    const identity = resolveJobIdentity({ url, applyUrl, company: jobInfo.company });
+    if (!args.allowExisting) {
+      const duplicate = findExistingDuplicate({
+        url,
+        applyUrl,
+        company: jobInfo.company,
+        ...identity,
+      });
+      if (duplicate) {
+        await browser.close();
+        return formatDuplicateResult(url, duplicate, identity);
+      }
+    }
+
     // 4. Save the job
     let saved = false;
     let wasAlreadySaved = false;
@@ -255,6 +278,9 @@ async function processJob(url, outDir) {
 
     const result = {
       url,
+      linkedinJobId: identity.linkedinJobId,
+      employerRequisitionId: identity.employerRequisitionId,
+      employerRequisitionSource: identity.employerRequisitionSource,
       company: jobInfo.company,
       title: jobInfo.title,
       location: jobInfo.location,
@@ -384,6 +410,38 @@ function readJsonIfExists(path) {
   }
 }
 
+function findExistingDuplicate(metadata) {
+  const inbox = join(workDir(), "inbox");
+  if (!existsSync(inbox)) return null;
+  const incoming = { id: "__incoming__", metadata };
+  const jobs = [];
+  for (const entry of readdirSync(inbox)) {
+    const dir = join(inbox, entry);
+    const metadataPath = join(dir, "metadata.json");
+    try {
+      if (!statSync(dir).isDirectory() || !existsSync(metadataPath)) continue;
+      const existing = JSON.parse(readFileSync(metadataPath, "utf8"));
+      jobs.push({ id: entry, metadata: existing, lifecycle: existing.lifecycle || {} });
+    } catch {
+      continue;
+    }
+  }
+  return findExactJobDuplicate(incoming, jobs, { preferExisting: true });
+}
+
+function formatDuplicateResult(url, duplicate, identity = resolveJobIdentity({ url })) {
+  const lifecycle = duplicate.job.lifecycle || duplicate.job.metadata?.lifecycle || {};
+  return {
+    url,
+    ...identity,
+    duplicate: true,
+    duplicateOf: duplicate.job.id,
+    duplicateBasis: duplicate.basis,
+    previouslyApplied: Boolean(lifecycle.appliedAt) || ["applied", "needs_action", "interviewing"].includes(lifecycle.status),
+    existingStatus: lifecycle.status || "",
+  };
+}
+
 function normalizeLifecycle(lifecycle = {}) {
   return {
     status: lifecycle.status || "to_review",
@@ -413,6 +471,7 @@ function parseArgs(args) {
     signalsOnly: false,
     screenshot: "",
     workflow: "",
+    allowExisting: false,
   };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--out") p.out = args[++i] || "";
@@ -421,6 +480,7 @@ function parseArgs(args) {
     else if (args[i] === "--signals-only") p.signalsOnly = true;
     else if (args[i] === "--screenshot") p.screenshot = args[++i] || "";
     else if (args[i] === "--workflow") p.workflow = args[++i] || "";
+    else if (args[i] === "--allow-existing") p.allowExisting = true;
     else if (!args[i].startsWith("--") && !p.url) p.url = args[i];
   }
   return p;

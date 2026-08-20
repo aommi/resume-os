@@ -45,6 +45,8 @@ and `tailoring-methodology.md` for package-building procedure.
 
 - Do not hand-edit `work/jobs-tracker.md`; it is generated from `work/inbox/<job-id>/metadata.json`.
 - Use `node scripts/job-board.mjs` for lifecycle changes.
+- Ingestion checks the LinkedIn job ID first, employer requisition ID second, and canonical URL
+  third. Similar titles at the same company remain separate when their requisitions differ.
 - Do not update submitted application packages unless explicitly reopened.
 - Build application PDFs with `scripts/build-resume-formats.mjs`; do not copy random export artifacts.
 - Resume identity/contact/link values are profile-owned hard gates. The scorer and builder reject a
@@ -64,6 +66,7 @@ and `tailoring-methodology.md` for package-building procedure.
 node scripts/job-board.mjs render
 node scripts/job-board.mjs package-ready <job-id|company> --package "<Company - Role>" --variant "<variant>"
 node scripts/job-board.mjs applied <job-id|company> --date YYYY-MM-DD --outcome Submitted
+node scripts/backfill-job-identities.mjs --apply
 
 # Optional controlled override; the asynchronous LinkedIn assessment default remains 5/day.
 LINKEDIN_ASSESS_DAILY_CAP=10 node scripts/assess-jobs.mjs
