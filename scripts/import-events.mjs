@@ -198,8 +198,11 @@ function classifyEvent(event, jobs) {
     return { action: "import", job };
   }
 
-  const matched = findMatchingJob(event, jobs);
-  if (matched) return { action: "import", job: matched };
+  const match = findMatchingJob(event, jobs);
+  if (match.job) return { action: "import", job: match.job };
+  if (match.ambiguous) {
+    return { action: "review", reason: "ambiguous company/title; exact job identity required" };
+  }
 
   if (confidence === "high" && hasUsableCompanyAndRole(event)) {
     return { action: "import" };
@@ -351,24 +354,17 @@ function parseBlock(block) {
 function findMatchingJob(event, jobs) {
   const company = normalize(event.company);
   const role = normalize(event.role);
-  if (!company || company === "unknown" || !role || role === "unknown") return null;
+  if (!company || company === "unknown" || !role || role === "unknown") {
+    return { job: null, ambiguous: false };
+  }
   const matches = [...jobs.values()].filter((job) =>
     normalize(job.metadata.company) === company &&
     normalize(job.metadata.title) === role
   );
-  if (matches.length === 1) return matches[0];
-
-  // Gmail-only placeholder jobs are created only when no canonical tracker row
-  // exists yet. If later imports see both a real posting and an email placeholder
-  // for the same company + role, keep applying events to the real posting instead
-  // of creating another duplicate row.
-  const canonicalMatches = matches.filter((job) => !isEmailPlaceholderJob(job));
-  return canonicalMatches.length === 1 ? canonicalMatches[0] : null;
-}
-
-function isEmailPlaceholderJob(job) {
-  const metadata = job.metadata || {};
-  return metadata.source === "gmail_event" || String(job.id || "").startsWith("email-");
+  return {
+    job: matches.length === 1 ? matches[0] : null,
+    ambiguous: matches.length > 1,
+  };
 }
 
 function existingMessageIds(jobs) {

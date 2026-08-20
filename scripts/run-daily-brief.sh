@@ -73,6 +73,7 @@ run_brief_deepseek() {
 run_brief_with_fallback() {
   local runner output exit_code
   local saw_empty_output=0
+  local saw_failure=0
   for runner in ${BRIEF_RUNNER_ORDER//,/ }; do
     case "$runner" in
       openai)
@@ -86,6 +87,7 @@ run_brief_with_fallback() {
           echo "brief runner openai exited 0 but produced no output" >> "$LOG"
         else
           exit_code=$?
+          saw_failure=1
           echo "brief runner openai failed with exit $exit_code" >> "$LOG"
         fi
         ;;
@@ -100,15 +102,20 @@ run_brief_with_fallback() {
           echo "brief runner deepseek exited 0 but produced no output" >> "$LOG"
         else
           exit_code=$?
+          saw_failure=1
           echo "brief runner deepseek failed with exit $exit_code" >> "$LOG"
         fi
         ;;
       *)
+        saw_failure=1
         echo "brief runner '$runner' is not configured; skipping" >> "$LOG"
         ;;
     esac
   done
-  return "$([ "$saw_empty_output" -eq 1 ] && echo 2 || echo 1)"
+  if [ "$saw_empty_output" -eq 1 ] && [ "$saw_failure" -eq 0 ]; then
+    return 2
+  fi
+  return 1
 }
 
 echo "=== daily-brief $RUN_ID (runner order: $BRIEF_RUNNER_ORDER) ===" >> "$LOG"
@@ -170,7 +177,7 @@ if [ $BRIEF_EXIT -ne 0 ]; then
     echo "all brief runners produced no output" >> "$LOG"
     write_hb "$LAST_SUCCESS" 1 "brief_output_missing"
   else
-    echo "all brief runners failed" >> "$LOG"
+    echo "no brief runner produced usable output" >> "$LOG"
     write_hb "$LAST_SUCCESS" 1 "agent_failed"
   fi
   exit 1

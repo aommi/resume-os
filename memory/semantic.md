@@ -71,16 +71,6 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `exhaustive-experience.md` remains fact-authoritative. The 2026-07-21 planned nine-story study
   satisfied recurrence/counterexample review and the user's explicit GO served as human triage,
   allowing four sanitized conditional refinements to enter the active rubric/methodology.
-- **LinkedIn outreach templates:** `resume-os.md` holds a small, profile-agnostic template library.
-  The initial post-application signal template is a concise, no-ask note for relevant hiring-side
-  contacts; both evidence phrases must be backed by the current application package. New templates
-  enter only through a profile-local craft candidate and explicit human approval.
-- **Contact opportunity assessment:** `tailoring-methodology.md` Phase 4 includes a lifecycle
-  check that asks whether contact is warranted before applying, after applying, after recruiter
-  screens/interviews, while waiting, and after rejection/close. It is a decision record, not
-  authorization to send or draft copy. If the decision is Hold, No contact, or Ask user, stop after
-  the assessment. Contact claims must come from the package, interview transcript, recruiter email,
-  or explicit user input.
 - **Protected resume identity/contact/links:** `engine/resume-protected-facts.mjs` deterministically
   validates the Markdown heading, exact profile-owned contact-block lines, required contact links,
   an allowlist of every HTTP(S) URL, and conditional project/credential links from the active profile.
@@ -97,9 +87,6 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `DECISIONS.md` exception. The same pass verifies `README.md`, agent startup/resolver wiring, and
   this semantic memory; update affected surfaces or explicitly confirm that no change is needed.
   This is intentionally a brief manual check, not a hook or CI system.
-- **LinkedIn discovery cold starts:** `search-linkedin-jobs.mjs` allows a longer Chrome CDP startup
-  window before connecting; Chrome 151 on macOS can take more than five seconds to open the remote
-  debugging endpoint from the shared LinkedIn profile.
 - **LinkedIn job signals:** `process-job.mjs` delegates personalized-signal detection to
   `engine/linkedin-job-signals.mjs`. A top-applicant result is true only for an exact visible claim
   scoped to the current job detail; recommendation-card claims are rejected, unverifiable pages
@@ -133,10 +120,10 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   because identities can be derived from stored URLs; `backfill-job-identities.mjs --apply`
   persists the explicit fields. `--allow-existing` permits intentional refreshes and the existing
   on-demand signal-assessment path.
-- **Gmail event canonical matching:** When a Gmail-created placeholder and a real posting share the
-  same normalized company + title, `import-events.mjs` attaches future unmatched events to the single
-  non-placeholder canonical posting. Placeholder rows are only for genuinely unmatched events; do not
-  let them duplicate real applied/interviewing tracker rows.
+- **Gmail event matching:** An explicit tracker job ID takes precedence. Company + title remains a
+  fallback only when it identifies one row; multiple matches are routed to review without mutating
+  any job. A Gmail placeholder never redirects to another posting merely because one row is not a
+  placeholder.
 - **Evaluation collection boundary:** Frozen private labels, cases, raw outputs, and scorecards are durable evaluation evidence. One-off collection interfaces are removed after use unless a recurring workflow and explicit owner exist; do not parameterize profile-specific sampling logic into the engine merely to preserve a temporary aid.
 - **Screening lifecycle:** `lifecycle.status` is execution state, while screening records `pursue`
   (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).

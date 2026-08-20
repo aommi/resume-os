@@ -32,21 +32,27 @@ const envelopes = JSON.parse(runHimalaya([
 const messages = envelopes
   .filter(isJobRelevant)
   .slice(0, maxMessages)
-  .map((envelope) => ({
-    imap_id: String(envelope.id),
-    source_message_id: `imap:${envelope.id}`,
-    subject: envelope.subject || "",
-    from: envelope.from || {},
-    to: envelope.to || {},
-    date: envelope.date || "",
-    body: redactSensitiveContent(runHimalaya([
+  .map((envelope) => {
+    const rawBody = runHimalaya([
       "message",
       "read",
       "--preview",
       "--no-headers",
       String(envelope.id),
-    ])).slice(0, 12_000),
-  }));
+    ]);
+    const body = isCredentialBearingMessage(envelope.subject || "", rawBody)
+      ? "[credential-bearing message omitted]"
+      : redactSensitiveContent(rawBody).slice(0, 12_000);
+    return {
+      imap_id: String(envelope.id),
+      source_message_id: `imap:${envelope.id}`,
+      subject: envelope.subject || "",
+      from: envelope.from || {},
+      to: envelope.to || {},
+      date: envelope.date || "",
+      body,
+    };
+  });
 
 const snapshot = {
   generated_at: new Date().toISOString(),
@@ -73,16 +79,26 @@ function runHimalaya(command) {
 }
 
 function isJobRelevant(envelope) {
-  const haystack = [
-    envelope.subject,
+  const subject = String(envelope.subject || "");
+  const sender = [
     envelope.from?.name,
     envelope.from?.addr,
   ].filter(Boolean).join(" ");
-  return /application|applied|interview|recruit|talent|hiring|candidate|screening|assessment|position|opportunity|job|career|offer|next step|schedule|meeting|invitation|thank you/i.test(haystack);
+  const specificSubject = /\b(?:application|applied|applying|interview|recruiter|hiring|candidate|screening|assessment|offer|next steps?)\b/i;
+  const recruitingSender = /\b(?:recruit|talent|hiring|careers?|jobs?)\b|greenhouse|lever|workday|ashby|jobvite|smartrecruiters/i;
+  const contextualSubject = /\b(?:position|opportunity|job|career|schedule|meeting|invitation|thank you)\b/i;
+  return specificSubject.test(subject) || (recruitingSender.test(sender) && contextualSubject.test(subject));
+}
+
+function isCredentialBearingMessage(subject, body) {
+  const text = `${subject}\n${body}`;
+  return /\b(?:verification|security|one[- ]time|login|sign[- ]in|access)\s+(?:code|password|link)\b/i.test(text) ||
+    /\b(?:otp|passcode|temporary password|password reset|reset your password|confirm your email|magic link)\b/i.test(text);
 }
 
 function redactSensitiveContent(text) {
   return text
-    .replace(/\b(?:password|passcode|verification code|security code|one-time code|otp)\b\s*[:#-]?\s*\S+/gi, "[redacted credential]")
+    .replace(/\b(?:verification|security|one[- ]time|login|sign[- ]in|access)\s+(?:code|password|link)\b\s*(?:is\s*)?[:#-]?\s*[a-z0-9-]{4,}/gi, "[redacted credential]")
+    .replace(/\b(?:otp|passcode|temporary password)\b\s*(?:is\s*)?[:#-]?\s*\S+/gi, "[redacted credential]")
     .replace(/https?:\/\/\S+/gi, "[redacted link]");
 }

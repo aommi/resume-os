@@ -25,11 +25,25 @@ HB_FILE="$HB_DIR/gmail-sync.json"
 PENDING_DIR="$WORK/events/pending"
 SNAPSHOT_DIR="$WORK/runtime/gmail-sync"
 mkdir -p "$HB_DIR" "$PENDING_DIR" "$SNAPSHOT_DIR"
+SNAPSHOT_MAX_AGE_MINUTES="${GMAIL_SNAPSHOT_MAX_AGE_MINUTES:-1440}"
+if ! [[ "$SNAPSHOT_MAX_AGE_MINUTES" =~ ^[1-9][0-9]*$ ]]; then
+  echo "FATAL: GMAIL_SNAPSHOT_MAX_AGE_MINUTES must be a positive integer" >&2
+  exit 1
+fi
+# The directory is dedicated to Gmail runtime snapshots and was resolved under
+# the active profile work directory above. Delete only stale JSON children.
+find "$SNAPSHOT_DIR" -type f -name '*.json' -mmin "+$SNAPSHOT_MAX_AGE_MINUTES" -delete
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 ATTEMPT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 LAST_SUCCESS="$(node -e "try{console.log(require('$HB_FILE').lastSuccess||'')}catch{console.log('')}" 2>/dev/null || echo "")"
 SNAPSHOT="$SNAPSHOT_DIR/$RUN_ID.json"
-trap 'rm -f "$SNAPSHOT"' EXIT
+cleanup_snapshot() {
+  rm -f -- "$SNAPSHOT"
+}
+trap cleanup_snapshot EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 write_hb() { # $1=lastSuccess $2=exitCode $3=failureCategory
   printf '{"workflow":"gmail-sync","cadenceMinutes":720,"lastAttempt":"%s","lastSuccess":"%s","exitCode":%s,"failureCategory":"%s","runId":"%s","model":"%s"}\n' \
