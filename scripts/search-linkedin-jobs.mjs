@@ -6,8 +6,9 @@
 //   node scripts/search-linkedin-jobs.mjs --dryrun
 //   node scripts/search-linkedin-jobs.mjs --json
 //   node scripts/search-linkedin-jobs.mjs --keywords "..." --location "..."
+//   node scripts/search-linkedin-jobs.mjs --since "2026-08-13T18:28:00-04:00"
 //
-// Output: NDJSON to stdout. Each job: { url, title, company, location, postedAt, postedTimeAgo }
+// Output: NDJSON to stdout. Each job includes its exact LinkedIn job ID.
 
 import { existsSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
@@ -18,12 +19,24 @@ import { createServer } from "node:net";
 import { resolveBrowserPath, loadProfile } from "../engine/config.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
+import {
+  buildLinkedInSearchUrl,
+  dedupeSearchResults,
+  resolveRecencySeconds,
+} from "../engine/linkedin-discovery-query.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const jobSearch = loadProfile().jobSearch || {};
 const defaultTitles = jobSearch.titles?.length ? jobSearch.titles : ["product manager", "product owner"];
 const defaultLocation = jobSearch.locations?.[0] || "Vancouver, British Columbia, Canada";
 const opts = parseArgs(process.argv.slice(2));
+let recencySeconds;
+try {
+  recencySeconds = resolveRecencySeconds(opts.since);
+} catch (error) {
+  console.error(error.message);
+  process.exit(2);
+}
 
 if (!existsSync(PROFILE_DIR)) {
   console.error("No LinkedIn Chrome profile. Run: node scripts/save-linkedin-cookies.mjs");
@@ -62,7 +75,7 @@ try {
   const page = browser.contexts()[0].pages()[0];
 
   for (const kw of keywords) {
-    const url = buildSearchUrl(kw, opts.location);
+    const url = buildLinkedInSearchUrl(kw, opts.location, recencySeconds);
     if (!opts.dryrun) console.error(`Search [${kw}]: ${url}`);
     const jobs = await searchPage(page, url);
     console.error(`  ${kw}: ${jobs.length} jobs`);
@@ -82,12 +95,7 @@ if (allJobs.length === 0) {
 }
 
 // Dedup across both searches
-const seen = new Set();
-const unique = allJobs.filter(j => {
-  if (seen.has(j.url)) return false;
-  seen.add(j.url);
-  return true;
-});
+const unique = dedupeSearchResults(allJobs);
 
 console.error(`Total: ${unique.length} unique jobs (from ${allJobs.length} raw).`);
 
@@ -180,7 +188,7 @@ async function searchPage(page, url) {
           }
         }
 
-        results.push({ url, title, company, location, postedTimeAgo: timeAgo });
+        results.push({ linkedinJobId: m[1], url, title, company, location, postedTimeAgo: timeAgo });
       }
       return results;
     });
@@ -202,19 +210,6 @@ async function searchPage(page, url) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function buildSearchUrl(keywords, location) {
-  return (
-    "https://www.linkedin.com/jobs/search/?" +
-    new URLSearchParams({
-      keywords,
-      location,
-      f_TPR: "r86400",
-      sortBy: "DD",
-      start: "0",
-    }).toString()
-  );
-}
-
 function parseTimeAgo(text) {
   if (!text) return null;
   const now = Date.now();
@@ -231,6 +226,7 @@ function parseTimeAgo(text) {
   const ms = { minute: 60_000, hour: 3_600_000, day: 86_400_000, week: 604_800_000, month: 2_592_000_000 }[unit];
   return ms ? now - num * ms : null;
 }
+
 
 function findFreePort() {
   return new Promise((resolve, reject) => {
@@ -254,6 +250,7 @@ function parseArgs(args) {
     max: 50,
     json: false,
     dryrun: false,
+    since: null,
   };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--keywords") p.keywords = args[++i] ?? p.keywords;
@@ -261,6 +258,7 @@ function parseArgs(args) {
     else if (args[i] === "--max") p.max = parseInt(args[++i], 10) || 15;
     else if (args[i] === "--json") p.json = true;
     else if (args[i] === "--dryrun") p.dryrun = true;
+    else if (args[i] === "--since") p.since = args[++i] ?? null;
   }
   return p;
 }
