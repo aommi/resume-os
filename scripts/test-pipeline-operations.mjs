@@ -176,6 +176,70 @@ fi
   assert.equal(invalidMetadata.lifecycle.nextEventAt, "2099-07-28T17:30:00.000Z");
   assert.equal(invalidMetadata.lifecycle.emailEvents.at(-1).nextEventAt, "");
 
+  writeJob("canonical-real-posting", {
+    url: "https://www.linkedin.com/jobs/view/canonical-real-posting/",
+    company: "Canonical Co",
+    title: "Product Manager",
+    fetched: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "applied" },
+  });
+  writeJob("email-canonical-co-product-manager", {
+    company: "Canonical Co",
+    title: "Product Manager",
+    source: "gmail_event",
+    fetched: "2026-07-27T00:00:00.000Z",
+    lifecycle: { status: "interviewing", nextEventAt: "2099-08-01T17:30:00.000Z" },
+  });
+  writeFileSync(join(pending, "2026-07-27-canonical-match.md"), `## JOB_EMAIL_EVENT
+- job_id:
+- company: Canonical Co
+- role: Product Manager
+- event: interview
+- event_date: 2026-07-27
+- next_event_at: 2099-07-30T17:30:00Z
+- subject: Interview invitation
+- message_id: canonical-message
+- thread_id: canonical-thread
+- confidence: high
+- evidence: Scheduled interview
+- notes: Ambiguous company and title should require exact identity
+`);
+  const canonicalImported = run("scripts/import-events.mjs");
+  assert.equal(canonicalImported.status, 0, canonicalImported.stderr);
+  const ambiguousReal = JSON.parse(readFileSync(join(inbox, "canonical-real-posting", "metadata.json"), "utf8"));
+  const ambiguousPlaceholder = JSON.parse(readFileSync(join(inbox, "email-canonical-co-product-manager", "metadata.json"), "utf8"));
+  assert.equal(ambiguousReal.lifecycle.status, "applied");
+  assert.equal(ambiguousReal.lifecycle.emailEvents?.length || 0, 0);
+  assert.equal(ambiguousPlaceholder.lifecycle.status, "interviewing");
+  assert.equal(ambiguousPlaceholder.lifecycle.nextEventAt, "2099-08-01T17:30:00.000Z");
+  assert.equal(ambiguousPlaceholder.lifecycle.emailEvents?.length || 0, 0);
+  assert.match(readFileSync(join(work, "events/digest.md"), "utf8"), /ambiguous company\/title; exact job identity required/);
+
+  writeFileSync(join(pending, "2026-07-27-exact-canonical-match.md"), `## JOB_EMAIL_EVENT
+- job_id: canonical-real-posting
+- company: Canonical Co
+- role: Product Manager
+- event: interview
+- event_date: 2026-07-27
+- next_event_at: 2099-07-30T17:30:00Z
+- subject: Interview invitation
+- message_id: exact-canonical-message
+- thread_id: canonical-thread
+- confidence: high
+- evidence: Scheduled interview
+- notes: Exact tracker identity selects the intended requisition
+`);
+  const exactCanonicalImported = run("scripts/import-events.mjs");
+  assert.equal(exactCanonicalImported.status, 0, exactCanonicalImported.stderr);
+  const canonicalReal = JSON.parse(readFileSync(join(inbox, "canonical-real-posting", "metadata.json"), "utf8"));
+  const canonicalPlaceholder = JSON.parse(readFileSync(join(inbox, "email-canonical-co-product-manager", "metadata.json"), "utf8"));
+  assert.equal(canonicalReal.lifecycle.status, "interviewing");
+  assert.equal(canonicalReal.lifecycle.nextEventAt, "2099-07-30T17:30:00.000Z");
+  assert.equal(canonicalReal.lifecycle.emailEvents.at(-1).messageId, "exact-canonical-message");
+  assert.equal(canonicalPlaceholder.lifecycle.emailEvents?.length || 0, 0);
+  rmSync(join(inbox, "canonical-real-posting"), { recursive: true });
+  rmSync(join(inbox, "email-canonical-co-product-manager"), { recursive: true });
+
   const screened = run(
     "scripts/job-board.mjs", "screen", "included",
     "--pursue", "apply", "--strategy", "tailor", "--application-mode", "focused", "--priority", "high", "--variant", "pm", "--reason", "Strong JD match",

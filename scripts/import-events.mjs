@@ -198,8 +198,11 @@ function classifyEvent(event, jobs) {
     return { action: "import", job };
   }
 
-  const matched = findMatchingJob(event, jobs);
-  if (matched) return { action: "import", job: matched };
+  const match = findMatchingJob(event, jobs);
+  if (match.job) return { action: "import", job: match.job };
+  if (match.ambiguous) {
+    return { action: "review", reason: "ambiguous company/title; exact job identity required" };
+  }
 
   if (confidence === "high" && hasUsableCompanyAndRole(event)) {
     return { action: "import" };
@@ -351,12 +354,17 @@ function parseBlock(block) {
 function findMatchingJob(event, jobs) {
   const company = normalize(event.company);
   const role = normalize(event.role);
-  if (!company || company === "unknown" || !role || role === "unknown") return null;
+  if (!company || company === "unknown" || !role || role === "unknown") {
+    return { job: null, ambiguous: false };
+  }
   const matches = [...jobs.values()].filter((job) =>
     normalize(job.metadata.company) === company &&
     normalize(job.metadata.title) === role
   );
-  return matches.length === 1 ? matches[0] : null;
+  return {
+    job: matches.length === 1 ? matches[0] : null,
+    ambiguous: matches.length > 1,
+  };
 }
 
 function existingMessageIds(jobs) {

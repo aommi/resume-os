@@ -27,7 +27,10 @@ mkdir -p "$HB_DIR"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 ATTEMPT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 LAST_SUCCESS="$(node -e "try{console.log(require('$HB_FILE').lastSuccess||'')}catch{console.log('')}" 2>/dev/null || echo "")"
-BRIEF_MODEL="${BRIEF_MODEL:-deepseek-v4-pro}"
+BRIEF_RUNNER_ORDER="${BRIEF_RUNNER_ORDER:-openai,deepseek}"
+BRIEF_OPENAI_MODEL="${BRIEF_OPENAI_MODEL:-gpt-5.6-terra}"
+BRIEF_DEEPSEEK_MODEL="${BRIEF_DEEPSEEK_MODEL:-deepseek-v4-pro}"
+BRIEF_MODEL="unset"
 
 # The wrapper is the single authority on the heartbeat: the agent is read-only and
 # never writes it. Success means either a quiet action-gate pass or successful delivery.
@@ -37,25 +40,85 @@ write_hb() { # $1=lastSuccess $2=exitCode $3=failureCategory
 }
 
 # ── Runner seam ──────────────────────────────────────────────────────────
-# The brief is a read-only summary job (see engine/models.json daily_brief); it is
-# not tied to Hermes. To swap runners (e.g. claude -p), replace run_brief with any
-# command that reads $PROMPT and prints ONLY the brief text to stdout.
+# The brief is a read-only summary job (see engine/models.json daily_brief).
+# Runners execute in configured order, advancing only when a runner exits nonzero
+# or returns blank output. Add a future runner by defining run_brief_<name> and
+# adding its name to BRIEF_RUNNER_ORDER; do not add an unavailable runner merely
+# to make the list longer.
 #
 # The wrapper is the single authority on profile resolution: it substitutes the
 # resolved work dir into the prompt's <WORK_DIR> placeholder so the agent never
 # re-resolves the profile (and cannot desync from RESUME_OS_PROFILE).
 PROMPT="$(cat prompts/daily-brief.txt)"
 PROMPT="${PROMPT//<WORK_DIR>/$WORK}"
-run_brief() {
+run_brief_openai() {
   hermes chat -q "$PROMPT" \
-    --model "$BRIEF_MODEL" \
+    --model "$BRIEF_OPENAI_MODEL" \
     -Q \
     -t file \
     --max-turns 30 \
     --ignore-rules
 }
 
-echo "=== daily-brief $RUN_ID (model: $BRIEF_MODEL) ===" >> "$LOG"
+run_brief_deepseek() {
+  hermes chat -q "$PROMPT" \
+    --provider deepseek \
+    --model "$BRIEF_DEEPSEEK_MODEL" \
+    -Q \
+    -t file \
+    --max-turns 30 \
+    --ignore-rules
+}
+
+run_brief_with_fallback() {
+  local runner output exit_code
+  local saw_empty_output=0
+  local saw_failure=0
+  for runner in ${BRIEF_RUNNER_ORDER//,/ }; do
+    case "$runner" in
+      openai)
+        BRIEF_MODEL="$BRIEF_OPENAI_MODEL"
+        if output="$(run_brief_openai 2>>"$LOG")"; then
+          if [ -n "$(printf '%s' "$output" | tr -d '[:space:]')" ]; then
+            BRIEF_TEXT="$output"
+            return 0
+          fi
+          saw_empty_output=1
+          echo "brief runner openai exited 0 but produced no output" >> "$LOG"
+        else
+          exit_code=$?
+          saw_failure=1
+          echo "brief runner openai failed with exit $exit_code" >> "$LOG"
+        fi
+        ;;
+      deepseek)
+        BRIEF_MODEL="$BRIEF_DEEPSEEK_MODEL"
+        if output="$(run_brief_deepseek 2>>"$LOG")"; then
+          if [ -n "$(printf '%s' "$output" | tr -d '[:space:]')" ]; then
+            BRIEF_TEXT="$output"
+            return 0
+          fi
+          saw_empty_output=1
+          echo "brief runner deepseek exited 0 but produced no output" >> "$LOG"
+        else
+          exit_code=$?
+          saw_failure=1
+          echo "brief runner deepseek failed with exit $exit_code" >> "$LOG"
+        fi
+        ;;
+      *)
+        saw_failure=1
+        echo "brief runner '$runner' is not configured; skipping" >> "$LOG"
+        ;;
+    esac
+  done
+  if [ "$saw_empty_output" -eq 1 ] && [ "$saw_failure" -eq 0 ]; then
+    return 2
+  fi
+  return 1
+}
+
+echo "=== daily-brief $RUN_ID (runner order: $BRIEF_RUNNER_ORDER) ===" >> "$LOG"
 
 if [ -z "${BRIEF_SEND_TARGET:-}" ]; then
   echo "FATAL: BRIEF_SEND_TARGET not set — refusing to run (won't guess a delivery target)" >> "$LOG"
@@ -103,22 +166,20 @@ if ! section_has_action "Upcoming Events" "^- [*][*]" \
   exit 0
 fi
 
-if BRIEF_TEXT="$(run_brief 2>>"$LOG")"; then
+BRIEF_TEXT=""
+if run_brief_with_fallback; then
   BRIEF_EXIT=0
 else
   BRIEF_EXIT=$?
 fi
 if [ $BRIEF_EXIT -ne 0 ]; then
-  echo "brief agent failed with exit $BRIEF_EXIT" >> "$LOG"
-  write_hb "$LAST_SUCCESS" "$BRIEF_EXIT" "agent_failed"
-  exit "$BRIEF_EXIT"
-fi
-
-# Output contract: an agent run that produced no brief text is a failure, not a
-# quiet success (same rule as the gmail monitor's monitor_output_missing).
-if [ -z "$(printf '%s' "$BRIEF_TEXT" | tr -d '[:space:]')" ]; then
-  echo "brief agent exited 0 but produced no output" >> "$LOG"
-  write_hb "$LAST_SUCCESS" 1 "brief_output_missing"
+  if [ "$BRIEF_EXIT" -eq 2 ]; then
+    echo "all brief runners produced no output" >> "$LOG"
+    write_hb "$LAST_SUCCESS" 1 "brief_output_missing"
+  else
+    echo "no brief runner produced usable output" >> "$LOG"
+    write_hb "$LAST_SUCCESS" 1 "agent_failed"
+  fi
   exit 1
 fi
 

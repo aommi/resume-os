@@ -253,6 +253,44 @@ the durable evaluation evidence. Remove one-off collection interfaces after use 
 workflow and an explicit owner are established. When a temporary feature leaks profile-specific
 policy into reusable code, deletion is preferred to parameterization by default.
 
+## Ordered runtime fallback for the daily action digest (2026-07-29)
+**Why accepted:** A scheduled summary should not fail just because one authenticated inference
+provider is temporarily unavailable or returns no usable output. The prior DeepSeek-only override
+was incompatible with Hermes's active OpenAI Codex provider, while `gpt-5.6-terra` was verified
+through Hermes as the balanced OpenAI cost/quality tier.
+
+**Implications:** `run-daily-brief.sh` tries configured runners sequentially. OpenAI Codex
+(`gpt-5.6-terra`) is primary; DeepSeek (`deepseek-v4-pro`) is secondary. It advances only after a
+nonzero exit or blank result, delivers exactly one successful brief, and records the successful
+model in the heartbeat. Disabled or unconfigured runners, including Claude without a valid
+subscription, are not placed in the active chain.
+
+**Architecture Boundary verdict (2026-07-29): ALIGNED.** (1) No resume judgment changed. (2)
+The prompt retains all summary judgment. (3) The wrapper deterministically retries a bounded
+execution concern and validates nonempty output. (4) No resolver or adapter gained domain logic.
+(5) The fallback is conditional on a provider failure. (6) Verdict: ALIGNED.
+
+## Single local Gmail sync path (2026-07-30)
+**Why accepted:** The prior scheduled path required Claude subscription access, while the Codex
+Gmail connector is explicitly interactive-only and cannot run through `codex exec`. A verified
+local Himalaya IMAP account can provide the bounded mailbox read without introducing another agent
+or connector cron. OpenAI Terra is the selected balanced extraction model already verified in the
+Hermes runtime.
+
+**Implications:** `run-gmail-sync.sh` is the sole scheduled Gmail workflow: Himalaya produces a
+short-lived, three-day overlapping profile-work snapshot; Hermes/OpenAI extracts event handoff
+files from it; `import-events.mjs` remains the only tracker writer. The machine-owned LaunchAgent
+runs it at 07:00 and 19:00. Claude and the paused Hermes Gmail cron are not fallbacks; Codex Gmail
+remains an interactive capability only. The importer deduplicates repeated overlapping source IDs,
+so retries and the two daily runs do not create duplicated lifecycle events.
+
+**Architecture Boundary verdict (2026-07-30): ALIGNED.** (1) No resume or job-state judgment was
+moved into code; the model prompt still classifies events and the importer validates structure. (2)
+The extraction judgment remains markdown-prompt guidance. (3) The new deterministic work is a
+bounded IMAP snapshot, credential/link redaction, output validation, and import. (4) No resolver
+or model harness gained application-domain policy. (5) The schedule replaces a broken path rather
+than adding universal workflow friction. (6) Verdict: ALIGNED.
+
 ## Exact job identity precedes ingestion and screening deduplication (2026-08-17)
 
 **Why accepted:** Company and title matching cannot distinguish multiple openings at the same
