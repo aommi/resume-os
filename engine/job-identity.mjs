@@ -46,7 +46,12 @@ export function extractEmployerRequisition(value) {
     match = path.match(/\/jobs\/(\d+)(?:\/|$)/i);
   } else if (/smartrecruiters\.com$/i.test(host)) {
     match = path.match(/\/[^/]+\/([^/]+?)(?:-[^/]*)?\/?$/);
-  } else if (/ashbyhq\.com$|lever\.co$|rippling\.com$|bamboohr\.com$|workable\.com$/i.test(host)) {
+  } else if (/ashbyhq\.com$|lever\.co$/i.test(host)) {
+    const segments = path.split("/").filter(Boolean);
+    const last = segments.at(-1) || "";
+    const id = /^(application|apply)$/i.test(last) ? segments.at(-2) || "" : last;
+    match = id.match(/^([a-z0-9][a-z0-9-]{5,})$/i);
+  } else if (/rippling\.com$|bamboohr\.com$|workable\.com$/i.test(host)) {
     match = path.match(/\/([a-z0-9][a-z0-9-]{5,})\/?$/i);
   }
 
@@ -56,9 +61,9 @@ export function extractEmployerRequisition(value) {
 export function resolveJobIdentity(metadata = {}) {
   const linkedinJobId = normalizeId(metadata.linkedinJobId) || extractLinkedInJobId(metadata.url);
   const derivedEmployer = extractEmployerRequisition(metadata.applyUrl || metadata.url || "");
-  const employerRequisitionId = normalizeId(metadata.employerRequisitionId) || derivedEmployer.employerRequisitionId;
-  const employerRequisitionSource = normalizeSource(metadata.employerRequisitionSource) ||
-    derivedEmployer.employerRequisitionSource ||
+  const employerRequisitionId = derivedEmployer.employerRequisitionId || normalizeId(metadata.employerRequisitionId);
+  const employerRequisitionSource = derivedEmployer.employerRequisitionSource ||
+    normalizeSource(metadata.employerRequisitionSource) ||
     (employerRequisitionId && metadata.company ? `company:${normalizeCompany(metadata.company)}` : "");
 
   return { linkedinJobId, employerRequisitionId, employerRequisitionSource };

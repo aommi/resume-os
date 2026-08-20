@@ -23,6 +23,20 @@ assert.deepEqual(
   extractEmployerRequisition("https://autodesk.wd1.myworkdayjobs.com/Ext/job/Toronto/Senior-Product-Manager_25WD12345"),
   { employerRequisitionId: "25WD12345", employerRequisitionSource: "workday:autodesk" },
 );
+assert.deepEqual(
+  extractEmployerRequisition("https://jobs.ashbyhq.com/surveymonkey/7a2f2a44-d8aa-4261-a3d2-acd6ea825a8d/application?source=LinkedIn"),
+  {
+    employerRequisitionId: "7a2f2a44-d8aa-4261-a3d2-acd6ea825a8d",
+    employerRequisitionSource: "ashby:surveymonkey",
+  },
+);
+assert.deepEqual(
+  extractEmployerRequisition("https://jobs.lever.co/example/f0077724-aa2e-48b9-8c33-fdf6877c3b64/apply"),
+  {
+    employerRequisitionId: "f0077724-aa2e-48b9-8c33-fdf6877c3b64",
+    employerRequisitionSource: "lever:example",
+  },
+);
 
 const jobs = [
   job("old-linkedin", {
@@ -35,6 +49,11 @@ const jobs = [
     applyUrl: "https://job-boards.greenhouse.io/remotecom/jobs/7813609003",
     company: "Remote",
     fetched: "2026-08-10",
+  }),
+  job("old-canonical", {
+    url: "https://careers.example.com/jobs/product-manager?source=linkedin",
+    fetched: "2026-08-09",
+    lifecycle: { status: "applied", appliedAt: "2026-08-09" },
   }),
 ];
 
@@ -61,6 +80,19 @@ duplicate = findExactJobDuplicate(job("repost", {
 assert.equal(duplicate?.job.id, "old-requisition", "ingestion must stop on an existing requisition before creating another record");
 assert.equal(duplicate?.basis, "employer requisition ID");
 
+duplicate = findExactJobDuplicate(job("canonical-copy", {
+  url: "https://careers.example.com/jobs/product-manager?tracking=new",
+}), jobs, { preferExisting: true });
+assert.equal(duplicate?.job.id, "old-canonical");
+assert.equal(duplicate?.basis, "canonical URL");
+
+duplicate = findExactJobDuplicate(job("conflicting-identities", {
+  url: "https://www.linkedin.com/jobs/view/4455274666/",
+  applyUrl: "https://job-boards.greenhouse.io/remotecom/jobs/7813609003",
+}), jobs, { preferExisting: true });
+assert.equal(duplicate?.job.id, "old-linkedin", "LinkedIn ID must win when exact identity keys conflict");
+assert.equal(duplicate?.basis, "LinkedIn job ID");
+
 duplicate = findExactJobDuplicate(job("distinct-requisition", {
   url: "https://www.linkedin.com/jobs/view/4999999998/",
   applyUrl: "https://job-boards.greenhouse.io/remotecom/jobs/7885156003",
@@ -76,6 +108,15 @@ assert.equal(assessScreenability(job("distinct-requisition", {
   description: "A complete job description.",
 }), jobs, {}).state, "ready");
 
+assert.deepEqual(resolveJobIdentity({
+  applyUrl: "https://jobs.ashbyhq.com/surveymonkey/7a2f2a44-d8aa-4261-a3d2-acd6ea825a8d/application",
+  employerRequisitionId: "application",
+  employerRequisitionSource: "ashby:surveymonkey",
+}), {
+  linkedinJobId: "",
+  employerRequisitionId: "7a2f2a44-d8aa-4261-a3d2-acd6ea825a8d",
+  employerRequisitionSource: "ashby:surveymonkey",
+});
 assert.deepEqual(resolveJobIdentity({
   company: "Autodesk",
   url: "https://www.linkedin.com/jobs/view/4111111111/",
