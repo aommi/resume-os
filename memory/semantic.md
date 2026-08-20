@@ -145,10 +145,14 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   placeholder.
 - **Evaluation collection boundary:** Frozen private labels, cases, raw outputs, and scorecards are durable evaluation evidence. One-off collection interfaces are removed after use unless a recurring workflow and explicit owner exist; do not parameterize profile-specific sampling logic into the engine merely to preserve a temporary aid.
 - **Screening lifecycle:** `lifecycle.status` is execution state, while screening records `pursue`
+  (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).
+  `job-board.mjs screen` validates that only `apply` receives a strategy; it moves `apply` to
+  `to_apply`, `skip` to `skipped`, and leaves `needs_input` in `to_review` with one focused question.
+  Apply routes may also carry `applicationMode` (`focused` or `opportunistic`); opportunistic is base-resume-only and excluded from package, tailoring, outreach, and priority work. Tailored routes require explicit `approve-tailor` approval before package-queue entry; re-screening clears it. `screenQuestion` preserves the one focused needs-input question, while `migrate-screening --apply` explicitly returns legacy unscreened rows to review. Legacy `fit` tiers normalize to the new fields for compatibility.
 - **Screening scoring method (documented, not yet a ranking capability):** `job-screening.md`
   defines the Q/I/A/V tuple (qualification, interest, access 0–4, value) plus a separate PV
-  platform-visibility flag, versioned anchor rubrics, lanes from Q and I only (Focus / Stretch /
-  Qualified), an additive `screenChanceIndex` (not a calibrated probability) with a freshness
+  platform-visibility flag, versioned anchor rubrics, base lanes from Q and I (Focus / Stretch /
+  Qualified) plus the explicit ACT-NOW access exception, an additive `screenChanceIndex` (not a calibrated probability) with a freshness
   multiplier yielding a 0–130 `rankIndex`, and an act-now rule: warm access + I ≥ 7 tops its lane
   and, when Q < 4, enters Stretch as an explicit exception (hard gates never overridden). The
   compact record is a `lifecycle.priority` string like `F-58 r2 (Q8 I9 A2 V4 PV1 f1.0 @2026-08-14)`;
@@ -157,10 +161,6 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   pass persists a compact pass basis with named assumptions in the screen reason. Company process
   facts and relationship wrap-ups live profile-locally in `company-history.md`; restrictions carry
   a scope and block only within it. Validation is prospective after the frozen `r1` retro baseline.
-  (`apply`, `skip`, `needs_input`) independently from material `strategy` (`base_resume`, `tailor`).
-  `job-board.mjs screen` validates that only `apply` receives a strategy; it moves `apply` to
-  `to_apply`, `skip` to `skipped`, and leaves `needs_input` in `to_review` with one focused question.
-  Apply routes may also carry `applicationMode` (`focused` or `opportunistic`); opportunistic is base-resume-only and excluded from package, tailoring, outreach, and priority work. Tailored routes require explicit `approve-tailor` approval before package-queue entry; re-screening clears it. `screenQuestion` preserves the one focused needs-input question, while `migrate-screening --apply` explicitly returns legacy unscreened rows to review. Legacy `fit` tiers normalize to the new fields for compatibility.
 - **Asynchronous LinkedIn assessment:** `scripts/assess-jobs.mjs` is a zero-local-model worker that
   assesses at most one recent `to_review` / `to_apply` job per invocation, caps initial throughput at
   five jobs per local day (with a validated `LINKEDIN_ASSESS_DAILY_CAP` command-level override for

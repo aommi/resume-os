@@ -343,9 +343,10 @@ letting access compensate for a lower qualification score once hard gates pass.
 
 **Implications:** `job-screening.md` now defines a four-axis tuple — Q (qualification), I
 (interest), A (access, 0–4), V (value) — plus a separate low-confidence PV platform-visibility
-flag, with written anchors. Lanes (Focus / Stretch / Qualified) derive from Q and I only. Rank
-within a lane is an additive `screenChanceIndex` (Q + A, no interaction term; an index, not a
-calibrated probability) times a freshness multiplier times value, giving a 0–130 `rankIndex`.
+flag, with written anchors. Base lanes (Focus / Stretch / Qualified) derive from Q and I; ACT-NOW
+is the sole access-based lane exception. Rank within a lane is an additive `screenChanceIndex`
+(Q + A, no interaction term; an index, not a calibrated probability) times a freshness multiplier
+times value, giving a 0–130 `rankIndex`.
 An act-now rule surfaces gate-passed, high-interest jobs with warm access at the top of their
 lane; when Q < 4 it places them in Stretch as an explicit exception, and hard gates are never
 overridden. The compact record lives in the existing `lifecycle.priority` string, including PV,
@@ -358,8 +359,9 @@ is stored as facts plus a relationship wrap-up in a profile-local `company-histo
 categorical summary feeding the A anchor; facts and inference are kept distinct, and any
 restriction carries an explicit scope (company / business unit / team / role family / person)
 and blocks only within it. Recorded assumptions: additive access and starting weights, revisited
-only through the blind retro-validation protocol. Design constraint: a job must be scoreable in
-about five minutes; decisive unknowns become `needs_input`, never silent passes.
+only through the validation protocol. The completed historical pass remains the frozen `r1`
+baseline; revision `r2` uses the prospective protocol below. Design constraint: a job must be
+scoreable in about five minutes; decisive unknowns become `needs_input`, never silent passes.
 
 **Architecture Boundary verdict (2026-08-14): ALIGNED.** (1) No judgment moved into code; the
 method is markdown consumed via the existing `job_screening` resolver route. (2) All scoring

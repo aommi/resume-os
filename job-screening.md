@@ -4,9 +4,10 @@ Judgment doc for triaging a discovered-jobs backlog into action tiers. Consumed 
 `job_screening` resolver route. Companion to `tailoring-methodology.md`: screening decides
 *whether* a job is worth work, tailoring decides *how* to do that work.
 
-This doc holds judgment only. Every threshold, parse, and state transition named here lives in
-deterministic tooling — do not re-implement any of it in prose, and do not encode candidate-specific
-taste here (that belongs in the profile's `LEARNINGS.md`).
+This doc owns screening judgment, including the scoring anchors and thresholds below.
+Deterministic parsing, stored-fact gates, and state transitions named here stay in tooling. Do not
+duplicate either owner's logic, and do not encode candidate-specific taste here (that belongs in
+the profile's `LEARNINGS.md`).
 
 ---
 
@@ -89,8 +90,9 @@ Cull without further judgment when the JD shows any of:
 Scoring runs only on jobs that survived the gates above. It answers "in what order do I apply",
 never "is this viable" — viability was settled by the gates. The design rule is **subtract**: a
 job must be scoreable in about five minutes with the JD and the profile evidence packet open. If a
-sub-score needs research, mark it unknown and move on; a decisive unknown is `needs_input`, and an
-unknown must never silently count as a pass or a point.
+sub-score needs research, use its explicit unknown treatment when one is defined; otherwise mark it
+unknown and move on. A decisive unknown is `needs_input`, and an unknown must never silently count
+as a pass or a point.
 
 Profile-specific taste feeding these anchors (target industries, mission interests, comp target,
 company-size preference) lives in the profile's `LEARNINGS.md` and `positioning.md`, never here.
@@ -123,8 +125,15 @@ they do not change the weights or rescore the historical worksheet.
 
 **I — interest (0–10).** Would the candidate take it?
 
-- Mission alignment (0–3), industry pull (0–3), business-model preference (0–2), role shape the
-  candidate wants (0–2) — all judged against the profile's stated preferences.
+- Mission alignment (0–3): 3 = directly advances a stated mission priority; 2 = meaningful adjacent
+  alignment; 1 = neutral or too little evidence to claim a pull; 0 = conflicts with a stated value
+  or mission preference. Flag a 1 when it comes from missing mission evidence.
+- Industry pull (0–3): 3 = named priority industry; 2 = meaningful adjacent interest; 1 = neutral or
+  acceptable; 0 = an industry the profile says to avoid.
+- Business-model preference (0–2): 2 = preferred model; 1 = acceptable, neutral, or unclear; 0 = a
+  model the profile says to avoid. Flag an unclear 1.
+- Role shape the candidate wants (0–2): 2 = preferred discovery/strategy/execution mix; 1 = an
+  acceptable mixed tradeoff; 0 = dominated by work the profile says to avoid.
 
 **A — access (0–4).** Will a human see the application?
 
@@ -145,12 +154,17 @@ independently of referrals and relationships. Only outcome evidence may promote 
 
 - Comp vs the profile target (0–2): at or above = 2, within ~15% below = 1, far below = 0.
   Absent comp is unknown, scored 1, and flagged — never treated as low.
-- Company-size fit (0–2), other constraints such as location friction (0–1).
+- Company-size fit (0–2): 2 = within the preferred range; 1 = acceptable, neutral, or unknown;
+  0 = a stated size mismatch. Flag an unknown 1.
+- Other non-gating constraints, such as location friction (0–1): 1 = no material friction; 0 = known
+  friction. An unresolved constraint that could fail a hard gate is `needs_input`, not 0.
 
 ## Lanes
 
-The lane comes from Q and I only. Access and value never change a lane — a warm contact at a
-company the candidate is unqualified for makes them visible, not qualified.
+The base lane comes from Q and I only. Value never changes a lane. Access changes it only through
+the explicit ACT-NOW exception below: a gate-passed job with I ≥ 7, warm access, and Q < 4 enters
+Stretch so the contact can be used while the role is open. That exception changes queue treatment,
+not the qualification score.
 
 | Lane | Condition | Meaning |
 |---|---|---|
