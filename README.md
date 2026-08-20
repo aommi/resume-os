@@ -78,7 +78,7 @@ node scripts/build-resume-formats.mjs --source resume.md --export
 node scripts/build-resume-formats.mjs --source "<package>/resume.md" --out-dir /private/tmp/resume-export \
   --resume-title "<Company Role>" --export --deliver "applications/<Company - Role>" --require-terms "term1,term2"
 
-# Review a browser-assisted application-form fill plan; the runner never submits.
+# Review a profile-bound application-form fill plan. The assisted browser blocks submission.
 RESUME_OS_PROFILE=example node scripts/apply-form-assist.mjs --manifest profiles/example/work/application-form-example.json --dry-run
 ```
 

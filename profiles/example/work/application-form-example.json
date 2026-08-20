@@ -1,5 +1,7 @@
 {
+  "profileId": "example",
   "url": "https://example.com/careers/product-manager/apply",
+  "applicationPackage": "applications/ExampleCo - Product Manager",
   "holdMinutes": 30,
   "clickBeforeFill": [
     {
@@ -60,7 +62,7 @@
     {
       "label": "Resume PDF",
       "selectors": ["input[type='file'][name='resume']", "input[type='file']"],
-      "path": "applications/ExampleCo - Product Manager/Jordan Rivera - ExampleCo Product Manager - Resume.pdf",
+      "path": "Jordan Rivera - ExampleCo Product Manager - Resume.pdf",
       "required": false
     }
   ]

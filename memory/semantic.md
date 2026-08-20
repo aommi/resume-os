@@ -50,10 +50,11 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `scripts/test-resolver.mjs` (deterministic test). Task type -> which skill docs to load,
   with a default/fallback route. `adapters/claude-code-bootstrap.md` is the Claude Code entry.
 - **Application form assist:** `application-form-assist.md` owns the judgment/no-submit rules.
-  `scripts/apply-form-assist.mjs` is a deterministic Playwright harness that reads a manifest and
-  active profile values, fills fields/uploads files, refuses final-submit-like clicks, and holds the
-  browser for manual review. Real manifests/answers are profile-local; the tracked example is
-  fictional.
+  `scripts/apply-form-assist.mjs` is a deterministic Playwright harness that requires the manifest
+  to match the active profile, leaves blank optional fields untouched, requires exact select
+  matches, confines uploads to one application package, blocks DOM submission and mutating HTTP
+  requests, reports required-action failures, and holds the browser for manual review. Real
+  manifests/answers are profile-local; the tracked example is fictional.
 - **Models:** `engine/models.json` maps pipeline steps to model ids. Schema/IDs only, no
   runtime binding. **Audit rule:** models.json is the declared dictionary; actuals are recorded
   per run (heartbeat JSON `model` field, run logs). Any runner/model swap MUST update models.json

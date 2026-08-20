@@ -108,8 +108,9 @@ does not require an architecture verdict.
 - The generated board separates active streams: `Applied` is submitted/waiting, `Needs Action` is follow-up required, `Interviewing` is screen/interview activity, and `Closed` is final outcomes such as rejection or withdrawal.
 - Email tracking uses event handoff files, not direct tracker edits. Interactive Cowork/Claude runs use `prompts/claude-cowork-gmail-job-monitor.md`; scheduled runs use `prompts/gmail-monitor-headless.txt` through `scripts/run-gmail-sync.sh`. Both write read-only Gmail findings into `events/pending/`. `scripts/import-events.mjs` deterministically deduplicates and imports valid events into lifecycle metadata, quarantines malformed output, archives processed files, and regenerates the job board.
 - Application form assist is a browser-prep workflow, not submission automation. The tracked harness
-  (`scripts/apply-form-assist.mjs`) reads a manifest plus the active profile, fills known fields,
-  uploads files, and leaves the browser open for human review. It must never submit. Private
+  (`scripts/apply-form-assist.mjs`) reads a profile-bound manifest, fills known nonblank fields,
+  uploads files confined to one active-profile application package, and leaves the browser open for
+  human review. DOM submission and mutating network requests remain blocked in that browser. Private
   manifests with real jobs/answers belong under `profiles/<activeProfile>/work/`; tracked manifests
   must be fictional examples.
 - Event files are immutable. Review/import status belongs in `events/reviews.md` with reviewer, model, timestamp, decision, and notes; do not edit old event blocks to mark them reviewed.
