@@ -291,6 +291,28 @@ bounded IMAP snapshot, credential/link redaction, output validation, and import.
 or model harness gained application-domain policy. (5) The schedule replaces a broken path rather
 than adding universal workflow friction. (6) Verdict: ALIGNED.
 
+## Application form assist is browser prep, not submission automation (2026-08-05)
+**Why accepted:** Computer-use can reduce repetitive application-form filling, but the reusable
+engine must not publish private candidate data, job-specific answers, or a submit-capable fat
+harness. The recurring capability is to prepare a browser session for human review; the decision to
+submit remains outside the script.
+
+**Implications:** `application-form-assist.md` owns judgment and no-submit rules. The resolver has an
+`application_form` route. `scripts/apply-form-assist.mjs` is a thin deterministic harness that binds
+each manifest to the active profile, leaves blank optional fields untouched, requires exact select
+matches, confines uploads to one application package, blocks DOM submission and mutating HTTP
+requests, reports required-action failures, and holds the browser open. Real manifests with
+job-specific answers live under `profiles/<activeProfile>/work/`; tracked examples use fictional
+data only.
+
+**Architecture Boundary verdict (2026-08-05): ALIGNED.** (1) Judgment introduced: application-form
+assist may prepare but never submit, and ambiguous answers stay blank. (2) Judgment lives in
+Markdown (`application-form-assist.md`, this decision); code performs deterministic browser actions
+and safety refusal only. (3) Repeatable execution: manifest dry-run, deterministic profile and path
+validation, field fill/upload operations, submission guards, and tests. (4) Resolver gains only a
+route to the skill doc; the harness gains no resume/application judgment. (5) Workflow friction is
+conditional: only invoked for package-ready application work. (6) Verdict: ALIGNED.
+
 ## Exact job identity precedes ingestion and screening deduplication (2026-08-17)
 
 **Why accepted:** Company and title matching cannot distinguish multiple openings at the same
