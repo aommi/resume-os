@@ -322,7 +322,52 @@ A complete application package in `applications/<Company - Role>/` contains:
 
 Non-resume artifacts obey the same truth gate: claims ⊆ resume ⊆ LinkedIn ⊆ reality. The cover letter draws only from resume facts and the Phase 0 vocabulary map — it may reframe and emphasize, never introduce new claims.
 
-Cover letters are short by default and follow `resume-os.md` → "Cover Letter Skill": one short opener, 3-4 bullets mapping JD requirements to source-backed proof, one short close, and contact info. Use a paragraph-only letter only when the user asks for that style or the application prompt expects it. Keep `cover_letter.md`, generated `cover_letter.html`, and a name-leading upload PDF in the package when a cover letter is needed. Generate the PDF with Chrome header/footer disabled (`--no-pdf-header-footer --print-to-pdf-no-header`) and verify there are no visible browser headers/footers before calling the package complete. LinkedIn/InMail messages need a punchy subject and should stay around 4 short lines.
+Cover letters are short by default and follow `resume-os.md` → "Cover Letter Skill": one short opener, 3-4 bullets mapping JD requirements to source-backed proof, one short close, and contact info. Use a paragraph-only letter only when the user asks for that style or the application prompt expects it. Keep `cover_letter.md`, generated `cover_letter.html`, and a name-leading upload PDF in the package when a cover letter is needed. Generate the PDF with Chrome header/footer disabled (`--no-pdf-header-footer --print-to-pdf-no-header`) and verify there are no visible browser headers/footers before calling the package complete. For LinkedIn outreach, use the applicable template in `resume-os.md` → "LinkedIn Outreach Templates" and adapt it only with package-backed claims; InMail messages may add a punchy subject.
+
+### 4.1 Contact opportunity assessment
+
+For focused applications, assess whether contact is warranted at the applicable lifecycle points
+below. Skip this assessment for opportunistic applications unless the user explicitly requests it
+or the application is re-screened as focused. This is a decision check, not a nudge to send. The
+default outcome can be "no contact."
+
+The required output is the decision record only. `Recommend draft` means the agent should stop and
+ask whether the user wants copy; it does not authorize drafting. For every decision, stop after the
+assessment and explain the reason unless the user has separately and explicitly requested a draft.
+
+Run the check at these points:
+
+- **Before applying:** Is there a known referrer, hiring manager, recruiter, or relevant team
+  member? If yes, decide whether to ask for a referral, send a short LinkedIn note after applying,
+  or hold.
+- **After applying:** If the role is high-fit, referred, or has an identifiable hiring-side contact,
+  consider a no-ask LinkedIn note. Use only package-backed claims.
+- **After recruiter screen or interview:** If the conversation created useful new substance, decide
+  whether a thank-you or follow-up email should add that substance, not repeat generic interest.
+- **While waiting:** If the process is quiet beyond the stated timing, decide whether a short
+  reiteration-of-interest or timing check is appropriate.
+- **After rejection or close:** If the reply or process was warm, decide whether to preserve the
+  relationship through a short email, LinkedIn connection, or both.
+
+Before submission, keep this decision record in `tailoring-log.md` or `strategy.md`. After
+submission, keep it in a profile-local `inbox/<job-id>/contact-log.md` so the submitted application
+package remains frozen. Never add later-stage contact notes to a submitted package.
+
+| Stage | Contact path | Evidence | Value to recipient | Risk | Decision | Owner/date |
+|---|---|---|---|---|---|---|
+| Applied | LinkedIn to hiring manager | High-fit package, submitted today | Short signal, no ask | Too soon / weak contact | Hold / No contact / Ask user / Recommend draft | User, YYYY-MM-DD |
+
+Assessment rules:
+
+- Do not contact only because a contact exists.
+- Do not invent a contact path. If the person is not relevant to the hiring process, record "no
+  contact."
+- Do not write suggested wording as part of the assessment. Wording belongs to the next step only
+  after the user explicitly asks for a draft.
+- Any message claim must be supported by the application package, interview transcript, recruiter
+  email, or explicit user input.
+- Prefer one high-quality touchpoint over several thin ones.
+- Never send, draft in Gmail, or click LinkedIn connect without user approval for that step.
 
 Finally, record application lifecycle changes through `node scripts/job-board.mjs`, which updates `inbox/<job-id>/metadata.json` and regenerates `jobs-tracker.md`. Do not hand-edit `jobs-tracker.md`; it is a generated board. Keep `resume-project-tracker.md` for OS state, locked resume decisions, and process changes. After ~10 applications, revisit `eval-rubric.md` gates against real outcomes from the generated tracker and underlying lifecycle metadata.
 
