@@ -42,6 +42,12 @@ For current status, locked decisions, open questions, and next steps, read `resu
 - `bullet-rubric.md` — bullet and whole-resume quality rules; apply before changing content.
 - `tailoring-methodology.md` — the full tailoring engine: phased process, taste rules, feature-scorecard ship check, and export verification. Load this before any tailoring session.
 - `eval-rubric.md` — the tailored-resume eval: keyword decision table, hard/soft/report ship gates, latent checklist. Deterministic checks run via `scripts/score-resume.mjs`.
+- `job-screening.md` — the job triage method: viability gates, Q/I/A/V/PV anchors, lanes,
+  freshness-aware ranking, and prospective validation.
+- `job-search-sweep.md` — the incremental-search runbook: saved-boundary handling, exact-identity
+  reconciliation, employer-page verification, screening composition, queue refresh, and
+  lane-grouped reporting. It owns sequence only and delegates judgment and state changes to their
+  existing owners.
 - `evals/model-comparison.md` — operational two-layer protocol for assessing or comparing models:
   deterministic smoke/protected-fact gates first, then human-vetted resume/bullet judgment.
 - `application-form-assist.md` — browser-assisted application form filling rules; deterministic

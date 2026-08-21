@@ -8,7 +8,8 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 ## How it works
 
 1. Identify the task type. Known tasks: `tailor`, `score`, `cover_letter`, `resume_maintenance`,
-   `job_screening`, `application_form`, `model_eval`, `pipeline_status`, `discover`.
+   `job_screening`, `job_search_sweep`, `application_form`, `model_eval`, `pipeline_status`,
+   `discover`.
 2. Load `always` docs (the active profile's `resume-project-tracker.md`) plus the task's route.
 3. **Unknown or ambiguous intent → the `default` route** (`resume-os.md` + `tailoring-methodology.md`).
    This is the safety net: the sparse resolver degrades to roughly the old cold-start behavior, so it is
@@ -21,6 +22,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 | `cover_letter` | resume-os.md, tailoring-methodology.md | cover letter skill |
 | `resume_maintenance` | resume-os.md, bullet-rubric.md | base-resume edits, not job-specific |
 | `job_screening` | job-screening.md | deciding pursue/skip/needs_input and material strategy |
+| `job_search_sweep` | job-search-sweep.md, job-screening.md | incremental discovery, exact-identity reconciliation, screening, and queue order |
 | `application_form` | resume-os.md, application-form-assist.md | browser-assisted form filling; never submits |
 | `model_eval` | evals/model-comparison.md | two-layer model comparison and approval gate |
 | `pipeline_status` | (none) | just run `node scripts/job-board.mjs` |
