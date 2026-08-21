@@ -6,7 +6,9 @@ The reusable engine is profile-agnostic; each person's private data lives under 
 ## Repository layout
 
 - **Engine (reusable, shareable):**
-  - `resume-os.md`, `tailoring-methodology.md`, `bullet-rubric.md`, `eval-rubric.md`, `job-screening.md`, `application-form-assist.md`: skill docs (judgment/process).
+  - `resume-os.md`, `tailoring-methodology.md`, `bullet-rubric.md`, `eval-rubric.md`,
+    `job-screening.md`, `job-search-sweep.md`, `application-form-assist.md`: skill docs
+    (judgment/process).
   - `resume-os.config.json`: machine/env config: `activeProfile`, timezone, browser path, variant→title map.
   - `engine/config.mjs`: config + profile resolver (used by all tooling).
   - `engine/schemas/profile.schema.json`: the per-tenant data contract.

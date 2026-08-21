@@ -3,6 +3,7 @@
 // Usage:
 //   node scripts/process-job.mjs <url>
 //   node scripts/process-job.mjs <url> --out <dir>     (save job.md + metadata)
+//   node scripts/process-job.mjs <url> --out <dir> --no-save  (inspect without changing LinkedIn save state)
 //
 // Output: JSON to stdout with { url, title, company, topApplicant, applyUrl, saved, ... }
 
@@ -18,14 +19,18 @@ import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 import { extractCompensationText } from "../engine/compensation.mjs";
 import { findExactJobDuplicate, resolveJobIdentity } from "../engine/job-identity.mjs";
+import {
+  parseProcessJobArgs,
+  shouldAttemptLinkedInSave,
+} from "../engine/process-job-options.mjs";
 
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const PROFILE_LOCK_FILE = join(PROFILE_DIR, "SingletonLock");
-const args = parseArgs(process.argv.slice(2));
+const args = parseProcessJobArgs(process.argv.slice(2));
 let activeChromeProc = null;
 
 if (!args.url) {
-  console.error("Usage: node scripts/process-job.mjs <url> [--out <dir>] [--allow-existing]");
+  console.error("Usage: node scripts/process-job.mjs <url> [--out <dir>] [--allow-existing] [--no-save]");
   process.exit(2);
 }
 
@@ -235,43 +240,45 @@ async function processJob(url, outDir) {
     let saved = false;
     let wasAlreadySaved = false;
 
-    try {
-      // Check current save state
-      const saveState = await page.evaluate(() => {
-        const buttons = document.querySelectorAll("button");
-        for (const b of buttons) {
-          const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-          if (aria.includes("save")) {
-            return {
-              ariaLabel: b.getAttribute("aria-label") || "",
-              isSaved: aria.includes("saved") || aria.includes("unsave"),
-            };
-          }
-        }
-        return null;
-      });
-
-      if (saveState && !saveState.isSaved) {
-        // Click save
-        await page.click('button[aria-label*="Save"]', { timeout: 5000 });
-        await page.waitForTimeout(2000);
-        
-        // Verify it saved
-        const savedState = await page.evaluate(() => {
+    if (shouldAttemptLinkedInSave(args)) {
+      try {
+        // Check current save state
+        const saveState = await page.evaluate(() => {
           const buttons = document.querySelectorAll("button");
           for (const b of buttons) {
             const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-            if (aria.includes("unsave") || aria.includes("saved")) return true;
+            if (aria.includes("save")) {
+              return {
+                ariaLabel: b.getAttribute("aria-label") || "",
+                isSaved: aria.includes("saved") || aria.includes("unsave"),
+              };
+            }
           }
-          return false;
+          return null;
         });
-        saved = savedState;
-      } else if (saveState?.isSaved) {
-        wasAlreadySaved = true;
-        saved = true; // already saved = effectively saved
+
+        if (saveState && !saveState.isSaved) {
+          // Click save
+          await page.click('button[aria-label*="Save"]', { timeout: 5000 });
+          await page.waitForTimeout(2000);
+
+          // Verify it saved
+          const savedState = await page.evaluate(() => {
+            const buttons = document.querySelectorAll("button");
+            for (const b of buttons) {
+              const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+              if (aria.includes("unsave") || aria.includes("saved")) return true;
+            }
+            return false;
+          });
+          saved = savedState;
+        } else if (saveState?.isSaved) {
+          wasAlreadySaved = true;
+          saved = true; // already saved = effectively saved
+        }
+      } catch (e) {
+        console.error("Save click failed:", e.message);
       }
-    } catch (e) {
-      console.error("Save click failed:", e.message);
     }
 
     await browser.close();
@@ -297,6 +304,7 @@ async function processJob(url, outDir) {
       isExternalApply,
       saved,
       wasAlreadySaved,
+      saveAttempted: shouldAttemptLinkedInSave(args),
       fetched: observedAt.toISOString().slice(0, 10),
     };
     if (args.debugSignals) result.linkedInSignalDiagnostics = linkedInSignals.diagnostics;
@@ -460,28 +468,4 @@ function normalizeLifecycle(lifecycle = {}) {
     notes: lifecycle.notes || "",
     emailEvents: Array.isArray(lifecycle.emailEvents) ? lifecycle.emailEvents : [],
   };
-}
-
-function parseArgs(args) {
-  const p = {
-    url: "",
-    out: "",
-    debugSignals: false,
-    assessMatch: false,
-    signalsOnly: false,
-    screenshot: "",
-    workflow: "",
-    allowExisting: false,
-  };
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--out") p.out = args[++i] || "";
-    else if (args[i] === "--debug-signals") p.debugSignals = true;
-    else if (args[i] === "--assess-match") p.assessMatch = true;
-    else if (args[i] === "--signals-only") p.signalsOnly = true;
-    else if (args[i] === "--screenshot") p.screenshot = args[++i] || "";
-    else if (args[i] === "--workflow") p.workflow = args[++i] || "";
-    else if (args[i] === "--allow-existing") p.allowExisting = true;
-    else if (!args[i].startsWith("--") && !p.url) p.url = args[i];
-  }
-  return p;
 }

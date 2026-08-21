@@ -14,7 +14,8 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 ## Architecture
 
 - **Engine (reusable):** root skill docs (`resume-os.md`, `tailoring-methodology.md`,
-  `bullet-rubric.md`, `eval-rubric.md`, `job-screening.md`, `application-form-assist.md`), `resume-os.config.json`, `engine/` (config loader,
+  `bullet-rubric.md`, `eval-rubric.md`, `job-screening.md`, `job-search-sweep.md`,
+  `application-form-assist.md`), `resume-os.config.json`, `engine/` (config loader,
   schema, templates, resolver, models), `scripts/` (tooling), `adapters/` (runtime entry points).
 - **Profiles (per-tenant, private):** `profiles/<id>/` holds `profile.json` (identity/contact/
   ATS answers/routing/positioning, validated by `engine/schemas/profile.schema.json`),
@@ -125,6 +126,15 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `node scripts/search-linkedin-jobs.mjs --since <ISO timestamp>`; verify page-level posting dates
   because LinkedIn can return older promoted listings inside a recency-filtered result, deduplicate
   by job ID, and advance `.linkedin-last-checked` only after the sweep is successfully reconciled.
+- **Incremental job-search sweep:** The `job_search_sweep` resolver route loads
+  `job-search-sweep.md` plus `job-screening.md`. The sweep doc owns only orchestration: saved-boundary
+  handling, out-of-window rejection, exact-identity reconciliation, official-page verification,
+  screening composition, queue freshness refresh, and lane-grouped reporting. Search, identity,
+  scoring, lifecycle, prospective freezing, and rendering remain with their existing owners.
+  Candidate staging uses `process-job.mjs --no-save`; successful runs finalize the epoch-millisecond
+  boundary atomically with `finalize-linkedin-discovery.mjs`, which rejects concurrent changes and
+  regressions. Freshness-only queue recalculation is report-only until a safe priority-only command
+  exists.
 - **Company exclusions:** Profile-specific `jobSearch.excludedCompanies` entries are normalized and
   enforced deterministically before LinkedIn search results are emitted, before a fetched job is
   persisted, before the asynchronous assessment worker selects a job, and before the package queue

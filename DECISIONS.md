@@ -402,3 +402,28 @@ by job ID, and advances the heartbeat only after reconciliation.
 (2) Judgment remains in `job-screening.md`; candidate observations remain profile-local. (3)
 `--since` is deterministic search-window plumbing. (4) No resolver or model harness changed. (5)
 The option is used only for incremental discovery. (6) Verdict: ALIGNED.
+
+## Incremental job-search sweep is a thin orchestration skill (2026-08-21)
+
+**Why accepted:** A recurring sweep spans discovery, exact identity, employer-page verification,
+screening, queue freshness, and reporting. Leaving the sequence implicit caused inconsistent
+boundary handling and encouraged agents to reconstruct logic already owned by scripts and the
+screening method.
+
+**Implications:** `job-search-sweep.md` owns the transaction sequence and completion gate only. The
+`job_search_sweep` resolver route loads it with `job-screening.md`. Search, identity extraction,
+duplicate stopping, fit judgment, lifecycle transitions, prospective score freezing, and board
+rendering remain in their existing owners. Non-mutating staging uses `process-job.mjs --no-save`.
+LinkedIn recency results are candidates only; a target listing dated before the saved boundary is
+reported but not admitted unless backlog recovery is explicitly requested. A small deterministic
+finalizer locks the discovery boundary, compares it with the value read at startup, rejects
+regression or concurrent completion, and atomically writes the run start as epoch milliseconds.
+Freshness-only reprioritization remains report-only because the existing screen command has broader
+side effects.
+
+**Architecture Boundary verdict (2026-08-21): ALIGNED.** (1) Candidate-specific taste stays in the
+profile. (2) The sweep adds no scoring judgment and refers to `job-screening.md`. (3) Existing
+deterministic owners are composed; code adds only non-saving inspection policy and atomic boundary
+finalization. (4) The resolver gains only a document route, with no model policy or domain logic.
+(5) The workflow runs only for an explicit sweep request. (6) Verdict: ALIGNED. README,
+`resume-os.md`, resolver docs/tests, and semantic memory were updated.
