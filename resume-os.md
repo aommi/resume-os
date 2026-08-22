@@ -48,6 +48,10 @@ For current status, locked decisions, open questions, and next steps, read `resu
   reconciliation, employer-page verification, screening composition, queue refresh, and
   lane-grouped reporting. It owns sequence only and delegates judgment and state changes to their
   existing owners.
+- `interview-postmortem.md` — evidence-grounded review of a completed interview or contract-scope
+  call: next move, changed role understanding, selective coaching, preparation audit, and reusable
+  question evidence. The `interview_prep` route loads it with the profile's question bank and
+  evidence ledger to validate stage-specific preparation.
 - `evals/model-comparison.md` — operational two-layer protocol for assessing or comparing models:
   deterministic smoke/protected-fact gates first, then human-vetted resume/bullet judgment.
 - `application-form-assist.md` — browser-assisted application form filling rules; deterministic

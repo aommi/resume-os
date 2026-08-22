@@ -9,6 +9,8 @@
     "job_screening": ["job-screening.md"],
     "job_search_sweep": ["job-search-sweep.md", "job-screening.md"],
     "application_form": ["resume-os.md", "application-form-assist.md"],
+    "interview_postmortem": ["interview-postmortem.md"],
+    "interview_prep": ["resume-os.md", "interview-postmortem.md", "profiles/<activeProfile>/sources/interview-question-bank.md", "profiles/<activeProfile>/work/interview-evidence.md"],
     "model_eval": ["evals/model-comparison.md"],
     "pipeline_status": [],
     "discover": []

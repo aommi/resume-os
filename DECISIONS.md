@@ -427,3 +427,34 @@ deterministic owners are composed; code adds only non-saving inspection policy a
 finalization. (4) The resolver gains only a document route, with no model policy or domain logic.
 (5) The workflow runs only for an explicit sweep request. (6) Verdict: ALIGNED. README,
 `resume-os.md`, resolver docs/tests, and semantic memory were updated.
+
+## Evidence-grounded interview post-processing (2026-08-22)
+**Why accepted:** Interview transcripts carried useful information about next steps, role scope,
+and repeat question themes, but earlier learning was dispersed in application packages and could
+easily turn a polite response, silence, or a rejection into unsupported performance feedback.
+
+**Implications:** The resolver-routed `interview-postmortem.md` keeps raw transcripts immutable,
+requires a distinction between direct evidence, self-observation, and inference, and records
+portable evidence in a profile-local ledger. It treats question-bank promotion as selective, not
+automatic, and separates contact decisions from transcript analysis. Transcript and ledger content
+remain profile-local; the engine contains only the reusable method and source-name convention.
+
+**Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The change introduces interview
+interpretation and learning judgment. (2) That judgment lives in markdown. (3) Resolver lookup is
+the only deterministic execution change. (4) The resolver adds a document route without domain
+logic. (5) The workflow runs after a substantive conversation, not for every job. (6) Verdict:
+ALIGNED.
+
+## Interview preparation reuses bounded interview evidence (2026-08-22)
+**Why accepted:** A postmortem can improve a later interview only if the preparation workflow sees
+its transferable evidence. Leaving the question bank and evidence ledger outside the prep route
+would make their use inconsistent.
+
+**Implications:** `interview_prep` loads the interview method, profile question bank, and profile
+evidence ledger with the general resume guidance. The preparation remains package-specific and
+must cite why a prior lesson applies; it does not reuse old stories or company facts by default.
+
+**Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The change adds preparation judgment.
+(2) That judgment remains in markdown. (3) Resolver lookup changes only the document set. (4) No
+adapter or harness gains domain logic. (5) The route runs only for interview preparation. (6)
+Verdict: ALIGNED.

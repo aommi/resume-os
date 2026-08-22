@@ -107,6 +107,16 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   `DECISIONS.md` exception. The same pass verifies `README.md`, agent startup/resolver wiring, and
   this semantic memory; update affected surfaces or explicitly confirm that no change is needed.
   This is intentionally a brief manual check, not a hook or CI system.
+- **Interview post-processing:** `interview-postmortem.md` is a resolver-routed judgment skill for
+  completed interview, recruiter, and contract-scope conversations. It preserves immutable source
+  transcripts, separates direct evidence from self-observation and inference, records only useful
+  next-step and reusable-question evidence in a profile-local ledger, and does not infer performance
+  failure from silence or rejection. Future source names use
+  `interview-transcript-YYYY-MM-DD-<stage>-<counterpart>.md`; historical files stay untouched. For
+  multi-stage processes, its validation check is whether an earlier call changed the next stage's
+  preparation, not whether a later outcome can be attributed to one answer. The `interview_prep`
+  route loads the method with the profile-local question bank and evidence ledger so recurring
+  learning validates recruiter, hiring-manager, functional, technical, panel, and case preparation.
 - **LinkedIn job signals:** `process-job.mjs` delegates personalized-signal detection to
   `engine/linkedin-job-signals.mjs`. A top-applicant result is true only for an exact visible claim
   scoped to the current job detail; recommendation-card claims are rejected, unverifiable pages
