@@ -458,3 +458,24 @@ must cite why a prior lesson applies; it does not reuse old stories or company f
 (2) That judgment remains in markdown. (3) Resolver lookup changes only the document set. (4) No
 adapter or harness gains domain logic. (5) The route runs only for interview preparation. (6)
 Verdict: ALIGNED.
+
+## Scheduled interview postmortem detection stays read-only (2026-08-22)
+
+**Why accepted:** Calendar details already arrive as exact future timestamps in imported Gmail
+events. A scheduled scan can make a missing transcript or postmortem visible without treating an
+invitation as proof that the conversation occurred or putting interview evaluation in code.
+
+**Implications:** After each successful Gmail import, `scan-interview-postmortems.mjs` establishes a
+first-run baseline and then maintains a profile-local pending queue for later completed scheduled
+recruiter-screen, hiring-manager, and interview events. It checks only a linked package and
+standard-named same-day source/review files; `--backfill` is explicit. The scanner neither sends
+messages nor edits packages, updates prep, infers outcomes, or judges call performance. Pending
+items remain until a source or review resolves them; the Markdown skill owns all interpretation.
+
+**Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The only new judgment is the
+postmortem method, which remains in Markdown. (2) Code performs timestamp, package-path, and
+filename checks only. (3) The new deterministic scan writes a profile-local operational queue.
+(4) The Gmail wrapper adds one read-only post-import call and no model or domain logic. (5) It runs
+only after the already scheduled Gmail import, with a first-run baseline to avoid historical
+workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
+semantic memory were updated.

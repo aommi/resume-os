@@ -205,6 +205,7 @@ function testGmailWrapperCleanupAndFailures() {
   assert.deepEqual(readdirSync(snapshotDir).filter((name) => name.endsWith(".json")), []);
   let heartbeat = JSON.parse(readFileSync(join(work, "heartbeats/gmail-sync.json"), "utf8"));
   assert.equal(heartbeat.exitCode, 0);
+  assert.equal(existsSync(join(work, "runtime", "interview-postmortem-scan.json")), true);
 
   const monitorFailure = run("bash", ["scripts/run-gmail-sync.sh"], {
     ...common,

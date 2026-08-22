@@ -68,7 +68,7 @@ When two or more stages exist for one opportunity, test the workflow itself: did
 
 Treat a newly saved transcript or call-notes file as a pending postmortem. If a confirmed next interview and its preparation exist, update that preparation with only the source-backed facts that change the next conversation: stated assessment, direct feedback, new company context, and one or two delivery rules. Do not rewrite the whole brief.
 
-An automated scan may run after Gmail event import, using confirmed interview events to identify recently completed calls, then checking for a saved transcript and a matching postmortem. It must not assume that a scheduled call occurred, send messages, infer outcomes, or alter a submitted package. The postmortem and prep update still require the judgment workflow in this skill.
+`scripts/scan-interview-postmortems.mjs` runs after each Gmail event import. It establishes a baseline on its first run, then keeps a profile-local queue at `work/runtime/interview-postmortem-scan.json` for completed, explicitly scheduled interview events. It checks the linked package for a same-day transcript and postmortem; run it with `--backfill` only when deliberately reviewing earlier events. It must not assume that a scheduled call occurred, send messages, infer outcomes, or alter a submitted package. The postmortem and prep update still require the judgment workflow in this skill.
 
 ## Preparing a future interview
 

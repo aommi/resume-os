@@ -34,8 +34,13 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   Hermes/OpenAI (`gpt-5.6-terra`) reads only that snapshot and writes one event handoff file.
   The wrapper enforces the output contract and heartbeat, then `scripts/import-events.mjs`
   deterministically deduplicates/imports valid events, quarantines malformed output, archives
-  processed files, and regenerates the job board. LaunchAgent `ai.resumeos.gmailsync` runs at
-  07:00 and 19:00 local time (machine config outside the repo). Claude and the paused Hermes
+  processed files, and regenerates the job board. After a successful import, the deterministic,
+  read-only `scan-interview-postmortems.mjs` establishes a first-run baseline then keeps
+  `work/runtime/interview-postmortem-scan.json` current for later completed, explicitly scheduled
+  interview events that lack a same-day standard-named transcript or postmortem. It retains pending
+  entries until the source artifact appears; `--backfill` is an explicit historical review, never
+  the scheduled default. It does not infer that a call occurred, evaluate it, send messages, or
+  edit packages. LaunchAgent `ai.resumeos.gmailsync` runs at 07:00 and 19:00 local time (machine config outside the repo). Claude and the paused Hermes
   Gmail cron are not active paths; the Codex Gmail connector remains interactive-only.
 - **Daily action digest:** `scripts/run-daily-brief.sh` + `prompts/daily-brief.txt`. A deterministic
   gate reads only `Upcoming Events`, `Needs Action`, and `Interviewing`; when all are empty, it
@@ -117,6 +122,8 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   preparation, not whether a later outcome can be attributed to one answer. The `interview_prep`
   route loads the method with the profile-local question bank and evidence ledger so recurring
   learning validates recruiter, hiring-manager, functional, technical, panel, and case preparation.
+  The scheduled scanner only identifies a missing source or review; interpretation and any prep
+  update remain inside the judgment workflow.
 - **LinkedIn job signals:** `process-job.mjs` delegates personalized-signal detection to
   `engine/linkedin-job-signals.mjs`. A top-applicant result is true only for an exact visible claim
   scoped to the current job detail; recommendation-card claims are rejected, unverifiable pages

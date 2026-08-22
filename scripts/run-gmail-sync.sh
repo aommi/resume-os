@@ -113,5 +113,12 @@ if ! node scripts/import-events.mjs >> "$LOG" 2>&1; then
   exit 1
 fi
 
+# This is deliberately read-only: it queues only completed, explicitly
+# scheduled interview events that still need a transcript or postmortem. A
+# scanner failure must not turn a successful mailbox import into a failed sync.
+if ! node scripts/scan-interview-postmortems.mjs >> "$LOG" 2>&1; then
+  echo "interview postmortem scan failed; Gmail import remains successful" >> "$LOG"
+fi
+
 write_hb "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 0 ""
 echo "gmail-sync $RUN_ID OK" >> "$LOG"

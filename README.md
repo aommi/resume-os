@@ -70,6 +70,12 @@ node scripts/job-board.mjs package-ready <job-id|company> --package "<Company - 
 node scripts/job-board.mjs applied <job-id|company> --date YYYY-MM-DD --outcome Submitted
 node scripts/backfill-job-identities.mjs --apply
 
+# Inspect the profile-local queue for completed scheduled interviews that still
+# need a transcript or postmortem. Scheduled Gmail sync runs this automatically.
+node scripts/scan-interview-postmortems.mjs
+# Deliberately include earlier events (not part of normal scheduled operation).
+node scripts/scan-interview-postmortems.mjs --backfill
+
 # Optional controlled override; the asynchronous LinkedIn assessment default remains 5/day.
 LINKEDIN_ASSESS_DAILY_CAP=10 node scripts/assess-jobs.mjs
 
