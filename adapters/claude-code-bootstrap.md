@@ -13,6 +13,8 @@ You are continuing the Resume OS project. The active profile is `resume-os.confi
    - tailoring a job → `tailor` route (resume-os.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md)
    - ship check → `score`; cover letter → `cover_letter`; base-resume edits → `resume_maintenance`
    - application form filling → `application_form` (application-form-assist.md; never submit)
+   - completed interview or contract-scope call → `interview_postmortem`; upcoming recruiter,
+     hiring-manager, functional, technical, panel, or case interview → `interview_prep`
    - assess or compare models → `model_eval` (evals/model-comparison.md)
    - pipeline status → `pipeline_status` (just run the job board); discovery → `discover` (scrapers)
    - unsure → the default route loads `resume-os.md` + `tailoring-methodology.md`.
