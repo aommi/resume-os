@@ -37,10 +37,11 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   processed files, and regenerates the job board. After a successful import, the deterministic,
   read-only `scan-interview-postmortems.mjs` establishes a first-run baseline then keeps
   `work/runtime/interview-postmortem-scan.json` current for later completed, explicitly scheduled
-  interview events that lack a same-day standard-named transcript or postmortem. It retains pending
-  entries until the source artifact appears; `--backfill` is an explicit historical review, never
-  the scheduled default. It does not infer that a call occurred, evaluate it, send messages, or
-  edit packages. LaunchAgent `ai.resumeos.gmailsync` runs at 07:00 and 19:00 local time (machine config outside the repo). Claude and the paused Hermes
+  interview events that lack a same-day standard-named transcript or postmortem. A later same-stage
+  calendar event suppresses the earlier append-only invitation as a reschedule; pending entries
+  refresh from current lifecycle metadata, including legacy repo-relative package paths. `--backfill`
+  is an explicit historical review, never the scheduled default. It does not infer that a call
+  occurred, evaluate it, send messages, or edit packages. LaunchAgent `ai.resumeos.gmailsync` runs at 07:00 and 19:00 local time (machine config outside the repo). Claude and the paused Hermes
   Gmail cron are not active paths; the Codex Gmail connector remains interactive-only.
 - **Daily action digest:** `scripts/run-daily-brief.sh` + `prompts/daily-brief.txt`. A deterministic
   gate reads only `Upcoming Events`, `Needs Action`, and `Interviewing`; when all are empty, it

@@ -40,7 +40,9 @@ export function scan({ now = new Date(), backfill = false, dryRun = false } = {}
   const candidates = new Map(priorPending);
 
   for (const event of completed) {
-    if (backfill || !firstRun && event.nextEventAt > previous.initializedAt) {
+    // Pending items are re-read from current metadata on every run. This lets
+    // a package linked after an explicit backfill resolve without another one.
+    if (priorPending.has(event.key) || backfill || !firstRun && event.nextEventAt > previous.initializedAt) {
       candidates.set(event.key, event);
     }
   }
@@ -114,10 +116,14 @@ function collectCompletedEvents(jobs, nowIso) {
   const events = [];
   for (const job of jobs) {
     const lifecycle = job.metadata.lifecycle || {};
+    const latestByStage = latestScheduledEventByStage(lifecycle.emailEvents || []);
     for (const emailEvent of lifecycle.emailEvents || []) {
       const eventName = String(emailEvent.event || "").toLowerCase();
       const nextEventAt = String(emailEvent.nextEventAt || "");
       if (!INTERVIEW_EVENTS.has(eventName) || !isTimestamp(nextEventAt) || nextEventAt > nowIso) continue;
+      // A later event at the same stage is treated as a reschedule. The event
+      // record is append-only, so the earlier invitation is not deleted.
+      if (latestByStage.get(eventName) !== nextEventAt) continue;
       const key = `${job.id}:${emailEvent.messageId || "no-message-id"}:${nextEventAt}`;
       events.push({
         key,
@@ -131,6 +137,17 @@ function collectCompletedEvents(jobs, nowIso) {
     }
   }
   return events;
+}
+
+function latestScheduledEventByStage(events) {
+  const latest = new Map();
+  for (const event of events) {
+    const stage = String(event.event || "").toLowerCase();
+    const at = String(event.nextEventAt || "");
+    if (!INTERVIEW_EVENTS.has(stage) || !isTimestamp(at) || at <= (latest.get(stage) || "")) continue;
+    latest.set(stage, at);
+  }
+  return latest;
 }
 
 function assess(event) {
@@ -151,9 +168,14 @@ function assess(event) {
 
 function resolvePackagePath(value) {
   if (!value) return "";
-  const path = isAbsolute(value) ? resolve(value) : resolve(WORK, value);
-  if (!isAbsolute(value) && relative(WORK, path).startsWith("..")) return "";
-  return path;
+  if (isAbsolute(value)) return resolve(value);
+  const workRelative = resolve(WORK, value);
+  if (!relative(WORK, workRelative).startsWith("..") && existsSync(workRelative)) return workRelative;
+  // Some pre-profile-migration metadata stored a repo-relative profile path.
+  // Preserve that readable legacy form without accepting traversal from WORK.
+  const repoRelative = resolve(process.cwd(), value);
+  if (existsSync(repoRelative)) return repoRelative;
+  return !relative(WORK, workRelative).startsWith("..") ? workRelative : "";
 }
 
 function toWorkRelative(path) {

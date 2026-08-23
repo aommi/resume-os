@@ -472,6 +472,12 @@ standard-named same-day source/review files; `--backfill` is explicit. The scann
 messages nor edits packages, updates prep, infers outcomes, or judges call performance. Pending
 items remain until a source or review resolves them; the Markdown skill owns all interpretation.
 
+**Implementation clarification (2026-08-22):** Because imported event records are append-only, a
+later same-stage scheduled timestamp suppresses the earlier one as a reschedule. Pending queue
+records are refreshed from current metadata each run, so a later package link resolves a backfill
+without repeating it. The scanner accepts the standard work-relative package path and the one
+legacy repo-relative profile path; neither rule adds interview judgment.
+
 **Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The only new judgment is the
 postmortem method, which remains in Markdown. (2) Code performs timestamp, package-path, and
 filename checks only. (3) The new deterministic scan writes a profile-local operational queue.

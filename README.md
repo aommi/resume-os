@@ -75,6 +75,8 @@ node scripts/backfill-job-identities.mjs --apply
 node scripts/scan-interview-postmortems.mjs
 # Deliberately include earlier events (not part of normal scheduled operation).
 node scripts/scan-interview-postmortems.mjs --backfill
+# Preview the queue without updating its runtime state.
+node scripts/scan-interview-postmortems.mjs --dry-run
 
 # Optional controlled override; the asynchronous LinkedIn assessment default remains 5/day.
 LINKEDIN_ASSESS_DAILY_CAP=10 node scripts/assess-jobs.mjs

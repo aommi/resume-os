@@ -9,6 +9,7 @@ const profile = join(process.cwd(), "profiles", profileId);
 const work = join(profile, "work");
 const inbox = join(work, "inbox");
 const packageDir = join(work, "applications", "Example Co - Product Manager");
+const legacyPackageDir = join(work, "applications", "Legacy Co - Product Manager");
 const script = "scripts/scan-interview-postmortems.mjs";
 const env = { ...process.env, RESUME_OS_PROFILE: profileId };
 const eventAt = "2026-08-20T17:30:00.000Z";
@@ -16,9 +17,14 @@ const eventAt = "2026-08-20T17:30:00.000Z";
 try {
   mkdirSync(inbox, { recursive: true });
   mkdirSync(packageDir, { recursive: true });
+  mkdirSync(legacyPackageDir, { recursive: true });
   writeFileSync(join(profile, "profile.json"), "{}\n");
   writeJob("with-package", "applications/Example Co - Product Manager", "message-1");
   writeJob("without-package", "", "message-2");
+  writeJob("rescheduled", "", "message-3", [
+    { messageId: "message-3", event: "recruiter_screen", nextEventAt: eventAt },
+    { messageId: "message-4", event: "recruiter_screen", nextEventAt: "2099-08-21T17:30:00.000Z" },
+  ]);
 
   const baseline = run();
   assert.equal(baseline.status, 0, baseline.stderr);
@@ -29,6 +35,12 @@ try {
   assert.equal(backfill.status, 0, backfill.stderr);
   report = readReport();
   assert.deepEqual(report.pending.map((item) => item.status), ["awaiting_transcript", "missing_package"]);
+  assert.equal(report.pending.some((item) => item.jobId === "rescheduled"), false);
+
+  setPackagePath("without-package", `profiles/${profileId}/work/applications/Legacy Co - Product Manager`);
+  assert.equal(run().status, 0);
+  report = readReport();
+  assert.equal(report.pending.find((item) => item.jobId === "without-package").status, "awaiting_transcript");
 
   writeFileSync(join(packageDir, "interview-transcript-2026-08-20-recruiter-screen-sam.md"), "# Notes\n");
   assert.equal(run().status, 0);
@@ -39,14 +51,14 @@ try {
   assert.equal(run().status, 0);
   report = readReport();
   assert.equal(report.pending.some((item) => item.jobId === "with-package"), false);
-  assert.equal(report.pending.find((item) => item.jobId === "without-package").status, "missing_package");
+  assert.equal(report.pending.find((item) => item.jobId === "without-package").status, "awaiting_transcript");
 } finally {
   rmSync(profile, { recursive: true, force: true });
 }
 
 console.log("interview postmortem scanner tests: PASS");
 
-function writeJob(id, packagePath, messageId) {
+function writeJob(id, packagePath, messageId, emailEvents = [{ messageId, event: "recruiter_screen", nextEventAt: eventAt }]) {
   const directory = join(inbox, id);
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, "metadata.json"), JSON.stringify({
@@ -54,9 +66,16 @@ function writeJob(id, packagePath, messageId) {
     title: "Product Manager",
     lifecycle: {
       packagePath,
-      emailEvents: [{ messageId, event: "recruiter_screen", nextEventAt: eventAt }],
+      emailEvents,
     },
   }, null, 2));
+}
+
+function setPackagePath(id, packagePath) {
+  const path = join(inbox, id, "metadata.json");
+  const metadata = JSON.parse(readFileSync(path, "utf8"));
+  metadata.lifecycle.packagePath = packagePath;
+  writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`);
 }
 
 function run(...args) {
