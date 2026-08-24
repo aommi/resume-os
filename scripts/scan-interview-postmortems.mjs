@@ -35,9 +35,19 @@ export function scan({ now = new Date(), backfill = false, dryRun = false } = {}
   const previous = loadState();
   const firstRun = !previous;
   const jobs = loadJobs();
-  const completed = collectCompletedEvents(jobs, nowIso);
+  const latestByJobStage = latestScheduledByJobStage(jobs);
+  const completed = collectCompletedEvents(jobs, nowIso, latestByJobStage);
   const priorPending = new Map((previous?.pending || []).map((item) => [item.key, item]));
-  const candidates = new Map(priorPending);
+  const candidates = new Map();
+  let superseded = 0;
+
+  for (const event of priorPending.values()) {
+    if (latestByJobStage.get(jobStageKey(event.jobId, event.stage)) === event.nextEventAt) {
+      candidates.set(event.key, event);
+    } else {
+      superseded += 1;
+    }
+  }
 
   for (const event of completed) {
     // Pending items are re-read from current metadata on every run. This lets
@@ -72,6 +82,7 @@ export function scan({ now = new Date(), backfill = false, dryRun = false } = {}
     scannedCompletedEvents: completed.length,
     newlyConsidered: [...candidates.keys()].filter((key) => !priorPending.has(key)).length,
     resolved,
+    superseded,
     pending: pending.length,
     report: STATE_PATH,
   };
@@ -112,25 +123,24 @@ function loadJobs() {
   return jobs;
 }
 
-function collectCompletedEvents(jobs, nowIso) {
+function collectCompletedEvents(jobs, nowIso, latestByJobStage) {
   const events = [];
   for (const job of jobs) {
     const lifecycle = job.metadata.lifecycle || {};
-    const latestByStage = latestScheduledEventByStage(lifecycle.emailEvents || []);
     for (const emailEvent of lifecycle.emailEvents || []) {
       const eventName = String(emailEvent.event || "").toLowerCase();
       const nextEventAt = String(emailEvent.nextEventAt || "");
       if (!INTERVIEW_EVENTS.has(eventName) || !isTimestamp(nextEventAt) || nextEventAt > nowIso) continue;
       // A later event at the same stage is treated as a reschedule. The event
       // record is append-only, so the earlier invitation is not deleted.
-      if (latestByStage.get(eventName) !== nextEventAt) continue;
+      if (latestByJobStage.get(jobStageKey(job.id, stageName(eventName))) !== nextEventAt) continue;
       const key = `${job.id}:${emailEvent.messageId || "no-message-id"}:${nextEventAt}`;
       events.push({
         key,
         jobId: job.id,
         company: String(job.metadata.company || ""),
         title: String(job.metadata.title || ""),
-        stage: eventName.replace(/_/g, "-"),
+        stage: stageName(eventName),
         nextEventAt,
         packagePath: String(lifecycle.packagePath || ""),
       });
@@ -139,15 +149,26 @@ function collectCompletedEvents(jobs, nowIso) {
   return events;
 }
 
-function latestScheduledEventByStage(events) {
+function latestScheduledByJobStage(jobs) {
   const latest = new Map();
-  for (const event of events) {
-    const stage = String(event.event || "").toLowerCase();
-    const at = String(event.nextEventAt || "");
-    if (!INTERVIEW_EVENTS.has(stage) || !isTimestamp(at) || at <= (latest.get(stage) || "")) continue;
-    latest.set(stage, at);
+  for (const job of jobs) {
+    for (const event of job.metadata.lifecycle?.emailEvents || []) {
+      const stage = String(event.event || "").toLowerCase();
+      const at = String(event.nextEventAt || "");
+      const key = jobStageKey(job.id, stageName(stage));
+      if (!INTERVIEW_EVENTS.has(stage) || !isTimestamp(at) || at <= (latest.get(key) || "")) continue;
+      latest.set(key, at);
+    }
   }
   return latest;
+}
+
+function stageName(value) {
+  return String(value || "").replace(/_/g, "-");
+}
+
+function jobStageKey(jobId, stage) {
+  return `${jobId}:${stageName(stage)}`;
 }
 
 function assess(event) {
@@ -173,8 +194,10 @@ function resolvePackagePath(value) {
   if (!relative(WORK, workRelative).startsWith("..") && existsSync(workRelative)) return workRelative;
   // Some pre-profile-migration metadata stored a repo-relative profile path.
   // Preserve that readable legacy form without accepting traversal from WORK.
-  const repoRelative = resolve(process.cwd(), value);
-  if (existsSync(repoRelative)) return repoRelative;
+  if (value.startsWith("profiles/")) {
+    const repoRelative = resolve(process.cwd(), value);
+    if (existsSync(repoRelative)) return repoRelative;
+  }
   return !relative(WORK, workRelative).startsWith("..") ? workRelative : "";
 }
 

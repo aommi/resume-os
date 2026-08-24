@@ -25,6 +25,7 @@ try {
     { messageId: "message-3", event: "recruiter_screen", nextEventAt: eventAt },
     { messageId: "message-4", event: "recruiter_screen", nextEventAt: "2099-08-21T17:30:00.000Z" },
   ]);
+  writeJob("rescheduled-after-pending", "", "message-5");
 
   const baseline = run();
   assert.equal(baseline.status, 0, baseline.stderr);
@@ -34,8 +35,17 @@ try {
   const backfill = run("--backfill");
   assert.equal(backfill.status, 0, backfill.stderr);
   report = readReport();
-  assert.deepEqual(report.pending.map((item) => item.status), ["awaiting_transcript", "missing_package"]);
+  assert.deepEqual(report.pending.map((item) => item.status).sort(), ["awaiting_transcript", "missing_package", "missing_package"]);
   assert.equal(report.pending.some((item) => item.jobId === "rescheduled"), false);
+
+  appendEvent("rescheduled-after-pending", {
+    messageId: "message-6",
+    event: "recruiter_screen",
+    nextEventAt: "2099-08-21T17:30:00.000Z",
+  });
+  assert.equal(run().status, 0);
+  report = readReport();
+  assert.equal(report.pending.some((item) => item.jobId === "rescheduled-after-pending"), false);
 
   setPackagePath("without-package", `profiles/${profileId}/work/applications/Legacy Co - Product Manager`);
   assert.equal(run().status, 0);
@@ -75,6 +85,13 @@ function setPackagePath(id, packagePath) {
   const path = join(inbox, id, "metadata.json");
   const metadata = JSON.parse(readFileSync(path, "utf8"));
   metadata.lifecycle.packagePath = packagePath;
+  writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`);
+}
+
+function appendEvent(id, event) {
+  const path = join(inbox, id, "metadata.json");
+  const metadata = JSON.parse(readFileSync(path, "utf8"));
+  metadata.lifecycle.emailEvents.push(event);
   writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`);
 }
 
