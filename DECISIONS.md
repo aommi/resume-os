@@ -427,3 +427,61 @@ deterministic owners are composed; code adds only non-saving inspection policy a
 finalization. (4) The resolver gains only a document route, with no model policy or domain logic.
 (5) The workflow runs only for an explicit sweep request. (6) Verdict: ALIGNED. README,
 `resume-os.md`, resolver docs/tests, and semantic memory were updated.
+
+## Evidence-grounded interview post-processing (2026-08-22)
+**Why accepted:** Interview transcripts carried useful information about next steps, role scope,
+and repeat question themes, but earlier learning was dispersed in application packages and could
+easily turn a polite response, silence, or a rejection into unsupported performance feedback.
+
+**Implications:** The resolver-routed `interview-postmortem.md` keeps raw transcripts immutable,
+requires a distinction between direct evidence, self-observation, and inference, and records
+portable evidence in a profile-local ledger. It treats question-bank promotion as selective, not
+automatic, and separates contact decisions from transcript analysis. Transcript and ledger content
+remain profile-local; the engine contains only the reusable method and source-name convention.
+
+**Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The change introduces interview
+interpretation and learning judgment. (2) That judgment lives in markdown. (3) Resolver lookup is
+the only deterministic execution change. (4) The resolver adds a document route without domain
+logic. (5) The workflow runs after a substantive conversation, not for every job. (6) Verdict:
+ALIGNED.
+
+## Interview preparation reuses bounded interview evidence (2026-08-22)
+**Why accepted:** A postmortem can improve a later interview only if the preparation workflow sees
+its transferable evidence. Leaving the question bank and evidence ledger outside the prep route
+would make their use inconsistent.
+
+**Implications:** `interview_prep` loads the interview method, profile question bank, and profile
+evidence ledger with the general resume guidance. The preparation remains package-specific and
+must cite why a prior lesson applies; it does not reuse old stories or company facts by default.
+
+**Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The change adds preparation judgment.
+(2) That judgment remains in markdown. (3) Resolver lookup changes only the document set. (4) No
+adapter or harness gains domain logic. (5) The route runs only for interview preparation. (6)
+Verdict: ALIGNED.
+
+## Scheduled interview postmortem detection stays read-only (2026-08-22)
+
+**Why accepted:** Calendar details already arrive as exact future timestamps in imported Gmail
+events. A scheduled scan can make a missing transcript or postmortem visible without treating an
+invitation as proof that the conversation occurred or putting interview evaluation in code.
+
+**Implications:** After each successful Gmail import, `scan-interview-postmortems.mjs` establishes a
+first-run baseline and then maintains a profile-local pending queue for later completed scheduled
+recruiter-screen, hiring-manager, and interview events. It checks only a linked package and
+standard-named same-day source/review files; `--backfill` is explicit. The scanner neither sends
+messages nor edits packages, updates prep, infers outcomes, or judges call performance. Pending
+items remain until a source or review resolves them; the Markdown skill owns all interpretation.
+
+**Implementation clarification (2026-08-22):** Because imported event records are append-only, a
+later same-stage scheduled timestamp suppresses the earlier one as a reschedule. Pending queue
+records are refreshed from current metadata each run, so a later package link resolves a backfill
+without repeating it. The scanner accepts the standard work-relative package path and the one
+legacy repo-relative profile path; neither rule adds interview judgment.
+
+**Architecture Boundary verdict (2026-08-22): ALIGNED.** (1) The only new judgment is the
+postmortem method, which remains in Markdown. (2) Code performs timestamp, package-path, and
+filename checks only. (3) The new deterministic scan writes a profile-local operational queue.
+(4) The Gmail wrapper adds one read-only post-import call and no model or domain logic. (5) It runs
+only after the already scheduled Gmail import, with a first-run baseline to avoid historical
+workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
+semantic memory were updated.

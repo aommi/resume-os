@@ -48,6 +48,10 @@ For current status, locked decisions, open questions, and next steps, read `resu
   reconciliation, employer-page verification, screening composition, queue refresh, and
   lane-grouped reporting. It owns sequence only and delegates judgment and state changes to their
   existing owners.
+- `interview-postmortem.md` — evidence-grounded review of a completed interview or contract-scope
+  call: next move, changed role understanding, selective coaching, preparation audit, and reusable
+  question evidence. The `interview_prep` route loads it with the profile's question bank and
+  evidence ledger to validate stage-specific preparation.
 - `evals/model-comparison.md` — operational two-layer protocol for assessing or comparing models:
   deterministic smoke/protected-fact gates first, then human-vetted resume/bullet judgment.
 - `application-form-assist.md` — browser-assisted application form filling rules; deterministic
@@ -115,7 +119,7 @@ does not require an architecture verdict.
   the same company remain separate opportunities. `process-job.mjs --allow-existing` is reserved
   for an intentional refresh or signal assessment of an existing record.
 - The generated board separates active streams: `Applied` is submitted/waiting, `Needs Action` is follow-up required, `Interviewing` is screen/interview activity, and `Closed` is final outcomes such as rejection or withdrawal.
-- Email tracking uses event handoff files, not direct tracker edits. Interactive Cowork/Claude runs use `prompts/claude-cowork-gmail-job-monitor.md`; scheduled runs use `prompts/gmail-monitor-headless.txt` through `scripts/run-gmail-sync.sh`. Both write read-only Gmail findings into `events/pending/`. `scripts/import-events.mjs` deterministically deduplicates and imports valid events into lifecycle metadata, quarantines malformed output, archives processed files, and regenerates the job board.
+- Email tracking uses event handoff files, not direct tracker edits. Interactive Cowork/Claude runs use `prompts/claude-cowork-gmail-job-monitor.md`; scheduled runs use `prompts/gmail-monitor-headless.txt` through `scripts/run-gmail-sync.sh`. Both write read-only Gmail findings into `events/pending/`. `scripts/import-events.mjs` deterministically deduplicates and imports valid events into lifecycle metadata, quarantines malformed output, archives processed files, and regenerates the job board. After a successful scheduled import, `scripts/scan-interview-postmortems.mjs` reads only completed, explicitly scheduled interview events and writes a profile-local queue at `work/runtime/interview-postmortem-scan.json`; it never sends, evaluates, or edits packages.
 - Application form assist is a browser-prep workflow, not submission automation. The tracked harness
   (`scripts/apply-form-assist.mjs`) reads a profile-bound manifest, fills known nonblank fields,
   uploads files confined to one active-profile application package, and leaves the browser open for

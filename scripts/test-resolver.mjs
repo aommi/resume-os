@@ -25,6 +25,8 @@ expect("resume_maintenance", [...always, "resume-os.md", "bullet-rubric.md"]);
 expect("job_screening", [...always, "job-screening.md"]);
 expect("job_search_sweep", [...always, "job-search-sweep.md", "job-screening.md"]);
 expect("application_form", [...always, "resume-os.md", "application-form-assist.md"]);
+expect("interview_postmortem", [...always, "interview-postmortem.md"]);
+expect("interview_prep", [...always, "resume-os.md", "interview-postmortem.md", "profiles/<activeProfile>/sources/interview-question-bank.md", "profiles/<activeProfile>/work/interview-evidence.md"]);
 expect("model_eval", [...always, "evals/model-comparison.md"]);
 expect("pipeline_status", [...always]);
 expect("discover", [...always]);

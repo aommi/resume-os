@@ -7,7 +7,7 @@ The reusable engine is profile-agnostic; each person's private data lives under 
 
 - **Engine (reusable, shareable):**
   - `resume-os.md`, `tailoring-methodology.md`, `bullet-rubric.md`, `eval-rubric.md`,
-    `job-screening.md`, `job-search-sweep.md`, `application-form-assist.md`: skill docs
+    `job-screening.md`, `job-search-sweep.md`, `application-form-assist.md`, `interview-postmortem.md`: skill docs
     (judgment/process).
   - `resume-os.config.json`: machine/env config: `activeProfile`, timezone, browser path, variant→title map.
   - `engine/config.mjs`: config + profile resolver (used by all tooling).
@@ -69,6 +69,14 @@ node scripts/job-board.mjs render
 node scripts/job-board.mjs package-ready <job-id|company> --package "<Company - Role>" --variant "<variant>"
 node scripts/job-board.mjs applied <job-id|company> --date YYYY-MM-DD --outcome Submitted
 node scripts/backfill-job-identities.mjs --apply
+
+# Inspect the profile-local queue for completed scheduled interviews that still
+# need a transcript or postmortem. Scheduled Gmail sync runs this automatically.
+node scripts/scan-interview-postmortems.mjs
+# Deliberately include earlier events (not part of normal scheduled operation).
+node scripts/scan-interview-postmortems.mjs --backfill
+# Preview the queue without updating its runtime state.
+node scripts/scan-interview-postmortems.mjs --dry-run
 
 # Optional controlled override; the asynchronous LinkedIn assessment default remains 5/day.
 LINKEDIN_ASSESS_DAILY_CAP=10 node scripts/assess-jobs.mjs

@@ -8,7 +8,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 ## How it works
 
 1. Identify the task type. Known tasks: `tailor`, `score`, `cover_letter`, `resume_maintenance`,
-   `job_screening`, `job_search_sweep`, `application_form`, `model_eval`, `pipeline_status`,
+   `job_screening`, `job_search_sweep`, `application_form`, `interview_postmortem`, `interview_prep`, `model_eval`, `pipeline_status`,
    `discover`.
 2. Load `always` docs (the active profile's `resume-project-tracker.md`) plus the task's route.
 3. **Unknown or ambiguous intent → the `default` route** (`resume-os.md` + `tailoring-methodology.md`).
@@ -24,6 +24,8 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 | `job_screening` | job-screening.md | deciding pursue/skip/needs_input and material strategy |
 | `job_search_sweep` | job-search-sweep.md, job-screening.md | incremental discovery, exact-identity reconciliation, screening, and queue order |
 | `application_form` | resume-os.md, application-form-assist.md | browser-assisted form filling; never submits |
+| `interview_postmortem` | interview-postmortem.md | analyze a completed interview or contract-scope call and ground the next step |
+| `interview_prep` | resume-os.md, interview-postmortem.md, profile question bank and evidence ledger | create or validate recruiter, hiring-manager, panel, technical, or case prep using transferable evidence |
 | `model_eval` | evals/model-comparison.md | two-layer model comparison and approval gate |
 | `pipeline_status` | (none) | just run `node scripts/job-board.mjs` |
 | `discover` | (none) | run scrapers (Hermes); facts only |
