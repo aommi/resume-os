@@ -213,6 +213,8 @@ function classifyEvent(event, jobs) {
 function applyEvent(job, event, sourceFile) {
   const lifecycle = job.metadata.lifecycle;
   const date = cleanValue(event.event_date) || today();
+  const latestKnownDate = [lifecycle.lastContactAt, lifecycle.appliedAt,
+    ...lifecycle.emailEvents.map(item => item.date)].filter(Boolean).map(value => String(value).slice(0, 10)).sort().at(-1) || '';
   const eventName = cleanValue(event.event).toLowerCase();
   const nextEventAt = parseFutureEventAt(event.next_event_at);
   if (cleanValue(event.next_event_at) && !nextEventAt) {
@@ -228,6 +230,13 @@ function applyEvent(job, event, sourceFile) {
     sourceFile,
   });
   lifecycle.lastContactAt = maxDate(lifecycle.lastContactAt, date);
+
+  // Recovery/overlap can deliver old emails after a newer application update.
+  // Keep the evidence without rolling lifecycle state backwards.
+  if (date < latestKnownDate) {
+    job.dirty = true;
+    return;
+  }
 
   if (nextEventAt && ["interview", "recruiter_screen", "hiring_manager"].includes(eventName)) {
     lifecycle.nextEventAt = earliestFutureEvent(lifecycle.nextEventAt, nextEventAt);

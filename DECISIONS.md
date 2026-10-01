@@ -485,3 +485,11 @@ filename checks only. (3) The new deterministic scan writes a profile-local oper
 only after the already scheduled Gmail import, with a first-run baseline to avoid historical
 workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
 semantic memory were updated.
+
+## 2026-09-30 — Verify scheduled discovery and bound recovery
+
+Use a script-owned exit status and contract heartbeat for scheduled LinkedIn discovery.
+Search only the last 24 hours, even after downtime; preserve the existing enrichment skill
+and model. Use explicit Gmail recovery windows, complete bounded header retrieval, and
+reject silent body truncation. Historical email evidence cannot regress newer lifecycle
+state. Architecture Boundary: ALIGNED; no subjective judgment added to scripts.

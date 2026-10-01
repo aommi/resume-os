@@ -63,6 +63,25 @@ and `tailoring-methodology.md` for package-building procedure.
 
 ## Common commands
 
+LinkedIn setup uses a dedicated local Chrome profile. Run
+`node scripts/save-linkedin-cookies.mjs`, sign in manually in that window, then close
+it before running `node scripts/search-linkedin-jobs.mjs --dryrun`.
+The search parser supports both legacy and current job cards. A login/checkpoint
+error requires manual verification; a parsing/script error is not evidence of a
+bot block. Do not repeatedly retry a CAPTCHA or security checkpoint.
+`node scripts/run-linkedin-discovery.mjs` runs scheduled discovery for the past
+24 hours only, ingests exact new jobs, and delegates factual enrichment to the
+existing skill. Search/ingestion failures exit nonzero and do not advance the
+discovery boundary. Individual enrichment failures remain visible in its report.
+
+Gmail schedules may set `HIMALAYA_BIN` to an OAuth2-capable binary and
+`HIMALAYA_ACCOUNT` to the intended account. Explicit recovery may set
+`GMAIL_SEARCH_AFTER`, `GMAIL_SEARCH_BEFORE`, and `GMAIL_MAX_MESSAGES` (maximum 50).
+Normal runs retain the three-day overlap. Header retrieval uses a bounded window
+without pagination to avoid the installed Himalaya 1.2 pagination bug; a message
+limit overflow fails visibly instead of dropping emails. Older recovered events
+are retained without overwriting newer lifecycle state.
+
 ```bash
 # Paths resolve within the active profile (resume-os.config.json → activeProfile).
 node scripts/job-board.mjs render

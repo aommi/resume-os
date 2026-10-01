@@ -23,9 +23,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const quiet = process.argv.includes("--quiet");
 const problems = [];
 
-// 1. Discovery heartbeat: .linkedin-last-checked (epoch ms), cadence every 6h.
+// 1. Legacy discovery boundary; the contract heartbeat below supersedes it.
 const discoveryHb = join(REPO_ROOT, ".linkedin-last-checked");
-if (!existsSync(discoveryHb)) {
+if (existsSync(join(WORK, 'heartbeats', 'linkedin-discovery.json'))) {
+  // Evaluated with its configured eight-hour cadence below.
+} else if (!existsSync(discoveryHb)) {
   problems.push("Discovery: no heartbeat file (.linkedin-last-checked)");
 } else {
   const epoch = Number(readFileSync(discoveryHb, "utf8").trim());
@@ -33,7 +35,7 @@ if (!existsSync(discoveryHb)) {
   if (!Number.isFinite(epoch) || epoch <= 0) {
     problems.push("Discovery: heartbeat file unreadable");
   } else if (ageDays > 1) {
-    problems.push(`Discovery agent DOWN: last success ${ageDays.toFixed(1)} days ago (cadence 6h)`);
+    problems.push(`Discovery agent DOWN: last success ${ageDays.toFixed(1)} days ago (cadence 8h)`);
   }
 }
 
