@@ -291,11 +291,18 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   board rendering, boundary finalization, and an eight-hour contract heartbeat. Hermes
   script exit status owns success; enrichment judgment remains in the existing skill,
   using the declared `discovery_enrich` model. It never widens a stale boundary into
-  historical catch-up. Enrichment failures are reported without blocking other jobs.
+  historical catch-up. A persistent `work/linkedin-stop.json` blocks scheduled search;
+  search/detail auth challenges create the stop and abort the run immediately, without
+  boundary advancement. Manual verification and explicit stop removal are required
+  before resuming. Enrichment failures are reported without blocking other jobs.
 - Gmail supports an explicit binary/account and bounded recovery dates. Himalaya 1.2's
   installed email-lib pagination repeats the first page, so fetch bounded headers with
   page-size zero, cap bodies, and fail on overflow. Recovered older events append evidence
-  without regressing newer lifecycle state.
+  without regressing newer lifecycle state. Transition freshness is recorded separately
+  as `lifecycle.stateChangedAt` (including manual applied/skip/outcome commands), with
+  appliedAt and legacy/manual contact dates retained as floors. Informational mail
+  updates lastContactAt but does not suppress a still relevant older interview; newer
+  state-changing email, including terminal rejection, continues to block regressions.
 - Architecture Boundary: ALIGNED. No domain judgment added to code; deterministic
   execution and verification compose existing identity, enrichment, lifecycle, rendering,
   and boundary owners. Resolver/adapter routing unchanged; README/model dictionary updated.

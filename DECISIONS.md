@@ -493,3 +493,14 @@ Search only the last 24 hours, even after downtime; preserve the existing enrich
 and model. Use explicit Gmail recovery windows, complete bounded header retrieval, and
 reject silent body truncation. Historical email evidence cannot regress newer lifecycle
 state. Architecture Boundary: ALIGNED; no subjective judgment added to scripts.
+
+## 2026-10-04 — Preserve auth stops and separate lifecycle from contact freshness
+
+Scheduled discovery checks the existing profile-local LinkedIn stop before search and
+each ingestion; search/detail authentication challenges persist the stop and abort
+immediately. Manual verification and explicit clearing remain the recovery path.
+Email imports date lifecycle transitions separately from informational contact, so
+newer informational mail cannot hide an older future interview invitation. Manual
+board transitions stamp the same state boundary; appliedAt and conservative legacy
+manual contact dates remain protected. Architecture Boundary: ALIGNED; deterministic
+execution and state validation only, no judgment or resolver/model routing change.

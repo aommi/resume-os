@@ -213,8 +213,16 @@ function classifyEvent(event, jobs) {
 function applyEvent(job, event, sourceFile) {
   const lifecycle = job.metadata.lifecycle;
   const date = cleanValue(event.event_date) || today();
-  const latestKnownDate = [lifecycle.lastContactAt, lifecycle.appliedAt,
-    ...lifecycle.emailEvents.map(item => item.date)].filter(Boolean).map(value => String(value).slice(0, 10)).sort().at(-1) || '';
+  // An informational email updates contact freshness, not lifecycle freshness.
+  // A contact date without matching mail remains a conservative legacy/manual
+  // transition boundary (job-board commands also write lastContactAt).
+  const contactDate = String(lifecycle.lastContactAt || '').slice(0, 10);
+  const manualContactDate = lifecycle.emailEvents.some(item => String(item.date || '').slice(0, 10) === contactDate)
+    ? '' : contactDate;
+  const latestKnownDate = [lifecycle.stateChangedAt, manualContactDate, lifecycle.appliedAt,
+    ...lifecycle.emailEvents.filter(item => item.changesState ?? changesLifecycle(item))
+      .map(item => item.date)].filter(Boolean).map(value => String(value).slice(0, 10)).sort().at(-1) || '';
+  lifecycle.stateChangedAt = latestKnownDate;
   const eventName = cleanValue(event.event).toLowerCase();
   const nextEventAt = parseFutureEventAt(event.next_event_at);
   if (cleanValue(event.next_event_at) && !nextEventAt) {
@@ -226,6 +234,7 @@ function applyEvent(job, event, sourceFile) {
     event: eventName,
     date,
     nextEventAt,
+    changesState: changesLifecycle(event),
     confidence: cleanValue(event.confidence),
     sourceFile,
   });
@@ -237,6 +246,8 @@ function applyEvent(job, event, sourceFile) {
     job.dirty = true;
     return;
   }
+
+  if (changesLifecycle(event)) lifecycle.stateChangedAt = date;
 
   if (nextEventAt && ["interview", "recruiter_screen", "hiring_manager"].includes(eventName)) {
     lifecycle.nextEventAt = earliestFutureEvent(lifecycle.nextEventAt, nextEventAt);
@@ -265,6 +276,11 @@ function applyEvent(job, event, sourceFile) {
     lifecycle.notes = [lifecycle.notes, note].filter(Boolean).join(" ");
   }
   job.dirty = true;
+}
+
+function changesLifecycle(event) {
+  return ['confirmation', 'rejection', 'interview', 'recruiter_screen', 'hiring_manager', 'assessment']
+    .includes(cleanValue(event.event).toLowerCase()) || /action required/i.test(event.subject || '');
 }
 
 function createJobFromEvent(event) {

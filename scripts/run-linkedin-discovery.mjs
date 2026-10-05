@@ -19,7 +19,22 @@ let previous = {};
 try { previous = JSON.parse(readFileSync(hbPath, 'utf8')); } catch {}
 const report = { runStartedAt: new Date(started).toISOString(), windowHours: 24, found: 0, ingested: [], duplicates: [], enrichmentFailures: [], failures: [] };
 const boundaryPath = join(repo, '.linkedin-last-checked');
-const expected = readDiscoveryBoundary(boundaryPath);
+let expected;
+const stopPath = join(work, 'linkedin-stop.json');
+
+function recordAuthStop() {
+  if (!existsSync(stopPath)) writeFileSync(stopPath, JSON.stringify({
+    reason: 'auth_challenge', detectedAt: new Date().toISOString(), workflow: 'linkedin-discovery',
+  }) + '\n');
+}
+
+function assertNotStopped() {
+  if (existsSync(stopPath)) {
+    const error = new Error('LinkedIn automation is stopped; complete manual verification and clear linkedin-stop.json before retrying');
+    error.code = 'LINKEDIN_STOPPED';
+    throw error;
+  }
+}
 
 function node(script, args = [], timeout = 240000) {
   return execFileSync(process.execPath, [join(repo, 'scripts', script), ...args], {
@@ -29,6 +44,8 @@ function node(script, args = [], timeout = 240000) {
 }
 
 try {
+  assertNotStopped();
+  expected = readDiscoveryBoundary(boundaryPath);
   // Never expand this scheduled window to compensate for a stale heartbeat.
   const jobs = JSON.parse(node('search-linkedin-jobs.mjs', ['--json']));
   const recent = jobs.filter(job => Number.isFinite(job.postedAt) && job.postedAt >= started - 86400000);
@@ -36,9 +53,17 @@ try {
   report.outsideWindowOrUndated = jobs.length - recent.length;
   writeFileSync(join(runDir, 'search.json'), JSON.stringify(jobs, null, 2));
   for (const job of recent) {
+    assertNotStopped();
     try {
       const result = JSON.parse(node('process-job.mjs', [job.url, '--out', join(work, 'inbox', job.linkedinJobId), '--no-save']));
       writeFileSync(join(runDir, `${job.linkedinJobId}.json`), JSON.stringify(result, null, 2));
+      if (result.authChallenge || result.failureCategory === 'auth_challenge') {
+        recordAuthStop();
+        const error = new Error('LinkedIn authentication challenge detected; stopping this discovery run');
+        error.code = 'LINKEDIN_STOPPED';
+        throw error;
+      }
+      assertNotStopped();
       if (result.duplicate || result.status === 'duplicate' || result.skipped === 'duplicate') {
         report.duplicates.push(job.linkedinJobId);
       } else if (existsSync(join(work, 'inbox', job.linkedinJobId, 'metadata.json')) && existsSync(join(work, 'inbox', job.linkedinJobId, 'job.md'))) {
@@ -46,8 +71,16 @@ try {
       } else {
         throw new Error('ingestion returned without a saved job or an exact duplicate result');
       }
-    } catch (error) { report.failures.push({ id: job.linkedinJobId, error: error.message }); }
+    } catch (error) {
+      report.failures.push({ id: job.linkedinJobId, error: error.message });
+      if (/LINKEDIN_AUTH_REQUIRED:/.test(`${error.message}\n${error.stderr || ''}`)) {
+        recordAuthStop();
+        error.code = 'LINKEDIN_STOPPED';
+      }
+      if (error.code === 'LINKEDIN_STOPPED') throw error;
+    }
   }
+  assertNotStopped();
   if (report.ingested.length) {
     const prompt = `Enrich ONLY these newly ingested job IDs: ${report.ingested.join(', ')}. Work directory: ${work}. Load skill resume-os-enrich and follow its ATS routing workflow using scripts/enrich-job.mjs. Save factual JD enrichment.md and enrichedAt/atsType metadata under that job's profile work inbox. No new searches, historical catch-up, fit assessment, resume work, messages, or LinkedIn save actions. Continue after an individual enrichment failure and report failures. Do not update the discovery timestamp; the wrapper owns it.`;
     try {
@@ -64,8 +97,12 @@ try {
   finalizeDiscoveryBoundary({ path: boundaryPath, expectedMs: expected, runStartedAtMs: started });
   writeHeartbeat(0, '');
 } catch (error) {
+  if (/LINKEDIN_AUTH_REQUIRED:/.test(`${error.message}\n${error.stderr || ''}`)) {
+    recordAuthStop();
+    error.code = 'LINKEDIN_STOPPED';
+  }
   report.error = `${error.message}${error.stderr ? `\n${error.stderr}` : ''}`;
-  writeHeartbeat(1, 'discovery_failed');
+  writeHeartbeat(1, error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : 'discovery_failed');
   process.exitCode = 1;
 } finally {
   writeFileSync(join(runDir, 'report.json'), JSON.stringify(report, null, 2));
