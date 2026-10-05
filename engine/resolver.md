@@ -25,7 +25,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 | `job_search_sweep` | job-search-sweep.md, job-screening.md | incremental discovery, exact-identity reconciliation, screening, and queue order |
 | `application_form` | resume-os.md, application-form-assist.md | browser-assisted form filling; never submits |
 | `interview_postmortem` | interview-postmortem.md | analyze a completed interview or contract-scope call and ground the next step |
-| `interview_prep` | resume-os.md, interview-postmortem.md, profile question bank and evidence ledger | create or validate recruiter, hiring-manager, panel, technical, or case prep using transferable evidence |
+| `interview_prep` | resume-os.md, interview-prep.md, interview-postmortem.md, profile question bank and evidence ledger | future interview, recruiter call, or active-application “next step”; create responsive, printable HTML prep using confirmed event details and transferable evidence |
 | `model_eval` | evals/model-comparison.md | two-layer model comparison and approval gate |
 | `pipeline_status` | (none) | just run `node scripts/job-board.mjs` |
 | `discover` | (none) | run scrapers (Hermes); facts only |

@@ -272,3 +272,7 @@ Named tools need stricter scrutiny than broad capabilities. A named tool belongs
 - Variant skills sets are useful for high-match roles, but the default resume should not try to cover every possible direction.
 - If a skill is only weakly supported, keep it in the bank until a concrete story validates it.
 - The default resume skills block should stay compact and credible: Product, AI & Automation, Agentic Development Stack, and Technical & Analytics. `AI & Automation` describes product areas and systems; `Agentic Development Stack` names hands-on AI-builder tools used for prototyping and agentic product work.
+
+## Future-interview preparation owner
+
+`interview-prep.md` owns future recruiter, hiring-manager, functional, technical, panel, and case preparation. The `interview_prep` route also covers an active application’s next step or round. Confirm the latest invitation, carry forward source-backed evidence, and produce a responsive, printable HTML brief with visual QA.

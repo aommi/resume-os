@@ -82,8 +82,12 @@ PENDING_BEFORE="$(ls -1 "$PENDING_DIR" 2>/dev/null | sort)"
 
 # Three overlapping days makes retries safe; importer deduplication keys each
 # imported event by source_message_id. The snapshot is removed on every exit.
-SEARCHED_AFTER="$(node -e 'const d=new Date(); d.setDate(d.getDate()-3); console.log(d.toISOString().slice(0,10))')"
-if ! node scripts/fetch-gmail-events.mjs --output "$SNAPSHOT" --after "$SEARCHED_AFTER" >> "$LOG" 2>&1; then
+SEARCHED_AFTER="${GMAIL_SEARCH_AFTER:-$(node -e 'const d=new Date(); d.setDate(d.getDate()-3); console.log(d.toISOString().slice(0,10))')}"
+FETCH_ARGS=(--output "$SNAPSHOT" --after "$SEARCHED_AFTER" --max-messages "${GMAIL_MAX_MESSAGES:-20}")
+if [ -n "${GMAIL_SEARCH_BEFORE:-}" ]; then
+  FETCH_ARGS+=(--before "$GMAIL_SEARCH_BEFORE")
+fi
+if ! node scripts/fetch-gmail-events.mjs "${FETCH_ARGS[@]}" >> "$LOG" 2>&1; then
   echo "IMAP snapshot failed" >> "$LOG"
   write_hb "$LAST_SUCCESS" 1 "mailbox_read_failed"
   exit 1
