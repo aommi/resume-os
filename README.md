@@ -117,3 +117,7 @@ separate from any profile data:
   through `AGENTS.md`; do not copy Claude hooks or `$CLAUDE_PROJECT_DIR` commands into `.codex/`.
 
 Memory is about the OS (architecture, extension, maintenance), never candidate/profile content.
+
+## Resume display title
+
+New exports use the shared single-column Arial presentation with restrained teal accents. `--display-title "<Target role>"` controls the visible title independently of the filename set by `--resume-title`. Base exports use the configured variant title. Narrow and skills-first layouts inherit the styling. Submitted packages remain frozen; validate each new PDF visually and against the two-page limit.

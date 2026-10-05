@@ -485,3 +485,31 @@ filename checks only. (3) The new deterministic scan writes a profile-local oper
 only after the already scheduled Gmail import, with a first-run baseline to avoid historical
 workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
 semantic memory were updated.
+
+## Refined resume layout is the shared export default (2026-09-23)
+
+**Decision:** Adopt the user-approved single-column Arial layout in the shared presentation
+template for all new exports. Use a short target-specific professional title under the name,
+regular-weight summary/company lines, a stronger profile divider, and light section rules.
+No repeated page-two header/footer or decorative metrics. Narrow inherits the design with wider
+margins; skills-first remains an explicitly selected fallback.
+
+**Title boundary:** `--display-title` controls visible positioning, independently of the filename
+controlled by `--resume-title`. Base builds default to the configured variant title. Tailoring
+chooses the title from target role, seniority, and supported specialization and carries the same
+value into delivery. No candidate/domain-specific title is embedded in the engine. Historical
+role titles and submitted packages remain unchanged.
+
+**Validation:** Template order/target-title checks and 13 protected-fact tests pass. Actual PM and
+commerce base HTML builds use their configured titles. A representative shared-template PDF is
+two pages, visually reviewed, and matches the approved draft's extracted content.
+
+**Architecture Boundary: ALIGNED.** (1) Presentation preference and target-title selection are
+the only new judgment. (2) Selection guidance lives in tailoring-methodology.md. (3) Rendering,
+argument handling, escaping, and title/section-order tests are deterministic. (4) No model,
+resolver, or adapter logic was added. (5) No new approval step; existing page-fit and visual checks
+continue. (6) ALIGNED, no exception needed. README and semantic memory updated; startup/resolver
+already route tailoring to the changed method and require no change. Operating-model principles
+remain accurate; no merge or capability/assumption transition is involved.
+
+**2026-10-04 publication validation:** Fix orphaned section headings with print break-after protection. Template and protected-fact tests pass; standard and narrow fictional example PDFs are both two pages, visually inspected, with text extraction confirming title/contact preservation and no browser headers.

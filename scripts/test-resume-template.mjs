@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { renderPage } from "../engine/templates/resume-template.mjs";
+import { buildStyles, renderPage } from "../engine/templates/resume-template.mjs";
 
 const resume = {
   name: "Example Candidate",
@@ -36,4 +36,18 @@ assert.equal((skillsFirstHtml.match(/<h2>Skills<\/h2>/g) ?? []).length, 1);
 const noSkillsHtml = renderPage(resume, { ...style, omitSkills: true }, { skillsFirst: true });
 assert.equal(noSkillsHtml.includes("<h2>Skills</h2>"), false);
 
-console.log("resume template order: PASS");
+for (const title of ["Senior Product Manager", "Product Manager - Commerce", "Product Owner"]) {
+  for (const variant of buildStyles("Example Resume", title, true)) {
+    const html = renderPage(resume, variant);
+    assert.ok(html.includes(`<div class="positioning-title">${title}</div>`));
+    assert.ok(html.indexOf('class="positioning-title"') > html.indexOf("<h1>"));
+    assert.ok(html.indexOf('class="positioning-title"') < html.indexOf('class="contact"'));
+    assert.equal(html.includes(`${title} Narrow</div>`), false);
+  }
+}
+const tailoredHtml = renderPage(resume, style, { displayTitle: "Product Manager · Data & AI <Platform>" });
+assert.ok(tailoredHtml.includes("Product Manager · Data &amp; AI &lt;Platform&gt;"));
+assert.equal((tailoredHtml.match(/class="positioning-title"/g) ?? []).length, 1);
+assert.equal(tailoredHtml.includes("<footer"), false);
+
+console.log("resume template order and target title: PASS");

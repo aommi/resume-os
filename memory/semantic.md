@@ -282,3 +282,14 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **De-personalization:** engine files must carry zero candidate data. The example profile
   (Jordan Rivera) and fictional company names (Summit Outfitters, Tutorly, Ledgerline,
   Corealign, Vantix, JobForge) are the only "people/companies" in the public engine.
+
+- **Shared resume presentation (2026-09-23):** all new exports use the refined single-column
+  Arial template: 30pt name, target-specific title below it, contact and summary, 10pt body at
+  1.36 line height, restrained teal, a stronger profile divider and light section rules.
+  No repeated page header/footer. `--display-title` sets the visible role/focus independently
+  of `--resume-title` (filename); base exports default to the configured variant title.
+  Tailoring must choose a supported target-specific title and carry it into delivery. Narrow
+  inherits the presentation with wider margins; skills-first remains conditional. Submitted
+  packages are not regenerated. Content and two-page visual/text validation remain per-resume.
+
+- Resume section headings stay with following content during PDF pagination. Both standard and narrow example exports were visually checked at two pages, with display title and protected contact text intact.

@@ -214,11 +214,22 @@ Hiring-manager smell test: every skill must sound like a real capability, not a 
 
 Always review and rewrite the fit summary/headline for the target job. Do not carry the base resume headline or a prior package summary forward unchanged unless it is still the best fit after reading the JD.
 
+The shared layout places a short professional title directly below the candidate's name,
+followed by contact details and the existing headline/summary block. Set `--display-title`
+explicitly for every tailored build and delivery: match the selected resume's target role,
+seniority, and supported specialization. Do not carry a prior application's domain label into
+another application. This is a target-positioning title, not a change to historical job titles.
+`--resume-title` still controls export filenames; it may include the company, while the visible
+title should normally omit it. Without an override, base exports use their configured variant
+title. Record the selected visible title in `strategy.md` and carry the same value into delivery.
+
 For referral/high-fit applications: a short summary at the top is allowed. It frames the archetype before the reader parses bullets. Use the company's vocabulary.
 
 For cold applications: the one-line headline is sufficient. No multi-line summary.
 
-If adding a summary: 2 sentences max, up to ~4 rendered lines when merged with the headline into a single block (the user prefers headline and summary merged, not stacked separately). It should read as: "I understand this role's world, and here's my spine."
+If adding a summary: 2 sentences max, up to ~4 rendered lines in the existing headline/summary
+block. Keep that block cohesive rather than adding another summary section. The separate short
+professional title under the name identifies the role; the block explains the fit.
 
 ### Step 10: Pre-flight taste check
 
@@ -261,7 +272,8 @@ The eval is `eval-rubric.md`: concrete feature checks with statuses **PASS / FAI
 1. Build to a temp dir (no `--deliver` yet):
    ```bash
    node scripts/build-resume-formats.mjs --source "applications/<Company - Role>/resume.md" \
-     --out-dir /private/tmp/resume-export --resume-title "<Company Role>" --export
+     --out-dir /private/tmp/resume-export --resume-title "<Company Role>" \
+     --display-title "<Target role and supported focus>" --export
    ```
 2. Run the deterministic scorer with the supported terms from `keywords.md`:
    ```bash
@@ -286,7 +298,8 @@ The eval is `eval-rubric.md`: concrete feature checks with statuses **PASS / FAI
 
 ```bash
 node scripts/build-resume-formats.mjs --source "applications/<Company - Role>/resume.md" \
-  --out-dir /private/tmp/resume-export --resume-title "<Company Role>" --export \
+  --out-dir /private/tmp/resume-export --resume-title "<Company Role>" \
+  --display-title "<Target role and supported focus>" --export \
   --deliver "applications/<Company - Role>" \
   --require-terms "<5-8 key JD terms, comma-separated>"
 ```

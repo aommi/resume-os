@@ -91,6 +91,11 @@ function parseArgs(args) {
       index += 1;
     } else if (arg.startsWith("--resume-title=")) {
       parsed.resumeTitle = arg.slice("--resume-title=".length);
+    } else if (arg === "--display-title") {
+      parsed.displayTitle = args[index + 1] ?? "";
+      index += 1;
+    } else if (arg.startsWith("--display-title=")) {
+      parsed.displayTitle = arg.slice("--display-title=".length);
     } else if (arg === "--deliver") {
       parsed.deliver = args[index + 1] ?? parsed.deliver;
       index += 1;
@@ -298,7 +303,10 @@ function cleanInline(value = "") {
 const stylesToBuild = buildStyles(outputBaseName, resumeTitle, emitNarrow);
 
 for (const style of stylesToBuild) {
-  writeFileSync(join(outDir, style.file), renderPage(resume, style, { skillsFirst: options.skillsFirst }));
+  writeFileSync(join(outDir, style.file), renderPage(resume, style, {
+    skillsFirst: options.skillsFirst,
+    displayTitle: options.displayTitle || VARIANT_TITLES[options.variant] || resumeTitle,
+  }));
 }
 
 const readmeFormats = stylesToBuild
