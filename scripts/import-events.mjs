@@ -213,6 +213,16 @@ function classifyEvent(event, jobs) {
 function applyEvent(job, event, sourceFile) {
   const lifecycle = job.metadata.lifecycle;
   const date = cleanValue(event.event_date) || today();
+  // An informational email updates contact freshness, not lifecycle freshness.
+  // A contact date without matching mail remains a conservative legacy/manual
+  // transition boundary (job-board commands also write lastContactAt).
+  const contactDate = String(lifecycle.lastContactAt || '').slice(0, 10);
+  const manualContactDate = lifecycle.emailEvents.some(item => String(item.date || '').slice(0, 10) === contactDate)
+    ? '' : contactDate;
+  const latestKnownDate = [lifecycle.stateChangedAt, manualContactDate, lifecycle.appliedAt,
+    ...lifecycle.emailEvents.filter(item => item.changesState ?? changesLifecycle(item))
+      .map(item => item.date)].filter(Boolean).map(value => String(value).slice(0, 10)).sort().at(-1) || '';
+  lifecycle.stateChangedAt = latestKnownDate;
   const eventName = cleanValue(event.event).toLowerCase();
   const nextEventAt = parseFutureEventAt(event.next_event_at);
   if (cleanValue(event.next_event_at) && !nextEventAt) {
@@ -224,10 +234,24 @@ function applyEvent(job, event, sourceFile) {
     event: eventName,
     date,
     nextEventAt,
+    subject: cleanValue(event.subject),
+    sender: cleanValue(event.sender),
+    evidence: cleanValue(event.evidence),
+    notes: cleanValue(event.notes),
+    changesState: changesLifecycle(event),
     confidence: cleanValue(event.confidence),
     sourceFile,
   });
   lifecycle.lastContactAt = maxDate(lifecycle.lastContactAt, date);
+
+  // Recovery/overlap can deliver old emails after a newer application update.
+  // Keep the evidence without rolling lifecycle state backwards.
+  if (date < latestKnownDate) {
+    job.dirty = true;
+    return;
+  }
+
+  if (changesLifecycle(event)) lifecycle.stateChangedAt = date;
 
   if (nextEventAt && ["interview", "recruiter_screen", "hiring_manager"].includes(eventName)) {
     lifecycle.nextEventAt = earliestFutureEvent(lifecycle.nextEventAt, nextEventAt);
@@ -256,6 +280,11 @@ function applyEvent(job, event, sourceFile) {
     lifecycle.notes = [lifecycle.notes, note].filter(Boolean).join(" ");
   }
   job.dirty = true;
+}
+
+function changesLifecycle(event) {
+  return ['confirmation', 'rejection', 'interview', 'recruiter_screen', 'hiring_manager', 'assessment']
+    .includes(cleanValue(event.event).toLowerCase()) || /action required/i.test(event.subject || '');
 }
 
 function createJobFromEvent(event) {

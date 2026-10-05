@@ -12,6 +12,8 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
+import { assertLinkedInSession } from "../engine/linkedin-session.mjs";
+import { clearDeadChromeLock } from "../engine/linkedin-profile-lock.mjs";
 import { createServer } from "node:net";
 import { resolveBrowserPath, workDir } from "../engine/config.mjs";
 import { readLinkedInJobSignals } from "../engine/linkedin-job-signals.mjs";
@@ -72,7 +74,7 @@ try {
 // ── Core ──────────────────────────────────────────────────────────────────
 
 async function processJob(url, outDir) {
-  try { unlinkSync(PROFILE_LOCK_FILE); } catch {}
+  clearDeadChromeLock(PROFILE_LOCK_FILE);
 
   const port = await findFreePort();
   const chromeProc = spawn(
@@ -81,7 +83,6 @@ async function processJob(url, outDir) {
       `--user-data-dir=${PROFILE_DIR}`, `--remote-debugging-port=${port}`,
       "--headless=new", "--disable-gpu", "--no-first-run", "--no-sandbox",
       "--disable-blink-features=AutomationControlled", "--disable-features=TranslateUI",
-      "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "--window-size=1920,1080", "about:blank",
     ],
     { stdio: "pipe" }
@@ -383,11 +384,9 @@ function formatTopApplicant(value) {
 }
 
 async function detectAuthChallenge(page) {
-  const currentUrl = page.url();
-  const title = await page.title().catch(() => "");
-  if (/\/checkpoint\/|\/authwall(?:[/?]|$)|\/uas\/login(?:[/?]|$)/i.test(currentUrl) ||
-      /sign in|join linkedin/i.test(title)) {
-    return { url: currentUrl, title };
+  try { await assertLinkedInSession(page); } catch (error) {
+    if (!error.message.startsWith('LINKEDIN_AUTH_REQUIRED:')) throw error;
+    return { url: page.url(), title: await page.title() };
   }
   return null;
 }
