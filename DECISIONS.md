@@ -504,3 +504,9 @@ newer informational mail cannot hide an older future interview invitation. Manua
 board transitions stamp the same state boundary; appliedAt and conservative legacy
 manual contact dates remain protected. Architecture Boundary: ALIGNED; deterministic
 execution and state validation only, no judgment or resolver/model routing change.
+
+## 2026-10-04 — Keep actionable email details chronological
+
+Preserve source subject, sender, evidence, and notes in profile-local email events. Render one newest dated event for both details and the email link, with import order breaking same-date ties. Historical recovery must not displace newer events. Include recruiter chat/availability subjects in the deterministic shortlist.
+
+Architecture Boundary: ALIGNED. No interpretation moves into code; parsing, ordering, and presentation remain deterministic. Existing classifier guidance owns event judgment. README and semantic memory updated; resolver/startup and operating-model rules remain applicable.

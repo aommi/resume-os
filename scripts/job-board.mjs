@@ -318,8 +318,8 @@ function writeTracker(jobs) {
     section("To Apply", jobs, "to_apply", activeColumns()),
     section("Package Ready", jobs, "package_ready", activeColumns()),
     section("Applied", jobs, "applied", appliedColumns()),
-    section("Needs Action", jobs, "needs_action", appliedColumns()),
-    section("Interviewing", jobs, "interviewing", appliedColumns()),
+    section("Needs Action", jobs, "needs_action", actionColumns()),
+    section("Interviewing", jobs, "interviewing", actionColumns()),
     section("Skipped", jobs, "skipped", closedColumns()),
     section("Closed", jobs, "closed", closedColumns()),
     "",
@@ -410,6 +410,45 @@ function appliedColumns() {
     column("Last Contact", (job) => job.lifecycle.lastContactAt),
     column("URL", (job) => job.metadata.url),
   ];
+}
+
+function actionColumns() {
+  return [
+    ...appliedColumns().slice(0, -1),
+    column("Details / Next Step", (job) => latestActionDetails(job)),
+    column("Email", (job) => latestGmailLink(job)),
+    appliedColumns().at(-1),
+  ];
+}
+
+function latestActionEvent(job) {
+  return (job.lifecycle.emailEvents || [])
+    .map((event, index) => {
+      const parsed = Date.parse(event.date || "");
+      return { event, index, time: Number.isFinite(parsed) ? parsed : -Infinity };
+    })
+    .sort((a, b) => (b.time - a.time) || (b.index - a.index))[0]?.event;
+}
+
+function latestActionDetails(job) {
+  const latest = latestActionEvent(job);
+  if (!latest) return "";
+  if (latest.notes || latest.evidence) return latest.notes || latest.evidence;
+  const stage = String(latest.event || "email").replace(/_/g, " ");
+  return `${stage.charAt(0).toUpperCase()}${stage.slice(1)} email recorded${latest.date ? ` on ${latest.date}` : ""}.`;
+}
+
+function latestGmailLink(job) {
+  const latest = latestActionEvent(job);
+  if (!latest) return "";
+  if (/^[a-f0-9]{12,}$/i.test(latest.messageId || "")) {
+    return `[Open email](https://mail.google.com/mail/u/0/#all/${latest.messageId})`;
+  }
+  if (latest.subject) {
+    const query = encodeURIComponent(`subject:${JSON.stringify(latest.subject)}`);
+    return `[Find email](https://mail.google.com/mail/u/0/#search/${query})`;
+  }
+  return "";
 }
 
 function closedColumns() {

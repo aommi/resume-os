@@ -142,3 +142,7 @@ separate from any profile data:
   through `AGENTS.md`; do not copy Claude hooks or `$CLAUDE_PROJECT_DIR` commands into `.codex/`.
 
 Memory is about the OS (architecture, extension, maintenance), never candidate/profile content.
+
+## Job email details
+
+`Needs Action` and `Interviewing` rows show details and an email link from the newest dated event. Gmail message IDs open directly; IMAP IDs use a subject search. These private fields remain in profile-local data. Historical imports cannot displace a more recent board update.

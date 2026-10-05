@@ -306,3 +306,5 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - Architecture Boundary: ALIGNED. No domain judgment added to code; deterministic
   execution and verification compose existing identity, enrichment, lifecycle, rendering,
   and boundary owners. Resolver/adapter routing unchanged; README/model dictionary updated.
+
+- **Job email visibility:** Imported events preserve subject, sender, evidence, and notes. Actionable board rows show the newest dated email details and its Gmail link. Undated recovery entries do not displace dated events. Generic recruiter subjects mentioning a chat or availability are included in the mailbox shortlist.

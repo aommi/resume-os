@@ -57,6 +57,13 @@ const envelopes = [
     date: "2026-08-20T08:00:00Z",
   },
   {
+    id: "105",
+    subject: "Let's chat!",
+    from: { name: "Example Hiring Team", addr: "notification@greenhouse.io" },
+    to: { name: "Candidate", addr: "candidate@example.com" },
+    date: "2026-08-20T07:30:00Z",
+  },
+  {
     id: "104",
     subject: "Thank you for dinner",
     from: { name: "A Friend", addr: "friend@example.com" },
@@ -74,6 +81,7 @@ try {
   writeFileSync(join(bodyDir, "102.txt"), "Bring the dinner notes.\n");
   writeFileSync(join(bodyDir, "103.txt"), "Your verification code is 123456. Do not share it.\n");
   writeFileSync(join(bodyDir, "104.txt"), "Dinner was fun.\n");
+  writeFileSync(join(bodyDir, "105.txt"), "Please share your availability for a conversation.\n");
   writeExecutable("himalaya", `#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "$HIMALAYA_CALLS"
@@ -166,8 +174,8 @@ function testSnapshotFilteringAndCredentialOmission() {
   ]);
   assert.equal(result.status, 0, result.stderr);
   const snapshot = JSON.parse(readFileSync(output, "utf8"));
-  assert.equal(snapshot.message_count, 2);
-  assert.deepEqual(snapshot.messages.map((message) => message.imap_id), ["101", "103"]);
+  assert.equal(snapshot.message_count, 3);
+  assert.deepEqual(snapshot.messages.map((message) => message.imap_id), ["101", "103", "105"]);
   assert.equal(snapshot.messages[0].body.includes("https://"), false);
   assert.match(snapshot.messages[0].body, /\[redacted link\]/);
   assert.equal(snapshot.messages[1].body, "[credential-bearing message omitted]");
