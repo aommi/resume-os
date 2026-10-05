@@ -95,7 +95,7 @@ try {
     job.lifecycle.appliedAt = options.date || job.lifecycle.appliedAt || today();
     job.lifecycle.outcome = options.outcome || job.lifecycle.outcome || "Submitted";
     job.lifecycle.lastContactAt = options.date || job.lifecycle.lastContactAt || job.lifecycle.appliedAt;
-    job.lifecycle.stateChangedAt = job.lifecycle.appliedAt;
+    job.lifecycle.stateChangedAt = options.date || today();
     if (options.package) job.lifecycle.packagePath = options.package;
     if (options.variant) job.lifecycle.variant = options.variant;
     saveJob(job);

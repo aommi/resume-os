@@ -97,5 +97,22 @@ try {
     assert.equal(result.stateChangedAt, '2026-09-21');
     assert.equal(result.nextEventAt, '');
   }
+  // Reasserting applied today must retain the original application date while
+  // establishing a fresh manual transition boundary.
+  seed({ appliedAt: '2026-09-01', stateChangedAt: '2026-09-18', lastContactAt: '2026-09-20',
+    emailEvents: [{ event: 'other', date: '2026-09-20' }] });
+  const todayBefore = new Date().toISOString().slice(0, 10);
+  const reapplied = spawnSync(process.execPath, ['scripts/job-board.mjs', 'applied', '123'], { cwd: root, encoding: 'utf8' });
+  const todayAfter = new Date().toISOString().slice(0, 10);
+  assert.equal(reapplied.status, 0, reapplied.stderr);
+  result = JSON.parse(readFileSync(metadata, 'utf8')).lifecycle;
+  assert.ok([todayBefore, todayAfter].includes(result.stateChangedAt));
+  const transitionDate = result.stateChangedAt;
+  assert.equal(result.appliedAt, '2026-09-01');
+  result = importMail([interview]);
+  assert.equal(result.status, 'applied');
+  assert.equal(result.appliedAt, '2026-09-01');
+  assert.equal(result.stateChangedAt, transitionDate);
+  assert.equal(result.nextEventAt, '');
   console.log('import history tests: PASS');
 } finally { rmSync(root, { recursive: true, force: true }); }
