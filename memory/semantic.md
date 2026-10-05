@@ -318,3 +318,14 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   product surface and separates released, preview/beta, roadmap, and North Star capabilities before
   proposing changes; it can distinguish maturity across product, marketplace, platform, and business-
   model layers. Company and candidate details remain in the profile package.
+
+- **Shared resume presentation (2026-09-23):** all new exports use the refined single-column
+  Arial template: 30pt name, target-specific title below it, contact and summary, 10pt body at
+  1.36 line height, restrained teal, a stronger profile divider and light section rules.
+  No repeated page header/footer. `--display-title` sets the visible role/focus independently
+  of `--resume-title` (filename); base exports default to the configured variant title.
+  Tailoring must choose a supported target-specific title and carry it into delivery. Narrow
+  inherits the presentation with wider margins; skills-first remains conditional. Submitted
+  packages are not regenerated. Content and two-page visual/text validation remain per-resume.
+
+- Resume section headings stay with following content during PDF pagination. Both standard and narrow example exports were visually checked at two pages, with display title and protected contact text intact.

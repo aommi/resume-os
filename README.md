@@ -150,3 +150,7 @@ Memory is about the OS (architecture, extension, maintenance), never candidate/p
 ## Interview preparation
 
 Use the `interview_prep` route for upcoming interviews or the next round of an active application. `interview-prep.md` owns confirmation checks, bounded source evidence, stage-specific preparation, and responsive, printable HTML briefs. Private interview facts remain in the profile package.
+
+## Resume display title
+
+New exports use the shared single-column Arial presentation with restrained teal accents. `--display-title "<Target role>"` controls the visible title independently of the filename set by `--resume-title`. Base exports use the configured variant title. Narrow and skills-first layouts inherit the styling. Submitted packages remain frozen; validate each new PDF visually and against the two-page limit.
