@@ -486,6 +486,25 @@ only after the already scheduled Gmail import, with a first-run baseline to avoi
 workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
 semantic memory were updated.
 
+## 2026-09-30 — Verify scheduled discovery and bound recovery
+
+Use a script-owned exit status and contract heartbeat for scheduled LinkedIn discovery.
+Search only the last 24 hours, even after downtime; preserve the existing enrichment skill
+and model. Use explicit Gmail recovery windows, complete bounded header retrieval, and
+reject silent body truncation. Historical email evidence cannot regress newer lifecycle
+state. Architecture Boundary: ALIGNED; no subjective judgment added to scripts.
+
+## 2026-10-04 — Preserve auth stops and separate lifecycle from contact freshness
+
+Scheduled discovery checks the existing profile-local LinkedIn stop before search and
+each ingestion; search/detail authentication challenges persist the stop and abort
+immediately. Manual verification and explicit clearing remain the recovery path.
+Email imports date lifecycle transitions separately from informational contact, so
+newer informational mail cannot hide an older future interview invitation. Manual
+board transitions stamp the same state boundary; appliedAt and conservative legacy
+manual contact dates remain protected. Architecture Boundary: ALIGNED; deterministic
+execution and state validation only, no judgment or resolver/model routing change.
+
 ## 2026-10-04 — Keep actionable email details chronological
 
 Preserve source subject, sender, evidence, and notes in profile-local email events. Render one newest dated event for both details and the email link, with import order breaking same-date ties. Historical recovery must not displace newer events. Include recruiter chat/availability subjects in the deterministic shortlist.

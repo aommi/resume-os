@@ -4,6 +4,7 @@
   "steps": {
     "route":        { "model": "claude-haiku-4-5-20251001", "purpose": "base + archetype routing (light; mixed deterministic precedence + latent JD read)" },
     "triage":       { "model": "claude-sonnet-4-6",          "purpose": "fit triage: score, base/variant, depth, skip reasons (THR-4). Downgrade to haiku only after EVAL-2 replay agreement" },
+    "discovery_enrich": { "model": "gpt-5.5", "purpose": "Scheduled LinkedIn factual enrichment through the resume-os-enrich skill; search and ingestion remain deterministic." },
     "enrich":       { "model": "claude-sonnet-4-6",          "purpose": "JD normalization into fields. Mid tier until EVAL-1 golden set proves cheap equivalence (review finding)" },
     "email_monitor": { "model": "gpt-5.6-terra",             "purpose": "Gmail event extraction from a bounded local IMAP snapshot (scripts/run-gmail-sync.sh). Himalaya reads the mailbox; Hermes/OpenAI classifies only the snapshot into an event handoff file; the deterministic importer updates the tracker." },
     "tailor":       { "model": "claude-opus-4-8",            "purpose": "bullet/skills tailoring (heavy latent)" },
