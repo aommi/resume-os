@@ -485,3 +485,23 @@ filename checks only. (3) The new deterministic scan writes a profile-local oper
 only after the already scheduled Gmail import, with a first-run baseline to avoid historical
 workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
 semantic memory were updated.
+
+## Interview preparation has a dedicated HTML-first skill (2026-08-26)
+
+**Why accepted:** The `interview_prep` route previously reused the postmortem method but had no
+dedicated preparation owner. Repeated HTML briefs created a useful convention without encoding its
+trigger, source hierarchy, event-confirmation check, stage shaping, or artifact quality bar.
+
+**Implications:** `interview-prep.md` now owns future-interview preparation and explicitly includes
+active-application requests such as “prep me for the next step” or “next round.” It resolves the
+latest confirmation before drafting, carries forward only source-backed evidence, treats supplied
+interviewer material as dated directional evidence, and defaults to a responsive, printable HTML
+brief with render, narrow-width, and print checks. `interview-postmortem.md` remains the owner for
+completed conversations. Company, interviewer, and candidate facts stay profile-local.
+
+**Architecture Boundary verdict (2026-08-26): ALIGNED.** (1) The change adds preparation and
+artifact judgment. (2) The judgment lives in `interview-prep.md`. (3) The only deterministic change
+is the resolver document list and its assertion. (4) Runtime instructions gain an intent example,
+not domain logic. (5) The workflow runs only for an upcoming interview or active-application next
+step. (6) Verdict: ALIGNED. `AGENTS.md`, README, `resume-os.md`, resolver docs/tests, and semantic
+memory were updated.

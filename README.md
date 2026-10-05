@@ -117,3 +117,7 @@ separate from any profile data:
   through `AGENTS.md`; do not copy Claude hooks or `$CLAUDE_PROJECT_DIR` commands into `.codex/`.
 
 Memory is about the OS (architecture, extension, maintenance), never candidate/profile content.
+
+## Interview preparation
+
+Use the `interview_prep` route for upcoming interviews or the next round of an active application. `interview-prep.md` owns confirmation checks, bounded source evidence, stage-specific preparation, and responsive, printable HTML briefs. Private interview facts remain in the profile package.

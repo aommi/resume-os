@@ -282,3 +282,13 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **De-personalization:** engine files must carry zero candidate data. The example profile
   (Jordan Rivera) and fictional company names (Summit Outfitters, Tutorly, Ledgerline,
   Corealign, Vantix, JobForge) are the only "people/companies" in the public engine.
+
+- **Interview preparation:** `interview-prep.md` owns future recruiter, hiring-manager, functional,
+  technical, panel, and case preparation. Active-application requests such as “prep me for the next
+  step” route to `interview_prep`. The workflow resolves the latest confirmation or reschedule,
+  carries forward source-backed evidence from earlier stages, treats supplied interviewer profiles
+  and recommendations as dated directional evidence, and defaults to a responsive, printable HTML
+  brief with render, narrow-width, and print checks. Product-strategy preparation verifies the live
+  product surface and separates released, preview/beta, roadmap, and North Star capabilities before
+  proposing changes; it can distinguish maturity across product, marketplace, platform, and business-
+  model layers. Company and candidate details remain in the profile package.
