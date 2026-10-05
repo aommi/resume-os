@@ -146,3 +146,7 @@ Memory is about the OS (architecture, extension, maintenance), never candidate/p
 ## Job email details
 
 `Needs Action` and `Interviewing` rows show details and an email link from the newest dated event. Gmail message IDs open directly; IMAP IDs use a subject search. These private fields remain in profile-local data. Historical imports cannot displace a more recent board update.
+
+## Interview preparation
+
+Use the `interview_prep` route for upcoming interviews or the next round of an active application. `interview-prep.md` owns confirmation checks, bounded source evidence, stage-specific preparation, and responsive, printable HTML briefs. Private interview facts remain in the profile package.

@@ -308,3 +308,13 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   and boundary owners. Resolver/adapter routing unchanged; README/model dictionary updated.
 
 - **Job email visibility:** Imported events preserve subject, sender, evidence, and notes. Actionable board rows show the newest dated email details and its Gmail link. Undated recovery entries do not displace dated events. Generic recruiter subjects mentioning a chat or availability are included in the mailbox shortlist.
+
+- **Interview preparation:** `interview-prep.md` owns future recruiter, hiring-manager, functional,
+  technical, panel, and case preparation. Active-application requests such as “prep me for the next
+  step” route to `interview_prep`. The workflow resolves the latest confirmation or reschedule,
+  carries forward source-backed evidence from earlier stages, treats supplied interviewer profiles
+  and recommendations as dated directional evidence, and defaults to a responsive, printable HTML
+  brief with render, narrow-width, and print checks. Product-strategy preparation verifies the live
+  product surface and separates released, preview/beta, roadmap, and North Star capabilities before
+  proposing changes; it can distinguish maturity across product, marketplace, platform, and business-
+  model layers. Company and candidate details remain in the profile package.

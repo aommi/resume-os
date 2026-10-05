@@ -70,6 +70,10 @@ Before implementing a feature, read `resume-os.md`. It is the canonical record o
 - Skills are plain-markdown judgment docs (resume-os.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md); scripts/*.mjs are deterministic tools; both resolve paths via engine/config.mjs.
 - Root working-state paths (inbox/, events/, applications/, resume-formats/) must never be tracked; real pipeline data lives under profiles/<id>/work/.
 - This memory is about the OS itself (architecture, extension, maintenance, gotchas), not any candidate's resume content.
+- For an upcoming interview, recruiter call, or the next step or round of an active application,
+  load `interview-prep.md` and follow the `interview_prep` route in `engine/resolver.json`. This
+  includes requests such as “prep me for the next step.” For a completed conversation, use
+  `interview-postmortem.md` instead.
 
 ---
 
