@@ -95,6 +95,7 @@ try {
     job.lifecycle.appliedAt = options.date || job.lifecycle.appliedAt || today();
     job.lifecycle.outcome = options.outcome || job.lifecycle.outcome || "Submitted";
     job.lifecycle.lastContactAt = options.date || job.lifecycle.lastContactAt || job.lifecycle.appliedAt;
+    job.lifecycle.stateChangedAt = options.date || today();
     if (options.package) job.lifecycle.packagePath = options.package;
     if (options.variant) job.lifecycle.variant = options.variant;
     saveJob(job);
@@ -108,6 +109,7 @@ try {
     job.lifecycle.outcome = "Skipped";
     job.lifecycle.notes = options.reason || options.notes || job.lifecycle.notes;
     job.lifecycle.lastContactAt = options.date || job.lifecycle.lastContactAt || today();
+    job.lifecycle.stateChangedAt = options.date || today();
     saveJob(job);
     writeTracker(loadJobs({ persistLifecycle: true }));
   } else if (command === "outcome") {
@@ -119,6 +121,7 @@ try {
     const job = findJob(jobs, target);
     job.lifecycle.outcome = outcome;
     job.lifecycle.lastContactAt = options.date || today();
+    job.lifecycle.stateChangedAt = job.lifecycle.lastContactAt;
     if (isClosedOutcome(outcome)) job.lifecycle.status = "closed";
     else if (isInterviewOutcome(outcome)) job.lifecycle.status = "interviewing";
     else if (isActionRequiredOutcome(outcome)) job.lifecycle.status = "needs_action";

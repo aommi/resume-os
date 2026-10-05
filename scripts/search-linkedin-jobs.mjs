@@ -10,11 +10,14 @@
 //
 // Output: NDJSON to stdout. Each job includes its exact LinkedIn job ID.
 
-import { existsSync, unlinkSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
+import { readLinkedInSearchCards } from "../engine/linkedin-search-cards.mjs";
+import { assertLinkedInSession } from "../engine/linkedin-session.mjs";
+import { clearDeadChromeLock } from "../engine/linkedin-profile-lock.mjs";
 import { createServer } from "node:net";
 import { resolveBrowserPath, loadProfile } from "../engine/config.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
@@ -44,19 +47,22 @@ if (!existsSync(PROFILE_DIR)) {
 }
 
 // LinkedIn's OR search is unreliable — run two separate searches and merge
-const keywords = defaultTitles.map((t) => t.toLowerCase());
+const keywords = opts.keywords ? [opts.keywords] : defaultTitles.map((t) => t.toLowerCase());
 const allJobs = [];
 
 // Reuse one Chrome session for both searches
 const sharedLock = acquireLinkedInLock("linkedin-discovery");
 if (!sharedLock.acquired) {
   console.error(`skipped: lock held by ${sharedLock.holder?.workflow || "unknown"}`);
-  process.exit(0);
+  process.exit(75);
 }
 const lockFile = join(PROFILE_DIR, "SingletonLock");
 let chromeProc;
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, () => { chromeProc?.kill("SIGTERM"); sharedLock.release(); process.exit(signal === "SIGTERM" ? 143 : 130); });
+}
 try {
-  try { unlinkSync(lockFile); } catch {}
+  clearDeadChromeLock(lockFile);
   const port = await findFreePort();
   chromeProc = spawn(
     resolveBrowserPath(),
@@ -65,7 +71,6 @@ try {
       `--remote-debugging-port=${port}`,
       "--headless=new", "--disable-gpu", "--no-first-run", "--no-sandbox",
       "--disable-blink-features=AutomationControlled", "--disable-features=TranslateUI",
-      "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "--window-size=1920,1080", "about:blank",
     ],
     { stdio: "ignore" }
@@ -85,14 +90,9 @@ try {
   await browser.close();
 } finally {
   chromeProc?.kill("SIGTERM");
-  try { unlinkSync(lockFile); } catch {}
   sharedLock.release();
 }
 
-if (allJobs.length === 0) {
-  console.error("No job cards found. May need re-login: node scripts/save-linkedin-cookies.mjs");
-  process.exit(1);
-}
 
 // Dedup across both searches
 const unique = dedupeSearchResults(allJobs);
@@ -146,52 +146,12 @@ async function searchPage(page, url) {
     const pageUrl = url.replace("start=0", `start=${start}`);
     await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.waitForTimeout(3000);
-
-    const jobs = await page.evaluate(() => {
-      const results = [];
-      const seen = new Set();
-
-      const links = document.querySelectorAll("a[href*='/jobs/view/']");
-      for (const link of links) {
-        const href = link.getAttribute("href") || "";
-        const m = href.match(/\/jobs\/view\/(\d+)\//);
-        if (!m) continue;
-        const url = `https://www.linkedin.com/jobs/view/${m[1]}/`;
-        if (seen.has(url)) continue;
-        seen.add(url);
-
-        const title = (link.textContent || "").trim();
-        if (!title || title.length < 3) continue;
-
-        const card =
-          link.closest("li") ||
-          link.closest('[data-job-id]') ||
-          link.closest(".job-card-container") ||
-          link.parentElement?.parentElement;
-
-        let company = "";
-        let location = "";
-        let timeAgo = null;
-
-        if (card) {
-          const cardText = card.textContent || "";
-          const timeMatch = cardText.match(
-            /(\d+\s+(?:minute|hour|day|week|month)s?\s+ago|Just now|\d+[dhm]\s+ago)/i
-          );
-          if (timeMatch) timeAgo = timeMatch[1].trim();
-
-          const lines = cardText.split("\n").map(l => l.trim()).filter(Boolean);
-          const titleIdx = lines.findIndex(l => l.includes(title.slice(0, 15)));
-          if (titleIdx >= 0 && lines.length > titleIdx + 1) {
-            company = lines[titleIdx + 1] || "";
-            if (lines.length > titleIdx + 2) location = lines[titleIdx + 2] || "";
-          }
-        }
-
-        results.push({ linkedinJobId: m[1], url, title, company, location, postedTimeAgo: timeAgo });
-      }
-      return results;
-    });
+    await assertLinkedInSession(page);
+    await page.waitForFunction(() => document.querySelector('[componentkey^="job-card-component-ref-"], li[data-occludable-job-id], .job-card-container') || /No results found|No matching jobs/i.test(document.body.innerText), null, { timeout: 15000 });
+    const jobs = await page.evaluate(readLinkedInSearchCards);
+    if (!jobs.length && !await page.evaluate(() => /No results found|No matching jobs/i.test(document.body.innerText))) {
+      throw new Error('LinkedIn search loaded without recognizable job cards or an explicit empty-results state');
+    }
 
     // Compute postedAt on Node side
     for (const j of jobs) {
@@ -245,7 +205,7 @@ function sleep(ms) {
 
 function parseArgs(args) {
   const p = {
-    keywords: defaultTitles.map((t) => `"${t}"`).join(" OR "),
+    keywords: null,
     location: defaultLocation,
     max: 50,
     json: false,

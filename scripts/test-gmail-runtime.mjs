@@ -162,6 +162,7 @@ function testSnapshotFilteringAndCredentialOmission() {
     "scripts/fetch-gmail-events.mjs",
     "--output", output,
     "--after", "2026-08-17",
+    "--before", "2026-08-21",
   ]);
   assert.equal(result.status, 0, result.stderr);
   const snapshot = JSON.parse(readFileSync(output, "utf8"));
@@ -177,6 +178,12 @@ function testSnapshotFilteringAndCredentialOmission() {
   assert.match(calls, /message read --preview --no-headers 103/);
   assert.doesNotMatch(calls, /--no-headers 102/);
   assert.doesNotMatch(calls, /--no-headers 104/);
+  assert.match(calls, /--page-size 0/);
+  assert.match(calls, /after 2026-08-17 and before 2026-08-21/);
+  const overflow = run(process.execPath, ['scripts/fetch-gmail-events.mjs', '--output', output,
+    '--after', '2026-08-17', '--before', '2026-08-21', '--max-messages', '1']);
+  assert.notEqual(overflow.status, 0, 'never silently truncate a recovery window');
+  assert.match(overflow.stderr, /exceed limit/);
 }
 
 function testGmailWrapperCleanupAndFailures() {
