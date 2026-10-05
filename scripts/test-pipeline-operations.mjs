@@ -140,7 +140,7 @@ fi
 - event_date: 2026-07-27
 - next_event_at: 2099-07-28T17:30:00Z
 - subject: Interview invitation
-- message_id: fixture-message
+- message_id: abcdef1234567890
 - thread_id: fixture-thread
 - confidence: high
 - evidence: Scheduled interview
@@ -151,9 +151,15 @@ fi
   const importedMetadata = JSON.parse(readFileSync(join(inbox, "scheduled", "metadata.json"), "utf8"));
   assert.equal(importedMetadata.lifecycle.nextEventAt, "2099-07-28T17:30:00.000Z");
   assert.equal(importedMetadata.lifecycle.status, "interviewing");
+  assert.equal(importedMetadata.lifecycle.emailEvents[0].subject, "Interview invitation");
+  assert.equal(importedMetadata.lifecycle.emailEvents[0].evidence, "Scheduled interview");
+  assert.equal(importedMetadata.lifecycle.emailEvents[0].notes, "Confirmed by calendar invite");
   const tracker = readFileSync(join(work, "jobs-tracker.md"), "utf8");
   assert.match(tracker, /## Upcoming Events/);
   assert.match(tracker, /Example Co — Product Manager/);
+  assert.match(tracker, /Details \/ Next Step/);
+  assert.match(tracker, /Confirmed by calendar invite/);
+  assert.match(tracker, /mail\.google\.com\/mail\/u\/0\/#all\/abcdef1234567890/);
 
   writeFileSync(join(pending, "2026-07-27-invalid-event.md"), `## JOB_EMAIL_EVENT
 - job_id: scheduled
@@ -163,7 +169,7 @@ fi
 - event_date: 2026-07-27
 - next_event_at: 2099-07-29T10:30:00-07:00
 - subject: Hiring manager conversation
-- message_id: invalid-time
+- message_id: imap:123
 - thread_id: fixture-thread
 - confidence: high
 - evidence: Scheduled conversation
@@ -175,6 +181,23 @@ fi
   const invalidMetadata = JSON.parse(readFileSync(join(inbox, "scheduled", "metadata.json"), "utf8"));
   assert.equal(invalidMetadata.lifecycle.nextEventAt, "2099-07-28T17:30:00.000Z");
   assert.equal(invalidMetadata.lifecycle.emailEvents.at(-1).nextEventAt, "");
+  const invalidTracker = readFileSync(join(work, "jobs-tracker.md"), "utf8");
+  assert.match(invalidTracker, /#search\/subject%3A%22Hiring%20manager%20conversation%22/);
+
+  // Recovery appends older evidence later; both visible columns must stay on
+  // the same newest dated email. Same-day ties use the later imported event.
+  const orderedPath = join(inbox, "scheduled", "metadata.json");
+  const ordered = JSON.parse(readFileSync(orderedPath, "utf8"));
+  ordered.lifecycle.emailEvents.push(
+    { date: "2026-07-26", messageId: "imap:older", subject: "Old recovered mail", notes: "Outdated details" },
+    { messageId: "imap:undated", subject: "Undated recovered mail", notes: "Undated details" },
+  );
+  writeFileSync(orderedPath, JSON.stringify(ordered));
+  assert.equal(run("scripts/job-board.mjs", "render").status, 0);
+  const orderedTracker = readFileSync(join(work, "jobs-tracker.md"), "utf8");
+  assert.match(orderedTracker, /Offset timestamp is intentionally rejected/);
+  assert.match(orderedTracker, /#search\/subject%3A%22Hiring%20manager%20conversation%22/);
+  assert.doesNotMatch(orderedTracker, /Outdated details|Undated details|Old%20recovered/);
 
   writeJob("canonical-real-posting", {
     url: "https://www.linkedin.com/jobs/view/canonical-real-posting/",

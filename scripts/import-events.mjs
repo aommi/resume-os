@@ -224,6 +224,10 @@ function applyEvent(job, event, sourceFile) {
     event: eventName,
     date,
     nextEventAt,
+    subject: cleanValue(event.subject),
+    sender: cleanValue(event.sender),
+    evidence: cleanValue(event.evidence),
+    notes: cleanValue(event.notes),
     confidence: cleanValue(event.confidence),
     sourceFile,
   });

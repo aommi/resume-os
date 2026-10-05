@@ -282,3 +282,5 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - **De-personalization:** engine files must carry zero candidate data. The example profile
   (Jordan Rivera) and fictional company names (Summit Outfitters, Tutorly, Ledgerline,
   Corealign, Vantix, JobForge) are the only "people/companies" in the public engine.
+
+- **Job email visibility:** Imported events preserve subject, sender, evidence, and notes. Actionable board rows show the newest dated email details and its Gmail link. Undated recovery entries do not displace dated events. Generic recruiter subjects mentioning a chat or availability are included in the mailbox shortlist.

@@ -485,3 +485,9 @@ filename checks only. (3) The new deterministic scan writes a profile-local oper
 only after the already scheduled Gmail import, with a first-run baseline to avoid historical
 workflow friction. (6) Verdict: ALIGNED. README, `resume-os.md`, `interview-postmortem.md`, and
 semantic memory were updated.
+
+## 2026-10-04 — Keep actionable email details chronological
+
+Preserve source subject, sender, evidence, and notes in profile-local email events. Render one newest dated event for both details and the email link, with import order breaking same-date ties. Historical recovery must not displace newer events. Include recruiter chat/availability subjects in the deterministic shortlist.
+
+Architecture Boundary: ALIGNED. No interpretation moves into code; parsing, ordering, and presentation remain deterministic. Existing classifier guidance owns event judgment. README and semantic memory updated; resolver/startup and operating-model rules remain applicable.

@@ -86,7 +86,7 @@ function isJobRelevant(envelope) {
   ].filter(Boolean).join(" ");
   const specificSubject = /\b(?:application|applied|applying|interview|recruiter|hiring|candidate|screening|assessment|offer|next steps?)\b/i;
   const recruitingSender = /\b(?:recruit|talent|hiring|careers?|jobs?)\b|greenhouse|lever|workday|ashby|jobvite|smartrecruiters/i;
-  const contextualSubject = /\b(?:position|opportunity|job|career|schedule|meeting|invitation|thank you)\b/i;
+  const contextualSubject = /\b(?:position|opportunity|job|career|schedule|meeting|invitation|thank you|chat|availability)\b/i;
   return specificSubject.test(subject) || (recruitingSender.test(sender) && contextualSubject.test(subject));
 }
 
