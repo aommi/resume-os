@@ -80,7 +80,16 @@ try {
   const limited = fixture('limited');
   const rateLimited = collectJobs({ ...limited, search: () => { throw new Error('LINKEDIN_RATE_LIMITED: HTTP 429'); } });
   assert.equal(rateLimited.exitCode, 1);
-  assert.equal(JSON.parse(readFileSync(join(limited.work, 'linkedin-stop.json'))).reason, 'rate_limited');
+  assert.equal(existsSync(join(limited.work, 'linkedin-stop.json')), false);
+  assert.equal(JSON.parse(readFileSync(join(limited.work, 'runtime/linkedin-cooldown.json'))).reason, 'rate_limited');
+  assert.equal(collectJobs({ ...limited, search: () => assert.fail('no search while cooling down') }).exitCode, 1);
+  const coolingWorker = runQueuedJobs({ ...limited, ingest: () => assert.fail('no ingestion while cooling down'), enrich: () => assert.fail('no model while cooling down'), render: () => {} });
+  assert.equal(coolingWorker.exitCode, 1);
+  assert.equal(coolingWorker.report.attempted.length, 0);
+  assert.equal(JSON.parse(readFileSync(join(limited.work, 'heartbeats/linkedin-worker.json'))).failureCategory, 'linkedin_cooldown');
+
+  clock = new Date(Date.parse(JSON.parse(readFileSync(join(limited.work, 'runtime/linkedin-cooldown.json'))).retryAt) + 1);
+  assert.equal(collectJobs({ ...limited, search: () => [] }).exitCode, 0, 'ordinary collection resumes after expiry without clearing auth state');
 
   const busy = fixture('busy'); const lock = openDiscoveryQueue({ work: busy.work, now });
   assert.equal(collectJobs({ ...busy, search: () => assert.fail('no search while a worker owns the queue') }).exitCode, 1);
@@ -121,6 +130,27 @@ try {
   assert.match(corruptResult.report.error, /metadata requires repair/);
   assert.equal(state(corrupt.work).entries.length, 1);
   assert.equal(JSON.parse(readFileSync(join(corrupt.work, 'heartbeats/linkedin-worker.json'))).failureCategory, 'canonical_metadata_invalid');
+
+  // Exercise the real default execFileSync handoff, not an injected ingest function.
+  const ipc = fixture('ipc');
+  mkdirSync(join(root, 'scripts'), { recursive: true });
+  collectJobs({ ...ipc, search: () => jobs(1) });
+  writeFileSync(join(root, 'scripts/retrieve-queued-job.mjs'), `
+    import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+    import { join } from 'node:path';
+    const entry = JSON.parse(readFileSync(0, 'utf8'));
+    if (entry.linkedinJobId !== '101') throw new Error('Missing or wrong leased entry');
+    const dir = join(${JSON.stringify(ipc.work)}, 'inbox', entry.linkedinJobId);
+    mkdirSync(dir, {recursive:true});
+    writeFileSync(join(dir, 'metadata.json'), JSON.stringify({...entry, enrichedAt:'2026-10-13'}));
+    writeFileSync(join(dir, 'job.md'), 'Source-backed fixture description');
+    writeFileSync(join(dir, 'enrichment.md'), '---\\njobId: 101\\nenrichment:\\n  jdCompleteness: partial\\n---\\n## Job Description\\nSource-backed fixture description');
+    console.log(JSON.stringify({linkedinJobId:entry.linkedinJobId}));
+  `);
+  const ipcResult = runQueuedJobs({ ...ipc, enrich: () => assert.fail('structured child output requires no model'), render: () => {} });
+  assert.equal(ipcResult.exitCode, 0, JSON.stringify(ipcResult.report));
+  assert.deepEqual(ipcResult.report.completed, ['101']);
+  assert.equal(ipcResult.report.queue.pending, 0);
 
   console.log('bounded discovery/worker integration and stop tests: PASS');
 } finally { rmSync(root, { recursive: true, force: true }); }

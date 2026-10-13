@@ -587,3 +587,13 @@ Supersedes the fixed-24-hour-only collection decision: use overlapped successful
 retain undated cards, and persist incomplete traversal cursors without falsely advancing a
 successful boundary. Budgets and schedules are unchanged. Exhausted work must remain
 visible in health reporting. Architecture Boundary: ALIGNED; no subjective scoring in code.
+
+## Rate-limit recovery and complete page collection (2026-10-13)
+
+HTTP429 represents a timed rate limit, distinct from login/CAPTCHA barriers. Honor
+Retry-After and otherwise use conservative exponential cooldown; collector, worker
+and detail resolution share the hold. Resume only on a normal run after expiry,
+without consuming attempts while held. Authentication stops remain manual. This
+supersedes treating every429 as a permanent manual-clear stop. No safe platform
+rate or observable platform heat meter is claimed. Materialize virtualized cards
+before advancing page coverage, and observe background-response429s.

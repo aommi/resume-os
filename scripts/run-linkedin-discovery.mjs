@@ -6,6 +6,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { workDir, timezone } from '../engine/config.mjs';
 import { readDiscoveryBoundary, finalizeDiscoveryBoundary } from '../engine/linkedin-discovery-boundary.mjs';
+import { assertLinkedInCooldown, recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { openDiscoveryQueue } from '../engine/linkedin-discovery-queue.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,6 +28,7 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
   try { previous = JSON.parse(readFileSync(hbPath, 'utf8')); } catch {}
   try {
     if (existsSync(stop)) throw Object.assign(new Error('LinkedIn is stopped; manual verification and explicit stop-file clearance required'), { code: 'LINKEDIN_STOPPED' });
+    assertLinkedInCooldown({ work, now: now() });
     queue = openDiscoveryQueue({ work, timezone: zone, now });
     const expected = readDiscoveryBoundary(boundary);
     if (!Number.isSafeInteger(overlapMs) || overlapMs < 1) throw new Error('Overlap must be positive milliseconds');
@@ -38,6 +40,7 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
     report.since = new Date(cycle.sinceMs).toISOString();
     report.catchupStartedAt = new Date(cycle.startedAtMs).toISOString();
     const result = search({ since: report.since, cursor: cycle.cursor });
+    assertLinkedInCooldown({ work, now: now() });
     const jobs = Array.isArray(result) ? result : result?.jobs;
     if (!Array.isArray(jobs)) throw new Error('Search did not return jobs');
     // Legacy array producers remain usable but cannot certify full traversal.
@@ -67,13 +70,20 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
       }
     }
   } catch (error) {
-    if (/LINKEDIN_(?:AUTH_REQUIRED|RATE_LIMITED):/.test(`${error.message}\n${error.stderr || ''}`)) {
-      if (!existsSync(stop)) writeFileSync(stop, JSON.stringify({ reason: /LINKEDIN_RATE_LIMITED:/.test(`${error.message} ${error.stderr || ''}`) ? 'rate_limited' : 'auth_challenge', detectedAt: now().toISOString(), workflow: 'linkedin-discovery' }) + '\n', { mode: 0o600 });
+    if (error.code === 'LINKEDIN_COOLDOWN' || /LINKEDIN_RATE_LIMITED:/.test(`${error.message} ${error.stderr || ''}`)) {
+      error.code = 'LINKEDIN_COOLDOWN';
+      try { assertLinkedInCooldown({ work, now: now() }); error.retryAt = recordLinkedInCooldown({ work, now: now(), workflow: 'linkedin-discovery' }).retryAt; } catch (cooldown) {
+        if (cooldown.code !== 'LINKEDIN_COOLDOWN') { error.message = cooldown.message; error.code = cooldown.code || 'COOLDOWN_STATE_INVALID';  }
+        if (cooldown.retryAt) error.retryAt = cooldown.retryAt;
+      }
+    } else if (/LINKEDIN_AUTH_REQUIRED:/.test(`${error.message}\n${error.stderr || ''}`)) {
+      if (!existsSync(stop)) writeFileSync(stop, JSON.stringify({ reason: 'auth_challenge', detectedAt: now().toISOString(), workflow: 'linkedin-discovery' }) + '\n', { mode: 0o600 });
       error.code = 'LINKEDIN_STOPPED';
     }
     report.error = error.message;
+    if (error.retryAt) report.retryAt = error.retryAt;
     exitCode = 1;
-    failureCategory = error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : error.code === 'QUEUE_LOCKED' ? 'queue_busy' : error.code === 'COVERAGE_INCOMPLETE' ? 'coverage_incomplete' : 'discovery_failed';
+    failureCategory = error.code === 'LINKEDIN_COOLDOWN' ? 'linkedin_cooldown' : error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : error.code === 'QUEUE_LOCKED' ? 'queue_busy' : error.code === 'COVERAGE_INCOMPLETE' ? 'coverage_incomplete' : 'discovery_failed';
   } finally {
     queue?.close();
     writeFileSync(join(runDir, 'report.json'), JSON.stringify(report, null, 2), { mode: 0o600 });

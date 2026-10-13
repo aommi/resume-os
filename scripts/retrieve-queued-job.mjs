@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { workDir } from '../engine/config.mjs';
 import { validateDiscoveryJob } from '../engine/linkedin-discovery-queue.mjs';
 import { extractJobPostings, matchJobPosting, externalJobUrl, employerPostingKey } from '../engine/job-posting-data.mjs';
@@ -24,6 +25,7 @@ export function fetchEmployer(url) {
 }
 export async function retrieveQueuedJob(entry, { work = workDir(), resolveDetail, fetchPage = fetchEmployer, now = () => new Date() } = {}) {
   validateDiscoveryJob(entry);
+  assertLinkedInCooldown({ work, now: now() });
   if (existsSync(join(work, 'linkedin-stop.json'))) throw new Error('LINKEDIN_AUTH_REQUIRED: shared stop requires manual review');
   if (isCompanyExcluded(entry.company || '')) return { excluded: true };
   const inbox = join(work, 'inbox');

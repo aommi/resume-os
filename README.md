@@ -95,8 +95,10 @@ Only durable canonical completion or explicit duplicate/exclusion evidence remov
 item from the pending queue. Partial writes are retryable; blocked content is not success.
 Exhausted items retain an unhealthy needs-review heartbeat even when no attempt is due.
 Malformed canonical metadata produces a named repair barrier before external work.
-A persistent `work/linkedin-stop.json` stops collector/worker after LinkedIn auth/429
-barriers; manual verification and explicit clearance are required. Interrupted recovery
+LinkedIn authentication barriers persist `work/linkedin-stop.json` and require manual
+verification/clearance. HTTP 429 instead persists `work/runtime/linkedin-cooldown.json`: all
+LinkedIn work pauses until Retry-After or conservative exponential backoff expires, then
+the next normal scheduled run may resume. Paused runs consume no attempts. Interrupted recovery
 locks also require manual review. Interactive sweeps and on-demand assessment are unchanged.
 
 Gmail schedules may set `HIMALAYA_BIN` to an OAuth2-capable binary and

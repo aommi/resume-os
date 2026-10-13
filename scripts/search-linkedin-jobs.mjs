@@ -21,7 +21,8 @@ import { readSelectedLinkedInDetail } from "../engine/linkedin-selected-detail.m
 import { assertLinkedInSession } from "../engine/linkedin-session.mjs";
 import { clearDeadChromeLock } from "../engine/linkedin-profile-lock.mjs";
 import { createServer } from "node:net";
-import { resolveBrowserPath, loadProfile } from "../engine/config.mjs";
+import { resolveBrowserPath, loadProfile, workDir } from "../engine/config.mjs";
+import { recordLinkedInCooldown, assertLinkedInCooldown } from "../engine/linkedin-cooldown.mjs";
 import { acquireLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 import {
@@ -66,6 +67,7 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
   process.once(signal, () => { chromeProc?.kill("SIGTERM"); sharedLock.release(); process.exit(signal === "SIGTERM" ? 143 : 130); });
 }
 try {
+  assertLinkedInCooldown({ work: workDir() });
   clearDeadChromeLock(lockFile);
   const port = await findFreePort();
   chromeProc = spawn(
@@ -167,27 +169,99 @@ export function readSearchPaginationEnd() {
   return false;
 }
 
-export async function searchPage(page, url, { startOffset = 0, maxPages = 4, previousPageIds = '', sessionCheck = assertLinkedInSession } = {}) {
+const rateObservers = new WeakMap();
+function rateLimitGuard(page, { work, now }) {
+  if (!rateObservers.has(page)) {
+    let failure = null;
+    const record = response => {
+      try {
+        if (response.status() !== 429 || !/(^|\.)linkedin\.com$/i.test(new URL(response.url()).hostname)) return;
+        const ledger = recordLinkedInCooldown({ work, now: now(), retryAfter: response.headers?.()['retry-after'], workflow: 'linkedin-discovery' });
+        failure = Object.assign(new Error(`LINKEDIN_RATE_LIMITED: cooldown until ${ledger.retryAt}`), { code: 'LINKEDIN_COOLDOWN', retryAt: ledger.retryAt });
+      } catch (error) { failure = error; }
+    };
+    page.on('response', record);
+    const assert = () => { if (failure) throw failure; assertLinkedInCooldown({ work, now: now() }); };
+    assert.record = record;
+    rateObservers.set(page, assert);
+  }
+  return rateObservers.get(page);
+}
+
+export function scrollSearchCards({ reset = false } = {}) {
+  const card = document.querySelector('[componentkey^="job-card-component-ref-"],li[data-occludable-job-id],.job-card-container');
+  const candidates = [];
+  for (let node = card?.parentElement; node && node !== document.body; node = node.parentElement) {
+    if (node.clientHeight > 0 && /auto|scroll/.test(getComputedStyle(node).overflowY)) candidates.push(node);
+  }
+  // Prefer a genuinely scrolling ancestor over a fitted inner list: the latter can
+  // otherwise falsely certify seven mounted cards while its parent virtualizes 25.
+  const node = candidates.find(node => node.scrollHeight > node.clientHeight + 2) || candidates.find(node => node.matches('.jobs-search-results-list,.scaffold-layout__list'));
+  if (node) {
+    if (reset) { node.scrollTop = 0; return { available: true }; }
+    const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 2;
+    const position = `${node.scrollTop}:${node.scrollHeight}:${node.clientHeight}`;
+    if (!atBottom) node.scrollTop = Math.min(node.scrollHeight, node.scrollTop + Math.max(1, Math.floor(node.clientHeight / 2)));
+    return { available: true, atBottom, position };
+  }
+  return { available: false };
+}
+
+export async function materializeSearchCards(page, assertActive, maxSteps = 40) {
+  const found = new Map();
+  await page.evaluate(scrollSearchCards, { reset: true });
+  await page.waitForTimeout(300);
+  let stable = 0, previous = '';
+  for (let step = 0; step < maxSteps; step++) {
+    assertActive();
+    const mounted = await page.evaluate(readLinkedInSearchCards);
+    for (const job of mounted) found.set(job.linkedinJobId, job);
+    const scroll = await page.evaluate(scrollSearchCards, {});
+    assertActive();
+    const signature = `${scroll?.position}:${[...found.keys()].sort().join(',')}`;
+    stable = scroll?.available && scroll.atBottom && signature === previous ? stable + 1 : 0;
+    if (stable >= 2) return { jobs: [...found.values()], complete: true };
+    if (!scroll?.available) return { jobs: [...found.values()], complete: false };
+    previous = signature;
+    await page.waitForTimeout(300);
+  }
+  return { jobs: [...found.values()], complete: false };
+}
+
+export async function searchPage(page, url, { startOffset = 0, maxPages = 4, previousPageIds = '', sessionCheck = assertLinkedInSession, work = workDir(), now = () => new Date() } = {}) {
   if (!Number.isSafeInteger(startOffset) || startOffset < 0 || startOffset % 25 || !Number.isSafeInteger(maxPages) || maxPages < 1) throw new Error('Invalid search pagination options');
+  const assertRateLimit = rateLimitGuard(page, { work, now });
+  assertRateLimit();
   const allJobs = [];
   let start = startOffset;
   let lastPageIds = previousPageIds;
   for (let count = 0; count < maxPages; count++, start += 25) {
     try {
+      assertRateLimit();
       const pageUrl = new URL(url);
       pageUrl.searchParams.set('start', String(start));
       const response = await page.goto(pageUrl.href, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-      if (response?.status() === 429) throw new Error('LINKEDIN_RATE_LIMITED: HTTP 429; stop and review before resuming');
+      if (response?.status() === 429) { assertRateLimit.record(response); assertRateLimit(); }
       if (response?.status() >= 400) throw new Error(`LinkedIn search HTTP ${response.status()}`);
       await page.waitForTimeout(3000);
       await sessionCheck(page);
       await page.waitForFunction(() => document.querySelector('[componentkey^="job-card-component-ref-"], li[data-occludable-job-id], .job-card-container') || /No results found|No matching jobs/i.test(document.body.innerText), null, { timeout: 15000 });
-      const jobs = await page.evaluate(readLinkedInSearchCards);
+      assertRateLimit();
+      const materialized = await materializeSearchCards(page, assertRateLimit);
+      const jobs = materialized.jobs;
       const explicitlyEmpty = !jobs.length && await page.evaluate(() => /No results found|No matching jobs/i.test(document.body.innerText));
       if (!jobs.length && !explicitlyEmpty) throw new Error('LinkedIn search loaded without recognizable cards or explicit empty results');
+      assertRateLimit();
+      if (!materialized.complete && !explicitlyEmpty) {
+        for (const job of jobs) job.postedAt = parseTimeAgo(job.postedTimeAgo);
+        allJobs.push(...jobs);
+        return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'page_error', error: 'Could not certify complete materialization of search cards' } };
+      }
       const pageIds = jobs.map(job => job.linkedinJobId).sort().join(',');
       if (pageIds && pageIds === lastPageIds) {
-        if (await page.evaluate(readSearchPaginationEnd)) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
+        const ended = await page.evaluate(readSearchPaginationEnd);
+        assertRateLimit();
+        if (ended) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
         return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'repeated_page' } };
       }
       const selectedIds = await page.evaluate(() => [...new Set([...document.querySelectorAll('a[href*="/jobs/view/"]')]
@@ -203,10 +277,15 @@ export async function searchPage(page, url, { startOffset = 0, maxPages = 4, pre
       for (const job of jobs) job.postedAt = parseTimeAgo(job.postedTimeAgo);
       allJobs.push(...jobs);
       lastPageIds = pageIds;
-      if (jobs.length && await page.evaluate(readSearchPaginationEnd)) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
+      assertRateLimit();
+      const ended = jobs.length && await page.evaluate(readSearchPaginationEnd);
+      assertRateLimit();
+      if (ended) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
       // Short DOM card lists can be virtualization, not proof of the final page.
+      assertRateLimit();
       if (explicitlyEmpty) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_empty_page' } };
     } catch (error) {
+      assertRateLimit();
       if (/LINKEDIN_(?:AUTH_REQUIRED|RATE_LIMITED):/.test(error.message)) throw error;
       return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'page_error', error: error.message } };
     }

@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { workDir, timezone } from '../engine/config.mjs';
+import { assertLinkedInCooldown, recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { openDiscoveryQueue } from '../engine/linkedin-discovery-queue.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,7 +26,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
   const report = { runStartedAt: started.toISOString(), attempted: [], completed: [], duplicates: [], excluded: [], failures: [], model: 'none' };
   let queue, exitCode = 0, failureCategory = '', previous = {};
   const command = (script, args = [], input) => execFileSync(process.execPath, [join(repo, 'scripts', script), ...args],
-    { cwd: repo, input, encoding: 'utf8', timeout: 240000, maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+    { cwd: repo, input, encoding: 'utf8', timeout: 240000, maxBuffer: 8 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
   ingest ??= entry => JSON.parse(command('retrieve-queued-job.mjs', [], JSON.stringify(entry)));
   render ??= () => command('job-board.mjs', ['render']);
   enrich ??= ids => {
@@ -37,12 +38,20 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
     writeFileSync(join(runDir, 'enrichment.log'), output, { mode: 0o600 });
   };
   function assertActive() {
+    assertLinkedInCooldown({ work, now: now() });
     if (existsSync(stop)) throw Object.assign(new Error('LinkedIn is stopped; manual verification and explicit stop-file clearance required'), { code: 'LINKEDIN_STOPPED' });
   }
   function failure(error) {
-    const auth = error.code === 'LINKEDIN_STOPPED' || /LINKEDIN_(?:AUTH_REQUIRED|RATE_LIMITED):/.test(`${error.message}\n${error.stderr || ''}`);
+    if (error.code === 'LINKEDIN_COOLDOWN' || /LINKEDIN_RATE_LIMITED:/.test(`${error.message} ${error.stderr || ''}`)) {
+      try { assertLinkedInCooldown({ work, now: now() }); error.retryAt = recordLinkedInCooldown({ work, now: now(), workflow: 'linkedin-worker' }).retryAt; } catch (cooldown) {
+        if (cooldown.code !== 'LINKEDIN_COOLDOWN') { error.message = cooldown.message; error.code = cooldown.code || 'COOLDOWN_STATE_INVALID'; return error; }
+        if (cooldown.retryAt) error.retryAt = cooldown.retryAt;
+      }
+      error.code = 'LINKEDIN_COOLDOWN'; return error;
+    }
+    const auth = error.code === 'LINKEDIN_STOPPED' || /LINKEDIN_AUTH_REQUIRED:/.test(`${error.message}\n${error.stderr || ''}`);
     if (auth) {
-      if (!existsSync(stop)) writeFileSync(stop, JSON.stringify({ reason: /LINKEDIN_RATE_LIMITED:/.test(`${error.message} ${error.stderr || ''}`) ? 'rate_limited' : 'auth_challenge', detectedAt: now().toISOString(), workflow: 'linkedin-worker' }) + '\n', { mode: 0o600 });
+      if (!existsSync(stop)) writeFileSync(stop, JSON.stringify({ reason: 'auth_challenge', detectedAt: now().toISOString(), workflow: 'linkedin-worker' }) + '\n', { mode: 0o600 });
       error.code = 'LINKEDIN_STOPPED';
     }
     return error;
@@ -91,7 +100,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
           const error = failure(cause);
           queue.fail(id, { message: error.message });
           report.failures.push({ id, error: error.message });
-          if (error.code === 'LINKEDIN_STOPPED') throw error;
+          if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN'].includes(error.code)) throw error;
         }
       }
       if (batch.length) {
@@ -106,15 +115,16 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
             report.failures.push({ id, error: enrichError?.message || error.message });
           }
         }
-        if (enrichError?.code === 'LINKEDIN_STOPPED') throw enrichError;
+        if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN'].includes(enrichError?.code)) throw enrichError;
       }
       if (report.attempted.length) render();
       if (report.failures.length) throw new Error(`${report.failures.length} queued attempt(s) failed; retained for bounded retry/manual review`);
     }
   } catch (error) {
     report.error = error.message;
+    if (error.retryAt) report.retryAt = error.retryAt;
     exitCode = 1;
-    failureCategory = error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : error.code === 'QUEUE_LOCKED' ? 'queue_busy' : error.code === 'CANONICAL_METADATA_INVALID' ? 'canonical_metadata_invalid' : 'worker_failed';
+    failureCategory = error.code === 'LINKEDIN_COOLDOWN' ? 'linkedin_cooldown' : error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : error.code === 'QUEUE_LOCKED' ? 'queue_busy' : error.code === 'CANONICAL_METADATA_INVALID' ? 'canonical_metadata_invalid' : 'worker_failed';
   } finally {
     if (queue) { report.queue = queue.summary(); queue.close(); }
     // Retry exhaustion remains an operational problem until explicitly repaired.

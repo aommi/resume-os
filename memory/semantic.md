@@ -298,7 +298,7 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   enrichment routing harness, so file existence or blocked content is not success.
   Defaults are two attempts/run, ten/local day, three attempts/item; schedule cadence
   is daily collection / two-hour worker. These are workload bounds, not request/detection
-  limits. Auth/HTTP429 barriers persist a shared stop. Domain judgment remains in skills.
+  limits. Auth barriers persist a manual stop; HTTP429 persists a shared timed cooldown. Domain judgment remains in skills.
 - Gmail supports an explicit binary/account and bounded recovery dates. Himalaya 1.2's
   installed email-lib pagination repeats the first page, so fetch bounded headers with
   page-size zero, cap bodies, and fail on overflow. Recovered older events append evidence

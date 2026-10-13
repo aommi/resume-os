@@ -7,6 +7,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { resolveBrowserPath, workDir } from './config.mjs';
 import { acquireLinkedInLock } from './linkedin-lock.mjs';
 import { clearDeadChromeLock } from './linkedin-profile-lock.mjs';
+import { assertLinkedInCooldown, recordLinkedInCooldown } from './linkedin-cooldown.mjs';
 import { assertLinkedInSession } from './linkedin-session.mjs';
 
 // Self-contained for page.evaluate. Never associates a list of card IDs with one URL.
@@ -97,6 +98,7 @@ export function selectLinkedInResponseURL(records, id) {
 }
 
 export async function resolveLinkedInDetail(entry) {
+  assertLinkedInCooldown({ work: workDir() });
   const id = String(entry.linkedinJobId || '');
   if (!/^\d+$/.test(id) || !entry.title || !entry.company) throw new Error('LinkedIn detail requires an exact job ID, title and company');
   const stop = join(workDir(), 'linkedin-stop.json');
@@ -106,8 +108,9 @@ export async function resolveLinkedInDetail(entry) {
   let proc, browser, timedOut = false, stopped = false;
   const pending = new Set(), records = [];
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const persistStop = reason => {
+  const persistStop = (reason, retryAfter) => {
     stopped = true;
+    if (reason === 'rate_limited') { recordLinkedInCooldown({ work: workDir(), retryAfter, workflow: 'linkedin-selected-detail' }); return; }
     if (!existsSync(stop)) writeFileSync(stop, JSON.stringify({ reason, detectedAt: new Date().toISOString(), workflow: 'linkedin-selected-detail' }) + '\n', { mode: 0o600 });
   };
   const timer = setTimeout(() => { timedOut = true; proc?.kill('SIGTERM'); }, 75000);
@@ -130,7 +133,7 @@ export async function resolveLinkedInDetail(entry) {
     page.setDefaultTimeout(5000);
     page.on('response', response => {
       if (!/(^|\.)linkedin\.com$/i.test(new URL(response.url()).hostname) || !['document', 'xhr', 'fetch'].includes(response.request().resourceType())) return;
-      if (response.status() === 429) { persistStop('rate_limited'); return; }
+      if (response.status() === 429) { persistStop('rate_limited', response.headers()['retry-after']); return; }
       if (response.status() >= 400 || pending.size >= 30 || stopped || timedOut) return;
       const task = (async () => {
         let timeout;

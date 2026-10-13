@@ -16,6 +16,7 @@ import { spawnSync } from "node:child_process";
 import { timezone, workDir } from "../engine/config.mjs";
 import { readLinkedInLock } from "../engine/linkedin-lock.mjs";
 import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
+import { assertLinkedInCooldown } from "../engine/linkedin-cooldown.mjs";
 
 // 0 = on-demand: assessment is a pull-based screening step, not a sweep, so the
 // watchdog must not report staleness for it. If a scheduled sweep is ever
@@ -53,6 +54,12 @@ export async function runWorker({
     return { outcome: "skipped_stop_state" };
   }
 
+  try { assertLinkedInCooldown({ work, now }); }
+  catch (error) {
+    if (error.code !== 'LINKEDIN_COOLDOWN') throw error;
+    heartbeat('skipped_cooldown', 'linkedin_cooldown');
+    return { outcome: 'skipped_cooldown', retryAt: error.retryAt };
+  }
   const heldLock = readLinkedInLock(work);
   if (heldLock) {
     heartbeat("skipped_lock_held");

@@ -176,8 +176,8 @@ new searches, redo ingestion, assess matches, modify scheduler state, or send me
 Repair partial output and preserve uncertainty. Full/partial factual output with valid
 metadata and structure is required for completion; blocked content is not success.
 Ordinary extraction failure may continue within the batch. A LinkedIn checkpoint,
-login barrier or rate limit persists the global stop and ends the entire batch; no
-session switching or retry around that stop. The queue retains unfinished work.
+login barrier persists the manual-review stop. HTTP 429 ends the batch and records a
+shared timed cooldown. Do not switch sessions or retry during either hold. The queue retains unfinished work.
 
 Reports show collected, attempted, completed, duplicate/excluded, pending, blocked, and
 oldest waiting work. Budgets count job attempts, not browser requests or a promised safe
@@ -207,8 +207,11 @@ metadata/artifacts, not a second history list inside the pending queue.
    Missing requisitions do not justify approximate search results; retain unresolved work.
 5. On employer 429, defer to the next bounded attempt; do not switch clients immediately
    to evade it. On a CAPTCHA/access challenge, stop that job for review. A LinkedIn
-   authentication or rate barrier stops the entire LinkedIn workflow. Do not rotate
-   accounts, proxies, or sessions to get around a barrier.
+   authentication barrier stops the entire LinkedIn workflow for manual review. For
+   LinkedIn HTTP 429, run `node scripts/record-linkedin-cooldown.mjs` with the Retry-After
+   value as an optional quoted argument, then stop the batch. The next ordinary scheduled
+   run may resume after the shared cooldown expires. Do not rotate accounts, proxies,
+   or sessions to get around a barrier.
 6. Save source evidence and verified artifacts before queue acknowledgement. Successful
    structured extraction bypasses enrichment calls. Skills write the existing full/partial
    enrichment contract only when factual extraction succeeded; blocked content cannot
@@ -218,3 +221,8 @@ metadata/artifacts, not a second history list inside the pending queue.
 
 The harness owns durable stages, accounting and exact structural checks. Skill judgment
 owns site adaptation, description completeness, and ambiguous-source interpretation.
+
+Discovery accumulates cards across bounded scrolling before advancing pagination. An
+unknown scroll boundary preserves incomplete coverage. All LinkedIn response 429s,
+including background results requests, trigger the shared cooldown. The fallback
+cooldown is a local conservative policy, not a measurement of a platform heat meter.
