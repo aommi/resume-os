@@ -157,7 +157,8 @@ A sweep is complete only when:
 
 This is a separate operational contract from the interactive, screened sweep above.
 Daily `run-linkedin-discovery.mjs` collects paginated cards into the durable pending
-queue. Each run starts at page 0 over a fixed recent window (default 48 hours),
+queue. Each run starts at page 0 over a recent window (default 48 hours, widened
+from the last successful collector heartbeat after missed runs and capped at 7 days),
 keeps undated cards eligible, caps pages, and reports page-cap hits as an
 observability signal. Exact-ID dedupe makes repeated overlap safe. Coverage describes
 observed LinkedIn search pagination, not all market postings or a stable historical snapshot.
