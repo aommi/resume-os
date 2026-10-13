@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync,
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { spawn } from "node:child_process";
+import { assertLinkedInCooldown, recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { chromium } from "playwright";
 import { assertLinkedInSession } from "../engine/linkedin-session.mjs";
 import { clearDeadChromeLock } from "../engine/linkedin-profile-lock.mjs";
@@ -49,6 +50,7 @@ if (!existsSync(PROFILE_DIR)) {
   process.exit(1);
 }
 
+assertLinkedInCooldown({ work: workDir() });
 const sharedLock = acquireLinkedInLock(args.workflow || "process-job");
 if (!sharedLock.acquired) {
   console.log(`skipped: lock held by ${sharedLock.holder?.workflow || "unknown"}`);
@@ -93,7 +95,11 @@ async function processJob(url, outDir) {
     const browser = await connectWithRetry(port);
     const page = browser.contexts()[0].pages()[0];
 
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    if (response?.status() === 429) {
+      recordLinkedInCooldown({ work: workDir(), retryAfter: response.headers()['retry-after'], workflow: args.workflow || 'process-job' });
+      throw new Error("LINKEDIN_RATE_LIMITED: HTTP 429; stop and review before resuming");
+    }
     await page.waitForTimeout(5000);
 
     const authChallenge = await detectAuthChallenge(page);
@@ -394,7 +400,7 @@ async function detectAuthChallenge(page) {
 function writeLinkedInStop(challenge, workflow) {
   const path = join(workDir(), "linkedin-stop.json");
   writeJsonAtomic(path, {
-    reason: "auth_challenge",
+    reason: challenge.reason || "auth_challenge",
     url: challenge.url,
     detectedAt: new Date().toISOString(),
     workflow,

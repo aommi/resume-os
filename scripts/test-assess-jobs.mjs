@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import {
   isEligibleJob,
   mergeAssessmentMetadata,
@@ -162,6 +163,12 @@ try {
   const assessment = JSON.parse(readFileSync(metadataPath, "utf8")).linkedinAssessment;
   assert.equal(assessment.status, "succeeded");
   assert.equal(assessment.attempts, 1);
+  const beforeCooldown = readFileSync(metadataPath, 'utf8');
+  const hold = recordLinkedInCooldown({ work: freshRoot, now });
+  const held = await runWorker({ work: freshRoot, now, jobId: '200', spawnAssessment: () => assert.fail('cooldown must precede attempt accounting') });
+  assert.equal(held.outcome, 'skipped_cooldown');
+  assert.equal(held.retryAt, hold.retryAt);
+  assert.equal(readFileSync(metadataPath, 'utf8'), beforeCooldown);
 } finally {
   rmSync(freshRoot, { recursive: true, force: true });
 }

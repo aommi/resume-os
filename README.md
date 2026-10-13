@@ -69,13 +69,44 @@ it before running `node scripts/search-linkedin-jobs.mjs --dryrun`.
 The search parser supports both legacy and current job cards. A login/checkpoint
 error requires manual verification; a parsing/script error is not evidence of a
 bot block. Do not repeatedly retry a CAPTCHA or security checkpoint.
-`node scripts/run-linkedin-discovery.mjs` runs scheduled discovery for the past
-24 hours only, ingests exact new jobs, and delegates factual enrichment to the
-existing skill. Search/ingestion failures exit nonzero and do not advance the
-discovery boundary. A persistent `work/linkedin-stop.json` prevents scheduled search;
-search or job-detail authentication challenges create that stop and abort the run
-immediately. Complete manual verification and explicitly clear the stop before
-resuming. Individual enrichment failures remain visible in its report.
+`node scripts/run-linkedin-discovery.mjs` collects paginated search cards into a
+profile-local pending queue. Each run starts at page 0 over a fixed recent window
+(default 48 hours), keeps undated cards eligible, caps pages, and reports when the
+cap is hit. Exact-ID dedupe makes overlap safe; search results are not a guarantee
+of all market postings.
+
+`node scripts/run-linkedin-worker.mjs` processes at most two attempts/run and ten per
+profile-local day by default (`LINKEDIN_WORKER_BATCH`, `LINKEDIN_WORKER_DAILY_CAP`).
+Run with `--status` for pending/blocked counts and remaining budget. Attempts are charged
+before external work and persisted across restarts; LinkedIn cooldown pauses are refunded
+and consume no job or daily attempt. Ordinary failures have bounded cooldowns and at most
+three attempts before review; use `--retry <id>` or `--dismiss <id> --reason <text>` for
+lock-safe blocked-entry recovery. Retry resets the item's attempt ceiling, not the daily
+budget. Dismissal requires a nonempty reason and writes profile-local evidence to
+`work/runtime/linkedin-dismissals/<id>.json` before removing pending work. A cooldown
+also refunds earlier unfinished batch items while preserving their ingestion stage.
+These are workload budgets, not browser-request limits
+or detection guarantees. Machine schedules remain daily collection and two-hour processing;
+no extra worker is spawned for a backlog. The watchdog requires LinkedIn collector/worker
+heartbeats only when `linkedin.scheduled: true` (or `RESUME_OS_LINKEDIN_SCHEDULED=1`) is set.
+
+Retrieval reuses verified employer links from collection, resolves missing links from
+selected-card responses/DOM, and fetches employer `JobPosting` structured data first.
+An exact verified match writes canonical artifacts without an enrichment model call.
+Unresolved pages pass to the existing enrichment skill for browser/DOM extraction and
+source judgment. Verified links survive retries, and exact duplicate LinkedIn aliases
+persist on canonical records. No approximate job-title matching is used as identity.
+See `job-search-sweep.md` for the retrieval hierarchy and requisition-search constraints.
+
+Only durable canonical completion or explicit duplicate/exclusion evidence removes an
+item from the pending queue. Partial writes are retryable; blocked content is not success.
+Exhausted items retain an unhealthy needs-review heartbeat even when no attempt is due.
+Malformed canonical metadata produces a named repair barrier before external work.
+LinkedIn authentication barriers persist `work/linkedin-stop.json` and require manual
+verification/clearance. HTTP 429 instead persists `work/runtime/linkedin-cooldown.json`: all
+LinkedIn work pauses until Retry-After or conservative exponential backoff expires, then
+the next normal scheduled run may resume. Paused runs consume no attempts. Interrupted recovery
+locks also require manual review. Interactive sweeps and on-demand assessment are unchanged.
 
 Gmail schedules may set `HIMALAYA_BIN` to an OAuth2-capable binary and
 `HIMALAYA_ACCOUNT` to the intended account. Explicit recovery may set

@@ -12,6 +12,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { workDir } from "../engine/config.mjs";
+import { isEnrichmentComplete } from "../engine/enrichment-completion.mjs";
 
 const REPO_ROOT = resolve(process.cwd());
 const jobId = process.argv[2];
@@ -65,7 +66,7 @@ const effectiveAts = effectiveUrl === metadata.url && !metadata.applyUrl
 const outputPath = join(inboxDir, "enrichment.md");
 
 // Check if already enriched
-const alreadyEnriched = existsSync(outputPath);
+const alreadyEnriched = isEnrichmentComplete(inboxDir, metadata);
 
 console.log(JSON.stringify({
   jobId,
@@ -76,4 +77,7 @@ console.log(JSON.stringify({
   title: metadata.title,
   company: metadata.company,
   alreadyEnriched,
+  retrieval: metadata.retrieval || null,
+  sourceRequisitionId: metadata.sourceRequisitionId || null,
+  sourceEvidence: metadata.sourceEvidence || null,
 }, null, 2));

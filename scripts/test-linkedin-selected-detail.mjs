@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+import { resolveBrowserPath } from '../engine/config.mjs';
+import { decodeLinkedInResponseEvidence, readSelectedLinkedInDetail, selectLinkedInResponseURL } from '../engine/linkedin-selected-detail.mjs';
+
+const entry = { linkedinJobId: '123', title: 'Product Manager', company: 'Example Co' };
+assert.equal(selectLinkedInResponseURL([{ ids: ['123', '999'], employerURLs: ['https://jobs.example.org/1'] }], '123'), null);
+assert.equal(selectLinkedInResponseURL([{ ids: ['999'], employerURLs: ['https://jobs.example.org/1'] }], '123'), null);
+assert.equal(selectLinkedInResponseURL([{ ids: ['123'], employerURLs: ['https://jobs.example.org/1', 'https://jobs.example.org/2'] }], '123'), null);
+const browser = await chromium.launch({ executablePath: resolveBrowserPath(), headless: true });
+try {
+  const page = await browser.newPage();
+  const pane = (company = 'Example Co', more = '') => `<section><h1><a href="https://www.linkedin.com/jobs/view/123/">Product Manager</a></h1><a href="https://www.linkedin.com/company/example">${company}</a><a href="https://jobs.example.org/123?source=linkedin">Apply</a><div class="jobs-description__content">A verified job description.</div>${more}</section>`;
+  await page.setContent(pane());
+  const result = await page.evaluate(readSelectedLinkedInDetail, entry);
+  assert.equal(result.applyUrl, 'https://jobs.example.org/123?source=linkedin');
+  assert.equal(result.description, 'A verified job description.');
+  await page.setContent(pane('Different Co'));
+  assert.equal(await page.evaluate(readSelectedLinkedInDetail, entry), null);
+  await page.setContent(pane('Example Co', '<a href="https://www.linkedin.com/jobs/view/999/">Other job</a>'));
+  assert.equal(await page.evaluate(readSelectedLinkedInDetail, entry), null);
+  await page.setContent(`<div role="button" componentkey="job-card-component-ref-123">${pane()}</div>`);
+  assert.equal(await page.evaluate(readSelectedLinkedInDetail, entry), null);
+  await page.setContent(pane().replace('<a href="https://jobs.example.org/123?source=linkedin">Apply</a>', '<button>Easy Apply</button>'));
+  assert.equal((await page.evaluate(readSelectedLinkedInDetail, entry)).applyUrl, null);
+  const decoded = await page.evaluate(decodeLinkedInResponseEvidence, '<code>{&quot;entity&quot;:&quot;urn:li:jobPosting:123&quot;,&quot;applyUrl&quot;:&quot;https://jobs.example.org/123?source=linkedin&quot;}</code>');
+  assert.equal(selectLinkedInResponseURL([decoded], '123'), 'https://jobs.example.org/123?source=linkedin');
+  const unrelated = await page.evaluate(decodeLinkedInResponseEvidence, '<script type="application/json">{"jobId":"123","recommendation":{"careersURL":"https://careers.other.example/jobs/456"}}</script>');
+  assert.equal(selectLinkedInResponseURL([unrelated], '123'), null);
+  const inherited = await page.evaluate(decodeLinkedInResponseEvidence, '<code>{&quot;jobId&quot;:&quot;123&quot;,&quot;child&quot;:{&quot;applyUrl&quot;:&quot;https://jobs.example.org/wrong&quot;}}</code>');
+  assert.equal(selectLinkedInResponseURL([inherited], '123'), null);
+  const otherBinding = await page.evaluate(decodeLinkedInResponseEvidence, '<code>{&quot;jobId&quot;:&quot;999&quot;,&quot;applyUrl&quot;:&quot;https://jobs.example.org/999&quot;}</code>');
+  assert.equal(selectLinkedInResponseURL([otherBinding], '123'), null);
+  const conflict = await page.evaluate(decodeLinkedInResponseEvidence, '<code>{&quot;jobId&quot;:&quot;123&quot;,&quot;jobPostingId&quot;:&quot;999&quot;,&quot;applyUrl&quot;:&quot;https://jobs.example.org/wrong&quot;}</code>');
+  assert.equal(selectLinkedInResponseURL([conflict], '123'), null);
+  let deep = { jobId: '123', applyUrl: 'https://jobs.example.org/123' };
+  for (let i = 0; i < 50; i++) deep = { child: deep };
+  const tooDeep = await page.evaluate(decodeLinkedInResponseEvidence, JSON.stringify(deep));
+  assert.equal(selectLinkedInResponseURL([tooDeep], '123'), null);
+  const mixed = await page.evaluate(decodeLinkedInResponseEvidence, 'urn:li:jobPosting:123 urn:li:jobPosting:999 https://jobs.example.org/123');
+  assert.equal(selectLinkedInResponseURL([mixed], '123'), null);
+  console.log('LinkedIn selected detail fixture tests: PASS');
+} finally { await browser.close(); }

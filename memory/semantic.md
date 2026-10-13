@@ -287,14 +287,18 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 
 - LinkedIn search supports current component-key job cards and legacy cards, rejects
   authentication checkpoints, and does not mistake detail-pane links for search results.
-- `run-linkedin-discovery.mjs` owns scheduled last-24-hour search, exact ingestion,
-  board rendering, boundary finalization, and an eight-hour contract heartbeat. Hermes
-  script exit status owns success; enrichment judgment remains in the existing skill,
-  using the declared `discovery_enrich` model. It never widens a stale boundary into
-  historical catch-up. A persistent `work/linkedin-stop.json` blocks scheduled search;
-  search/detail auth challenges create the stop and abort the run immediately, without
-  boundary advancement. Manual verification and explicit stop removal are required
-  before resuming. Enrichment failures are reported without blocking other jobs.
+- Scheduled collection and execution are separate: `run-linkedin-discovery.mjs` durably
+  queues fixed-window recent search candidates from page 0, retaining undated cards and
+  reporting page-cap hits without proving total LinkedIn coverage. Exact-ID dedupe makes
+  repeated overlap safe. It does not advance the interactive sweep boundary. `run-linkedin-worker.mjs` applies
+  persisted run/day attempt budgets, FIFO, process exclusion and bounded retry before
+  invoking canonical ingestion and one existing enrichment-skill call per batch. The
+  pending-only queue reconciles canonical artifacts after a crash; partial enrichment
+  remains retryable without detail refetch. Structural completion is shared with the
+  enrichment routing harness, so file existence or blocked content is not success.
+  Defaults are two attempts/run, ten/local day, three attempts/item; schedule cadence
+  is daily collection / two-hour worker. These are workload bounds, not request/detection
+  limits. Auth barriers persist a manual stop; HTTP429 persists a shared timed cooldown. Domain judgment remains in skills.
 - Gmail supports an explicit binary/account and bounded recovery dates. Himalaya 1.2's
   installed email-lib pagination repeats the first page, so fetch bounded headers with
   page-size zero, cap bodies, and fail on overflow. Recovered older events append evidence
@@ -329,3 +333,18 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   packages are not regenerated. Content and two-page visual/text validation remain per-resume.
 
 - Resume section headings stay with following content during PDF pagination. Both standard and narrow example exports were visually checked at two pages, with display title and protected contact text intact.
+
+## Employer-first queued retrieval (2026-10-13)
+
+Scheduled ingestion uses `retrieve-queued-job.mjs`: verified collected link, selected-card
+response/DOM resolution when missing, employer HTTP/JobPosting extraction, then existing
+skill-directed browser/DOM fallback. Strict structured matches complete without a model
+call; links and retrieval stage evidence survive retries. Canonical records retain exact
+LinkedIn aliases before duplicate acknowledgement. Unresolved/exhausted work stays visible;
+malformed metadata is an explicit repair barrier. The sweep skill owns source adaptation
+and exact-requisition search rules. No new dependency, provider, schedule or fit judgment.
+Manual queue retry releases the per-item ceiling without resetting daily accounting;
+cooldown aborts refund all unfinished leased batch work, retaining canonical ingestion.
+Dismissal requires a nonempty reason and persists profile-local evidence at
+`work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
+collection overlap treats dismissal evidence as a duplicate and does not requeue it.

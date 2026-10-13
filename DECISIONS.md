@@ -558,3 +558,45 @@ already route tailoring to the changed method and require no change. Operating-m
 remain accurate; no merge or capability/assumption transition is involved.
 
 **2026-10-04 publication validation:** Fix orphaned section headings with print break-after protection. Template and protected-fact tests pass; standard and narrow fictional example PDFs are both two pages, visually inspected, with text extraction confirming title/contact preservation and no browser headers.
+
+## Bounded scheduled discovery queue (2026-10-12)
+
+Supersedes the all-in-one scheduled discovery execution described by the September
+pipeline repair; the interactive sweep and on-demand assessment decisions remain.
+Collect once daily into a durable profile-local pending queue, then use one bounded
+worker. Backlog growth does not create more workers. Deterministic code owns exact
+identity, atomic persistence, mechanical FIFO, budgets, locks, retry and completion
+validation. Markdown skills retain factual extraction, screening and priority judgment.
+
+Collection and completed processing have different watermarks/heartbeats. Preserve
+canonical inbox data and unfinished work across restarts; remove terminal queue entries.
+Initial budgets are workload choices, not platform-approved rates. No new dependency,
+service framework, paid provider or automatic assessment sweep is introduced.
+Architecture Boundary: ALIGNED; no new domain judgment or resolver routing is added.
+
+## Employer-first retrieval and bounded recent collection (2026-10-13)
+
+Bounded probes established that paginated cards and selected-detail responses can expose
+exact employer links, and employer JobPosting data can supply descriptions without model
+interpretation. Reuse these facts before additional LinkedIn navigation. Persist exact
+source association and retry stages; retain canonical aliases rather than refetching known
+employer postings. Structured extraction validates exact source fields; site adaptation,
+completeness judgment and exact-requisition recovery remain in the sweep/enrichment skills.
+
+Supersedes the fixed-24-hour-only collection decision: use a fixed recent search window
+from page 0 every scheduled run, retain undated cards, cap pages, and report page-cap
+hits instead of proving complete LinkedIn coverage. Exact-ID dedupe makes overlap safe.
+Budgets and schedules are unchanged. Exhausted work must remain
+visible in health reporting. Architecture Boundary: ALIGNED; no subjective scoring in code.
+
+## Rate-limit recovery and complete page collection (2026-10-13)
+
+HTTP429 represents a timed rate limit, distinct from login/CAPTCHA barriers. Honor
+Retry-After and otherwise use conservative exponential cooldown; collector, worker
+and detail resolution share the hold. Resume only on a normal run after expiry,
+without consuming attempts while held. Authentication stops remain manual. Mid-attempt
+cooldowns refund the queue and daily attempt budget intentionally; the escalating
+cooldown is the traffic cap, while attempts measure actual useful processing work.
+This supersedes treating every429 as a permanent manual-clear stop. No safe platform
+rate or observable platform heat meter is claimed. Materialize virtualized cards
+before advancing page pagination, and observe background-response429s.
