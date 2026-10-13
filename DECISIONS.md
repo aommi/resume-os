@@ -558,3 +558,18 @@ already route tailoring to the changed method and require no change. Operating-m
 remain accurate; no merge or capability/assumption transition is involved.
 
 **2026-10-04 publication validation:** Fix orphaned section headings with print break-after protection. Template and protected-fact tests pass; standard and narrow fictional example PDFs are both two pages, visually inspected, with text extraction confirming title/contact preservation and no browser headers.
+
+## Bounded scheduled discovery queue (2026-10-12)
+
+Supersedes the all-in-one scheduled discovery execution described by the September
+pipeline repair; the interactive sweep and on-demand assessment decisions remain.
+Collect once daily into a durable profile-local pending queue, then use one bounded
+worker. Backlog growth does not create more workers. Deterministic code owns exact
+identity, atomic persistence, mechanical FIFO, budgets, locks, retry and completion
+validation. Markdown skills retain factual extraction, screening and priority judgment.
+
+Collection and completed processing have different watermarks/heartbeats. Preserve
+canonical inbox data and unfinished work across restarts; remove terminal queue entries.
+Initial budgets are workload choices, not platform-approved rates. No new dependency,
+service framework, paid provider or automatic assessment sweep is introduced.
+Architecture Boundary: ALIGNED; no new domain judgment or resolver routing is added.

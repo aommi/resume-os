@@ -287,14 +287,17 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 
 - LinkedIn search supports current component-key job cards and legacy cards, rejects
   authentication checkpoints, and does not mistake detail-pane links for search results.
-- `run-linkedin-discovery.mjs` owns scheduled last-24-hour search, exact ingestion,
-  board rendering, boundary finalization, and an eight-hour contract heartbeat. Hermes
-  script exit status owns success; enrichment judgment remains in the existing skill,
-  using the declared `discovery_enrich` model. It never widens a stale boundary into
-  historical catch-up. A persistent `work/linkedin-stop.json` blocks scheduled search;
-  search/detail auth challenges create the stop and abort the run immediately, without
-  boundary advancement. Manual verification and explicit stop removal are required
-  before resuming. Enrichment failures are reported without blocking other jobs.
+- Scheduled collection and execution are separate: `run-linkedin-discovery.mjs` durably
+  queues last-24-hour search candidates, then advances a profile-work collection watermark.
+  It does not advance the interactive sweep boundary. `run-linkedin-worker.mjs` applies
+  persisted run/day attempt budgets, FIFO, process exclusion and bounded retry before
+  invoking canonical ingestion and one existing enrichment-skill call per batch. The
+  pending-only queue reconciles canonical artifacts after a crash; partial enrichment
+  remains retryable without detail refetch. Structural completion is shared with the
+  enrichment routing harness, so file existence or blocked content is not success.
+  Defaults are two attempts/run, ten/local day, three attempts/item; schedule cadence
+  is daily collection / two-hour worker. These are workload bounds, not request/detection
+  limits. Auth/HTTP429 barriers persist a shared stop. Domain judgment remains in skills.
 - Gmail supports an explicit binary/account and bounded recovery dates. Himalaya 1.2's
   installed email-lib pagination repeats the first page, so fetch bounded headers with
   page-size zero, cap bodies, and fail on overflow. Recovered older events append evidence

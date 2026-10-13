@@ -144,7 +144,8 @@ async function searchPage(page, url) {
 
   while (true) {
     const pageUrl = url.replace("start=0", `start=${start}`);
-    await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const response = await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    if (response?.status() === 429) throw new Error("LINKEDIN_RATE_LIMITED: HTTP 429; stop and review before resuming");
     await page.waitForTimeout(3000);
     await assertLinkedInSession(page);
     await page.waitForFunction(() => document.querySelector('[componentkey^="job-card-component-ref-"], li[data-occludable-job-id], .job-card-container') || /No results found|No matching jobs/i.test(document.body.innerText), null, { timeout: 15000 });

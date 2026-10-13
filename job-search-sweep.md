@@ -152,3 +152,32 @@ A sweep is complete only when:
   strings in the rendered tracker were updated;
 - frozen prospective scores were not rewritten;
 - the saved boundary advanced only after no unresolved item remained.
+
+## Scheduled collection and bounded worker
+
+This is a separate operational contract from the interactive, screened sweep above.
+Daily `run-linkedin-discovery.mjs` queues exact identities from a fixed 24-hour search
+window. Its collection watermark advances only after durable queue persistence; it does
+not certify that jobs were fetched, screened, or enriched and does not change the
+interactive sweep boundary. A failed/late collection is visible, not expanded into
+unbounded catch-up. Search page caps mean counts are returned matches, not all market postings.
+
+`run-linkedin-worker.mjs` claims a bounded FIFO batch from the profile-local pending
+queue. It reuses canonical ingestion and the existing enrichment skill. FIFO is neutral
+execution order; do not interpret it as job priority. Screening, whether to invest in a
+role, and match-assessment requests belong to `job-screening.md` and the human's task.
+Do not add relevance scoring or ATS extraction heuristics to the queue/runner.
+
+The enrichment skill receives only leased canonical IDs. Do not widen the batch, run
+new searches, redo ingestion, assess matches, modify scheduler state, or send messages.
+Repair partial output and preserve uncertainty. Full/partial factual output with valid
+metadata and structure is required for completion; blocked content is not success.
+Ordinary extraction failure may continue within the batch. A LinkedIn checkpoint,
+login barrier or rate limit persists the global stop and ends the entire batch; no
+session switching or retry around that stop. The queue retains unfinished work.
+
+Reports show collected, attempted, completed, duplicate/excluded, pending, blocked, and
+oldest waiting work. Budgets count job attempts, not browser requests or a promised safe
+LinkedIn rate. Review a growing/aging backlog before changing workload budgets; do not
+spawn more LinkedIn workers automatically. Completed items live in canonical inbox
+metadata/artifacts, not a second history list inside the pending queue.
