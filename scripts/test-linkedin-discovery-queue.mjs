@@ -75,6 +75,8 @@ try {
   assert.throws(() => q.acknowledgeDuplicate('20', 'missing'));
   assert.equal(q.summary().pending, 1);
   q.acknowledgeDuplicate('20', 'canonical-21');
+  assert.deepEqual(JSON.parse(readFileSync(join(root, 'duplicate/inbox/canonical-21/metadata.json'))).linkedinAliases, ['20']);
+  assert.deepEqual(q.enqueue([job('20')]).duplicates, ['20']);
   assert.equal(q.summary().pending, 0); q.close();
 
   q = open('excluded'); q.enqueue([job('22')]); q.beginNext(); q.acknowledgeExcluded('22');
@@ -108,5 +110,18 @@ try {
   q = open('partial'); q.enqueue([job('8')]); q.beginNext(); evidence('partial', '8');
   writeFileSync(join(root, 'partial/inbox/canonical-8/enrichment.md'), 'Partial model output');
   q.reconcile(); assert.equal(q.summary().pending, 1); assert.throws(() => q.complete('8')); q.close();
+  // Corruption is a named repair barrier, preserving work rather than guessing identity.
+  q = open('corrupt'); q.enqueue([job('30')]);
+  evidence('corrupt', '99');
+  const corruptMetadata = join(root, 'corrupt/inbox/canonical-99/metadata.json');
+  writeFileSync(corruptMetadata, '{');
+  assert.throws(() => q.reconcile(), error => error.code === 'CANONICAL_METADATA_INVALID' && error.message.includes(corruptMetadata));
+  assert.equal(q.summary().pending, 1);
+  q.close();
+  writeFileSync(corruptMetadata, JSON.stringify({ linkedinJobId: '99' }));
+  q = open('corrupt'); assert.equal(q.beginNext().linkedinJobId, '30'); q.close();
+  assert.equal(validateDiscoveryJob({ ...job('31'), applyUrl: 'https://example.com/jobs/31', sourceEvidence: { linkedinJobId: '31' } }).applyUrl, 'https://example.com/jobs/31');
+  assert.throws(() => validateDiscoveryJob({ ...job('31'), applyUrl: 'javascript:alert(1)', sourceEvidence: { linkedinJobId: '31' } }));
+
   console.log('LinkedIn discovery queue: identity guards, deduplication, run/day caps, retry backoff, stage recovery, dead/live/foreign locks, and crash reconciliation passed.');
 } finally { rmSync(root, { recursive: true, force: true }); }

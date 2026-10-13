@@ -573,3 +573,17 @@ canonical inbox data and unfinished work across restarts; remove terminal queue 
 Initial budgets are workload choices, not platform-approved rates. No new dependency,
 service framework, paid provider or automatic assessment sweep is introduced.
 Architecture Boundary: ALIGNED; no new domain judgment or resolver routing is added.
+
+## Employer-first retrieval and explicit collection coverage (2026-10-13)
+
+Bounded probes established that paginated cards and selected-detail responses can expose
+exact employer links, and employer JobPosting data can supply descriptions without model
+interpretation. Reuse these facts before additional LinkedIn navigation. Persist exact
+source association and retry stages; retain canonical aliases rather than refetching known
+employer postings. Structured extraction validates exact source fields; site adaptation,
+completeness judgment and exact-requisition recovery remain in the sweep/enrichment skills.
+
+Supersedes the fixed-24-hour-only collection decision: use overlapped successful coverage,
+retain undated cards, and persist incomplete traversal cursors without falsely advancing a
+successful boundary. Budgets and schedules are unchanged. Exhausted work must remain
+visible in health reporting. Architecture Boundary: ALIGNED; no subjective scoring in code.

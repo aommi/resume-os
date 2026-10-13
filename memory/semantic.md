@@ -288,7 +288,8 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - LinkedIn search supports current component-key job cards and legacy cards, rejects
   authentication checkpoints, and does not mistake detail-pane links for search results.
 - Scheduled collection and execution are separate: `run-linkedin-discovery.mjs` durably
-  queues last-24-hour search candidates, then advances a profile-work collection watermark.
+  queues overlapping catch-up search candidates, retaining undated cards and incomplete
+  pagination cursors. Only complete observed traversal advances its collection watermark.
   It does not advance the interactive sweep boundary. `run-linkedin-worker.mjs` applies
   persisted run/day attempt budgets, FIFO, process exclusion and bounded retry before
   invoking canonical ingestion and one existing enrichment-skill call per batch. The
@@ -332,3 +333,13 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
   packages are not regenerated. Content and two-page visual/text validation remain per-resume.
 
 - Resume section headings stay with following content during PDF pagination. Both standard and narrow example exports were visually checked at two pages, with display title and protected contact text intact.
+
+## Employer-first queued retrieval (2026-10-13)
+
+Scheduled ingestion uses `retrieve-queued-job.mjs`: verified collected link, selected-card
+response/DOM resolution when missing, employer HTTP/JobPosting extraction, then existing
+skill-directed browser/DOM fallback. Strict structured matches complete without a model
+call; links and retrieval stage evidence survive retries. Canonical records retain exact
+LinkedIn aliases before duplicate acknowledgement. Unresolved/exhausted work stays visible;
+malformed metadata is an explicit repair barrier. The sweep skill owns source adaptation
+and exact-requisition search rules. No new dependency, provider, schedule or fit judgment.

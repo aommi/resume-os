@@ -77,4 +77,7 @@ console.log(JSON.stringify({
   title: metadata.title,
   company: metadata.company,
   alreadyEnriched,
+  retrieval: metadata.retrieval || null,
+  sourceRequisitionId: metadata.sourceRequisitionId || null,
+  sourceEvidence: metadata.sourceEvidence || null,
 }, null, 2));

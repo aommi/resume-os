@@ -17,6 +17,14 @@ export function validateDiscoveryJob(job) {
   const result = { linkedinJobId: id, url: `https://www.linkedin.com/jobs/view/${id}/` };
   // Retain source facts for skills/human inspection; no ranking or inferred fields.
   for (const key of ['title', 'company', 'location']) if (typeof job[key] === 'string') result[key] = job[key];
+  if (typeof job.applyUrl === 'string' && job.sourceEvidence?.linkedinJobId === id) {
+    let apply;
+    try { apply = new URL(job.applyUrl); } catch { throw new Error('Invalid apply URL'); }
+    if (!['https:', 'http:'].includes(apply.protocol) || apply.username || apply.password) throw new Error('Invalid apply URL');
+    result.applyUrl = apply.href;
+    result.sourceEvidence = structuredClone(job.sourceEvidence);
+    if (typeof job.employerRequisitionId === 'string') result.employerRequisitionId = job.employerRequisitionId;
+  }
   if (typeof job.postedAt === 'number' && Number.isFinite(job.postedAt)) result.postedAt = job.postedAt;
   return result;
 }
@@ -97,8 +105,14 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
       if (!dir.isDirectory()) continue;
       const base = join(inbox, dir.name);
       if (!existsSync(join(base, 'metadata.json')) || !existsSync(join(base, 'job.md'))) continue;
-      const meta = JSON.parse(readFileSync(join(base, 'metadata.json'), 'utf8'));
-      if (String(meta.linkedinJobId || extractLinkedInJobId(meta.url)) === id) return { id: dir.name, enriched: isEnrichmentComplete(base, meta) };
+      let meta;
+      try {
+        meta = JSON.parse(readFileSync(join(base, 'metadata.json'), 'utf8'));
+        if (!meta || typeof meta !== 'object' || Array.isArray(meta)) throw new Error('Expected metadata object');
+      } catch {
+        throw Object.assign(new Error(`Canonical inbox metadata requires repair: ${join(base, 'metadata.json')}; queue retained, no identity guessed`), { code: 'CANONICAL_METADATA_INVALID' });
+      }
+      if (String(meta.linkedinJobId || extractLinkedInJobId(meta.url)) === id || (Array.isArray(meta.linkedinAliases) && meta.linkedinAliases.includes(id))) return { id: dir.name, enriched: isEnrichmentComplete(base, meta) };
     }
     return null;
   }
@@ -170,6 +184,8 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
       if (!existsSync(join(base, 'metadata.json')) || !existsSync(join(base, 'job.md'))) throw new Error('Duplicate canonical inbox evidence is missing');
       const metadata = JSON.parse(readFileSync(join(base, 'metadata.json'), 'utf8'));
       if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) throw new Error('Invalid canonical metadata');
+      metadata.linkedinAliases = [...new Set([...(Array.isArray(metadata.linkedinAliases) ? metadata.linkedinAliases : []), id])];
+      atomicWrite(join(base, 'metadata.json'), metadata);
       state.entries = state.entries.filter(e => e.linkedinJobId !== id);
       save();
     },

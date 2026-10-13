@@ -88,5 +88,39 @@ try {
   const malformed = collectJobs({ ...busy, search: () => [{ ...jobs(1)[0], url: 'https://notlinkedin.com/jobs/view/101/' }] });
   assert.equal(malformed.exitCode, 1);
   assert.ok(!existsSync(join(busy.work, 'runtime/linkedin-collection-watermark')));
+  const structured = fixture('structured');
+  collectJobs({ ...structured, search: () => jobs(1) });
+  const structuredResult = runQueuedJobs({ ...structured,
+    ingest: entry => { ingest(structured.work, entry.linkedinJobId); enrich(structured.work, [entry.linkedinJobId]); return {}; },
+    enrich: () => assert.fail('complete structured retrieval requires no enrichment model'), render: () => {} });
+  assert.equal(structuredResult.exitCode, 0);
+  assert.deepEqual(structuredResult.report.completed, ['101']);
+  assert.equal(state(structured.work).entries.length, 0);
+
+  const exhausted = fixture('exhausted');
+  collectJobs({ ...exhausted, search: () => jobs(1) });
+  const exhaustedDeps = { ...exhausted, ingest: () => { throw new Error('Fixture extraction failure'); }, enrich: () => assert.fail('failed ingestion'), render: () => {} };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    assert.equal(runQueuedJobs(exhaustedDeps).exitCode, 1);
+    clock = new Date(clock.getTime() + 5 * 3600000);
+  }
+  const idleBlocked = runQueuedJobs(exhaustedDeps);
+  assert.equal(idleBlocked.exitCode, 1);
+  assert.equal(idleBlocked.report.attempted.length, 0);
+  assert.equal(idleBlocked.report.queue.blocked, 1);
+  const blockedHeartbeat = JSON.parse(readFileSync(join(exhausted.work, 'heartbeats/linkedin-worker.json')));
+  assert.equal(blockedHeartbeat.failureCategory, 'queue_needs_review');
+  assert.equal(blockedHeartbeat.lastSuccess, null);
+
+  const corrupt = fixture('corrupt');
+  collectJobs({ ...corrupt, search: () => jobs(1) });
+  ingest(corrupt.work, '999');
+  writeFileSync(join(corrupt.work, 'inbox/999/metadata.json'), '{');
+  const corruptResult = runQueuedJobs({ ...corrupt, ingest: () => assert.fail('repair barrier before external work'), enrich: () => assert.fail('repair barrier before model'), render: () => {} });
+  assert.equal(corruptResult.exitCode, 1);
+  assert.match(corruptResult.report.error, /metadata requires repair/);
+  assert.equal(state(corrupt.work).entries.length, 1);
+  assert.equal(JSON.parse(readFileSync(join(corrupt.work, 'heartbeats/linkedin-worker.json'))).failureCategory, 'canonical_metadata_invalid');
+
   console.log('bounded discovery/worker integration and stop tests: PASS');
 } finally { rmSync(root, { recursive: true, force: true }); }

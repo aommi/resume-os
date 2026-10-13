@@ -69,34 +69,35 @@ it before running `node scripts/search-linkedin-jobs.mjs --dryrun`.
 The search parser supports both legacy and current job cards. A login/checkpoint
 error requires manual verification; a parsing/script error is not evidence of a
 bot block. Do not repeatedly retry a CAPTCHA or security checkpoint.
-`node scripts/run-linkedin-discovery.mjs` now collects only the last 24 hours of search
-cards into a profile-local pending queue; it does not ingest/enrich the entire result set.
-Collection success advances `work/runtime/linkedin-collection-watermark`, independently
-of the interactive sweep's repository `.linkedin-last-checked` boundary.
-`node scripts/run-linkedin-worker.mjs` consumes at most two job attempts/run and ten per
+`node scripts/run-linkedin-discovery.mjs` collects paginated search cards into a
+profile-local pending queue. It uses overlapping catch-up from the last successful
+collection and persists an incomplete traversal cursor when a page cap is reached.
+Undated cards remain eligible; only completed observed pagination advances the separate
+collection boundary. Search results are not a guarantee of all market postings.
+
+`node scripts/run-linkedin-worker.mjs` processes at most two attempts/run and ten per
 profile-local day by default (`LINKEDIN_WORKER_BATCH`, `LINKEDIN_WORKER_DAILY_CAP`).
-These are workload budgets, not browser-request limits or detection guarantees. The
-machine schedule is daily collection at 08:00 and a worker every two hours at :30.
-Run `node scripts/run-linkedin-worker.mjs --status` for pending/blocked counts, oldest
-queued item and remaining budget without contacting LinkedIn.
+Run with `--status` for pending/blocked counts and remaining budget. Attempts are charged
+before external work and persisted across restarts; ordinary failures have bounded
+cooldowns and at most three attempts before review. These are workload budgets, not
+browser-request limits or detection guarantees. Machine schedules remain daily collection
+and two-hour processing; no extra worker is spawned for a backlog.
 
-Queue entries persist before fetching; attempts are charged before external work.
-FIFO is mechanical ordering, not fit ranking. Skills retain extraction/screening
-judgment. One model call handles the bounded enrichment batch. Canonical inbox
-artifacts are the source of truth; completed/excluded/verified-duplicate items leave
-the pending queue. Partial enrichment retries do not refetch the LinkedIn detail.
-Ordinary failures have persisted 1h/2h/4h cooldown and at most three attempts before
-manual review. A dead local worker lock can be recovered; a foreign/malformed lock or
-an interrupted recovery mutex requires manual inspection, never blind lock deletion.
+Retrieval reuses verified employer links from collection, resolves missing links from
+selected-card responses/DOM, and fetches employer `JobPosting` structured data first.
+An exact verified match writes canonical artifacts without an enrichment model call.
+Unresolved pages pass to the existing enrichment skill for browser/DOM extraction and
+source judgment. Verified links survive retries, and exact duplicate LinkedIn aliases
+persist on canonical records. No approximate job-title matching is used as identity.
+See `job-search-sweep.md` for the retrieval hierarchy and requisition-search constraints.
 
-A persistent `work/linkedin-stop.json` stops both collector and worker on authentication
-barriers or HTTP 429. Manual verification and explicit clearance are required. No
-new scheduled match-assessment sweep is introduced. A missed daily collection can
-leave a gap: the fixed 24-hour window and page cap do not claim complete coverage or
-automatic historical catch-up. Employer-requisition duplicates discovered only on the
-detail page can be fetched again if a later collection sees the same alternate LinkedIn
-ID; this version does not add a second permanent identity database. See
-`job-search-sweep.md` for the distinct interactive sweep and scheduled-worker contracts.
+Only durable canonical completion or explicit duplicate/exclusion evidence removes an
+item from the pending queue. Partial writes are retryable; blocked content is not success.
+Exhausted items retain an unhealthy needs-review heartbeat even when no attempt is due.
+Malformed canonical metadata produces a named repair barrier before external work.
+A persistent `work/linkedin-stop.json` stops collector/worker after LinkedIn auth/429
+barriers; manual verification and explicit clearance are required. Interrupted recovery
+locks also require manual review. Interactive sweeps and on-demand assessment are unchanged.
 
 Gmail schedules may set `HIMALAYA_BIN` to an OAuth2-capable binary and
 `HIMALAYA_ACCOUNT` to the intended account. Explicit recovery may set

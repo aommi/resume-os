@@ -156,14 +156,17 @@ A sweep is complete only when:
 ## Scheduled collection and bounded worker
 
 This is a separate operational contract from the interactive, screened sweep above.
-Daily `run-linkedin-discovery.mjs` queues exact identities from a fixed 24-hour search
-window. Its collection watermark advances only after durable queue persistence; it does
-not certify that jobs were fetched, screened, or enriched and does not change the
-interactive sweep boundary. A failed/late collection is visible, not expanded into
-unbounded catch-up. Search page caps mean counts are returned matches, not all market postings.
+Daily `run-linkedin-discovery.mjs` collects paginated cards into the durable pending
+queue. Collection resumes an incomplete cursor before starting a new search cycle.
+A new cycle uses the previous successful collection boundary with a 24-hour overlap;
+the first cycle searches 24 hours. Undated cards remain eligible. A page cap or partial
+failure preserves incomplete coverage rather than advancing the successful boundary.
+Queue persistence precedes cursor/checkpoint updates. Coverage describes observed
+LinkedIn search pagination, not all market postings or a stable historical snapshot.
+The separate interactive sweep boundary is unchanged.
 
 `run-linkedin-worker.mjs` claims a bounded FIFO batch from the profile-local pending
-queue. It reuses canonical ingestion and the existing enrichment skill. FIFO is neutral
+queue. It invokes `retrieve-queued-job.mjs` and uses the existing enrichment skill only for unresolved extraction. FIFO is neutral
 execution order; do not interpret it as job priority. Screening, whether to invest in a
 role, and match-assessment requests belong to `job-screening.md` and the human's task.
 Do not add relevance scoring or ATS extraction heuristics to the queue/runner.
@@ -181,3 +184,37 @@ oldest waiting work. Budgets count job attempts, not browser requests or a promi
 LinkedIn rate. Review a growing/aging backlog before changing workload budgets; do not
 spawn more LinkedIn workers automatically. Completed items live in canonical inbox
 metadata/artifacts, not a second history list inside the pending queue.
+
+## Scheduled source-retrieval hierarchy
+
+1. Reuse an employer URL already observed for this exact LinkedIn ID. Do not assign a
+   page-level Apply link to every card. Otherwise load the results detail pane for the
+   queued ID, using response evidence or verified selected-detail DOM. Never click Apply
+   or Save to obtain a URL. Ambiguous identity is a failure, not a guessed association.
+2. Persist the verified link before fetching it. Fetch the employer page once with the
+   normal HTTP client and extract `JobPosting` JSON-LD before any model call. Exact
+   employer plus title, or a previously collected matching requisition, is required for
+   automatic acceptance. Multiple matching postings are ambiguous. Keep unknown facts
+   unknown; structured extraction does not retrieve application questions or top-applicant
+   signals, and must not claim it did.
+3. When the HTTP page lacks usable structured data, retain the canonical pending record
+   and let the enrichment skill render the exact employer URL in a browser, inspect
+   JSON-LD/known DOM fields, and use visible-text interpretation only when necessary.
+   Inspect `metadata.retrieval` and its evidence path first. Do not repeat a successful
+   stage or refetch LinkedIn when its verified employer URL is already stored.
+4. An alternate source search is permitted only with a requisition ID already collected
+   from the source. Require the same employer and exact ID. Similar titles are not proof.
+   Missing requisitions do not justify approximate search results; retain unresolved work.
+5. On employer 429, defer to the next bounded attempt; do not switch clients immediately
+   to evade it. On a CAPTCHA/access challenge, stop that job for review. A LinkedIn
+   authentication or rate barrier stops the entire LinkedIn workflow. Do not rotate
+   accounts, proxies, or sessions to get around a barrier.
+6. Save source evidence and verified artifacts before queue acknowledgement. Successful
+   structured extraction bypasses enrichment calls. Skills write the existing full/partial
+   enrichment contract only when factual extraction succeeded; blocked content cannot
+   complete a job. Persist exact LinkedIn aliases on the canonical record before dropping
+   duplicate queue entries. Failed attempts remain pending with cooldown; exhausted work
+   remains visibly blocked. The canonical inbox, not a second history queue, records completion.
+
+The harness owns durable stages, accounting and exact structural checks. Skill judgment
+owns site adaptation, description completeness, and ambiguous-source interpretation.

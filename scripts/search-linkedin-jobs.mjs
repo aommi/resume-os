@@ -12,10 +12,12 @@
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { readLinkedInSearchCards } from "../engine/linkedin-search-cards.mjs";
+import { readSelectedLinkedInDetail } from "../engine/linkedin-selected-detail.mjs";
 import { assertLinkedInSession } from "../engine/linkedin-session.mjs";
 import { clearDeadChromeLock } from "../engine/linkedin-profile-lock.mjs";
 import { createServer } from "node:net";
@@ -28,11 +30,12 @@ import {
   resolveRecencySeconds,
 } from "../engine/linkedin-discovery-query.mjs";
 
+export async function main(args = process.argv.slice(2)) {
 const PROFILE_DIR = join(homedir(), ".linkedin-chrome-profile");
 const jobSearch = loadProfile().jobSearch || {};
 const defaultTitles = jobSearch.titles?.length ? jobSearch.titles : ["product manager", "product owner"];
 const defaultLocation = jobSearch.locations?.[0] || "Vancouver, British Columbia, Canada";
-const opts = parseArgs(process.argv.slice(2));
+const opts = parseArgs(args, defaultLocation);
 let recencySeconds;
 try {
   recencySeconds = resolveRecencySeconds(opts.since);
@@ -49,6 +52,7 @@ if (!existsSync(PROFILE_DIR)) {
 // LinkedIn's OR search is unreliable — run two separate searches and merge
 const keywords = opts.keywords ? [opts.keywords] : defaultTitles.map((t) => t.toLowerCase());
 const allJobs = [];
+const queries = [];
 
 // Reuse one Chrome session for both searches
 const sharedLock = acquireLinkedInLock("linkedin-discovery");
@@ -82,9 +86,12 @@ try {
   for (const kw of keywords) {
     const url = buildLinkedInSearchUrl(kw, opts.location, recencySeconds);
     if (!opts.dryrun) console.error(`Search [${kw}]: ${url}`);
-    const jobs = await searchPage(page, url);
-    console.error(`  ${kw}: ${jobs.length} jobs`);
-    allJobs.push(...jobs);
+    const prior = opts.cursor.find(item => item.keyword === kw && item.location === opts.location);
+    if (prior?.complete) { queries.push(prior); continue; }
+    const result = await searchPage(page, url, { startOffset: prior?.nextStart || 0, maxPages: opts.pages, previousPageIds: prior?.lastPageIds || '' });
+    console.error(`  ${kw}: ${result.jobs.length} jobs (${result.coverage.reason})`);
+    allJobs.push(...result.jobs);
+    queries.push({ keyword: kw, location: opts.location, ...result.coverage });
   }
 
   await browser.close();
@@ -130,43 +137,81 @@ if (opts.dryrun) {
 }
 
 const output = filtered;
-if (opts.json) {
+if (opts.coverageJson) {
+  console.log(JSON.stringify({ jobs: output, coverage: { complete: queries.every(q => q.complete), queries } }, null, 2));
+} else if (opts.json) {
   console.log(JSON.stringify(output, null, 2));
 } else {
   for (const j of output) console.log(JSON.stringify(j));
 }
 
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
+
 // ── Core ──────────────────────────────────────────────────────────────────
 
-async function searchPage(page, url) {
-  const allJobs = [];
-  let start = 0;
-
-  while (true) {
-    const pageUrl = url.replace("start=0", `start=${start}`);
-    const response = await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
-    if (response?.status() === 429) throw new Error("LINKEDIN_RATE_LIMITED: HTTP 429; stop and review before resuming");
-    await page.waitForTimeout(3000);
-    await assertLinkedInSession(page);
-    await page.waitForFunction(() => document.querySelector('[componentkey^="job-card-component-ref-"], li[data-occludable-job-id], .job-card-container') || /No results found|No matching jobs/i.test(document.body.innerText), null, { timeout: 15000 });
-    const jobs = await page.evaluate(readLinkedInSearchCards);
-    if (!jobs.length && !await page.evaluate(() => /No results found|No matching jobs/i.test(document.body.innerText))) {
-      throw new Error('LinkedIn search loaded without recognizable job cards or an explicit empty-results state');
-    }
-
-    // Compute postedAt on Node side
-    for (const j of jobs) {
-      j.postedAt = parseTimeAgo(j.postedTimeAgo);
-    }
-
-    allJobs.push(...jobs);
-
-    // Stop if fewer than 20 results (last page) or we've done 4 pages
-    if (jobs.length < 20 || start >= 75) break;
-    start += 25;
+// Completion needs an explicit paginator state, never a short virtualized card list.
+export function readSearchPaginationEnd() {
+  const visible = node => Boolean(node && node.getClientRects().length);
+  const containers = [...document.querySelectorAll('.jobs-search-pagination,.artdeco-pagination,[data-test-pagination]')].filter(visible);
+  for (const container of containers) {
+    const next = [...container.querySelectorAll('button,a')].find(node => /^(?:next|next page|view next page)$/i.test((node.getAttribute('aria-label') || node.textContent || '').trim()));
+    const disabled = next && (next.disabled === true || next.getAttribute('aria-disabled') === 'true');
+    if (!disabled || !visible(next)) continue;
+    const selected = container.querySelector('[aria-current="page"],.artdeco-pagination__indicator--number.active button,.artdeco-pagination__indicator--number.selected button');
+    const numbers = [...container.querySelectorAll('button,a')].map(node => Number((node.textContent || '').trim())).filter(n => Number.isInteger(n) && n > 0);
+    const current = Number((selected?.textContent || '').trim());
+    if (!selected || (Number.isInteger(current) && current > 0 && numbers.length && current === Math.max(...numbers))) return true;
   }
+  return false;
+}
 
-  return allJobs;
+export async function searchPage(page, url, { startOffset = 0, maxPages = 4, previousPageIds = '', sessionCheck = assertLinkedInSession } = {}) {
+  if (!Number.isSafeInteger(startOffset) || startOffset < 0 || startOffset % 25 || !Number.isSafeInteger(maxPages) || maxPages < 1) throw new Error('Invalid search pagination options');
+  const allJobs = [];
+  let start = startOffset;
+  let lastPageIds = previousPageIds;
+  for (let count = 0; count < maxPages; count++, start += 25) {
+    try {
+      const pageUrl = new URL(url);
+      pageUrl.searchParams.set('start', String(start));
+      const response = await page.goto(pageUrl.href, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      if (response?.status() === 429) throw new Error('LINKEDIN_RATE_LIMITED: HTTP 429; stop and review before resuming');
+      if (response?.status() >= 400) throw new Error(`LinkedIn search HTTP ${response.status()}`);
+      await page.waitForTimeout(3000);
+      await sessionCheck(page);
+      await page.waitForFunction(() => document.querySelector('[componentkey^="job-card-component-ref-"], li[data-occludable-job-id], .job-card-container') || /No results found|No matching jobs/i.test(document.body.innerText), null, { timeout: 15000 });
+      const jobs = await page.evaluate(readLinkedInSearchCards);
+      const explicitlyEmpty = !jobs.length && await page.evaluate(() => /No results found|No matching jobs/i.test(document.body.innerText));
+      if (!jobs.length && !explicitlyEmpty) throw new Error('LinkedIn search loaded without recognizable cards or explicit empty results');
+      const pageIds = jobs.map(job => job.linkedinJobId).sort().join(',');
+      if (pageIds && pageIds === lastPageIds) {
+        if (await page.evaluate(readSearchPaginationEnd)) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
+        return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'repeated_page' } };
+      }
+      const selectedIds = await page.evaluate(() => [...new Set([...document.querySelectorAll('a[href*="/jobs/view/"]')]
+        .filter(a => !a.closest('[componentkey^="job-card-component-ref-"],li[data-occludable-job-id],.job-card-container'))
+        .map(a => a.href.match(/\/jobs\/view\/(?:[^/?#]*-)?(\d+)(?:\/|$)/)?.[1]).filter(Boolean))]);
+      if (Array.isArray(selectedIds) && selectedIds.length === 1) {
+        const selected = jobs.find(job => job.linkedinJobId === selectedIds[0]);
+        if (selected) {
+          const detail = await page.evaluate(readSelectedLinkedInDetail, selected);
+          if (detail?.sourceEvidence?.linkedinJobId === selected.linkedinJobId && detail.sourceEvidence.titleAndCompanyMatched === true) Object.assign(selected, detail);
+        }
+      }
+      for (const job of jobs) job.postedAt = parseTimeAgo(job.postedTimeAgo);
+      allJobs.push(...jobs);
+      lastPageIds = pageIds;
+      if (jobs.length && await page.evaluate(readSearchPaginationEnd)) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
+      // Short DOM card lists can be virtualization, not proof of the final page.
+      if (explicitlyEmpty) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_empty_page' } };
+    } catch (error) {
+      if (/LINKEDIN_(?:AUTH_REQUIRED|RATE_LIMITED):/.test(error.message)) throw error;
+      return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'page_error', error: error.message } };
+    }
+  }
+  return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'page_cap' } };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -204,7 +249,7 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-function parseArgs(args) {
+function parseArgs(args, defaultLocation) {
   const p = {
     keywords: null,
     location: defaultLocation,
@@ -212,11 +257,23 @@ function parseArgs(args) {
     json: false,
     dryrun: false,
     since: null,
+    coverageJson: false,
+    cursor: [],
+    pages: 4,
   };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--keywords") p.keywords = args[++i] ?? p.keywords;
     else if (args[i] === "--location") p.location = args[++i] ?? p.location;
     else if (args[i] === "--max") p.max = parseInt(args[++i], 10) || 15;
+    else if (args[i] === '--coverage-json') p.coverageJson = true;
+    else if (args[i] === '--cursor-json') {
+      p.cursor = JSON.parse(args[++i]);
+      if (!Array.isArray(p.cursor) || p.cursor.some(q => typeof q.keyword !== 'string' || typeof q.complete !== 'boolean' || (!q.complete && (!Number.isSafeInteger(q.nextStart) || q.nextStart < 0 || q.nextStart % 25)))) throw new Error('Invalid pagination cursor');
+    }
+    else if (args[i] === '--pages') {
+      p.pages = Number(args[++i]);
+      if (!Number.isSafeInteger(p.pages) || p.pages < 1) throw new Error('Invalid page budget');
+    }
     else if (args[i] === "--json") p.json = true;
     else if (args[i] === "--dryrun") p.dryrun = true;
     else if (args[i] === "--since") p.since = args[++i] ?? null;
