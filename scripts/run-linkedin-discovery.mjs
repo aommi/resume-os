@@ -10,6 +10,18 @@ import { assertLinkedInCooldown, recordLinkedInCooldown } from '../engine/linked
 import { openDiscoveryQueue } from '../engine/linkedin-discovery-queue.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
+function cursorKey(query) { return `${query.keyword || ''}\u0000${query.location || ''}`; }
+function stabilizeCursor(previous = [], next = [], maxStalls = 2) {
+  const prior = new Map(previous.map(q => [cursorKey(q), q]));
+  return next.map(query => {
+    if (query.complete || !['page_error', 'repeated_page'].includes(query.reason)) return { ...query, stallAttempts: 0 };
+    const old = prior.get(cursorKey(query));
+    const stuck = old && old.complete === false && old.nextStart === query.nextStart && old.lastPageIds === query.lastPageIds && ['page_error', 'repeated_page'].includes(old.reason);
+    const stallAttempts = stuck ? Number(old.stallAttempts || 0) + 1 : 1;
+    if (stallAttempts >= maxStalls) return { ...query, nextStart: query.nextStart + 25, lastPageIds: '', stallAttempts: 0, reason: 'stalled_cursor_skipped_page' };
+    return { ...query, stallAttempts };
+  });
+}
 export function collectJobs({ work = workDir(), repo = REPO, now = () => new Date(),
   zone = timezone(), overlapMs = 86400000, search = ({ since, cursor }) => JSON.parse(execFileSync(process.execPath,
     [join(repo, 'scripts/search-linkedin-jobs.mjs'), '--coverage-json', '--since', since, '--cursor-json', JSON.stringify(cursor)],
@@ -61,7 +73,8 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
       if (existsSync(cursorPath)) unlinkSync(cursorPath);
     } else {
       const temp = `${cursorPath}.${process.pid}.tmp`;
-      writeFileSync(temp, JSON.stringify({ ...cycle, cursor: coverage.queries }, null, 2) + '\n', { mode: 0o600 });
+      const nextCursor = stabilizeCursor(cycle.cursor, coverage.queries);
+      writeFileSync(temp, JSON.stringify({ ...cycle, cursor: nextCursor }, null, 2) + '\n', { mode: 0o600 });
       renameSync(temp, cursorPath);
       if (coverage.queries.some(q => ['page_error', 'repeated_page'].includes(q.reason))) {
         const error = new Error('Collection traversal stalled; queued results preserved, checkpoint unchanged');

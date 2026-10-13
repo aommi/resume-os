@@ -1,4 +1,4 @@
-// Applycling's structured-first extraction, without provider calls or credentials.
+// Structured-first extraction, without provider calls or credentials.
 export function plainText(value = '') {
   return String(value).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<\/(?:p|div|li|h[1-6])\s*>|<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '')

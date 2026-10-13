@@ -116,6 +116,9 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
     }
     return null;
   }
+  function dismissed(id) {
+    return existsSync(join(work, 'runtime', 'linkedin-dismissals', `${id}.json`));
+  }
   function entryFor(id) {
     guard();
     const entry = state.entries.find(e => e.linkedinJobId === id);
@@ -139,7 +142,7 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
       const validated = jobs.map(validateDiscoveryJob); // Reject whole input before mutation.
       const result = { added: [], duplicates: [] };
       for (const job of validated) {
-        if (state.entries.some(e => e.linkedinJobId === job.linkedinJobId) || canonical(job.linkedinJobId)) result.duplicates.push(job.linkedinJobId);
+        if (state.entries.some(e => e.linkedinJobId === job.linkedinJobId) || canonical(job.linkedinJobId) || dismissed(job.linkedinJobId)) result.duplicates.push(job.linkedinJobId);
         else {
           state.entries.push({ ...job, queuedAt: now().toISOString(), stage: 'ingest', attempts: 0, blocked: false, nextAttemptAt: null });
           result.added.push(job.linkedinJobId);

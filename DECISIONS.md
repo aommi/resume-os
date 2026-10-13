@@ -593,7 +593,9 @@ visible in health reporting. Architecture Boundary: ALIGNED; no subjective scori
 HTTP429 represents a timed rate limit, distinct from login/CAPTCHA barriers. Honor
 Retry-After and otherwise use conservative exponential cooldown; collector, worker
 and detail resolution share the hold. Resume only on a normal run after expiry,
-without consuming attempts while held. Authentication stops remain manual. This
-supersedes treating every429 as a permanent manual-clear stop. No safe platform
+without consuming attempts while held. Authentication stops remain manual. Mid-attempt
+cooldowns refund the queue and daily attempt budget intentionally; the escalating
+cooldown is the traffic cap, while attempts measure actual useful processing work.
+This supersedes treating every429 as a permanent manual-clear stop. No safe platform
 rate or observable platform heat meter is claimed. Materialize virtualized cards
 before advancing page coverage, and observe background-response429s.

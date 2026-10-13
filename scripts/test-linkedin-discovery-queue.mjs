@@ -97,7 +97,9 @@ try {
   assert.equal(dismissal.url, job('11').url);
   assert.equal(dismissal.reason, 'bad lead');
   assert.equal(dismissal.dismissedAt, now().toISOString());
-  q = open('operator'); assert.equal(q.summary().pending, 1); q.close();
+  q = open('operator'); assert.equal(q.summary().pending, 1);
+  assert.deepEqual(q.enqueue([job('11')]), { added: [], duplicates: ['11'] }, 'dismissed jobs stay suppressed across overlap collection');
+  assert.equal(q.summary().pending, 1); q.close();
 
   q = open('refund', { dailyCap: 1 }); q.enqueue([job('13')]);
   q.beginNext();

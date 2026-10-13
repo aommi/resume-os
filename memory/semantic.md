@@ -346,4 +346,6 @@ and exact-requisition search rules. No new dependency, provider, schedule or fit
 Manual queue retry releases the per-item ceiling without resetting daily accounting;
 cooldown aborts refund all unfinished leased batch work, retaining canonical ingestion.
 Dismissal requires a nonempty reason and persists profile-local evidence at
-`work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry.
+`work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
+collection overlap treats dismissal evidence as a duplicate and does not requeue it.
+Repeated stuck collection cursors advance after bounded retries rather than looping forever.

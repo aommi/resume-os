@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { alertFingerprint, shouldSendAlert } from "../engine/watchdog-alerts.mjs";
 import { STATUS_VALID_FOR_MS, writeHealthStatus } from "../engine/watchdog-health.mjs";
-import { workDir } from "../engine/config.mjs";
+import { workDir, loadConfig } from "../engine/config.mjs";
 
 const WORK = workDir();
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -67,10 +67,13 @@ const hbDir = join(WORK, "heartbeats");
 // it became an on-demand screening step: demanding a recent heartbeat from a
 // workflow nothing schedules produces a permanent false alarm, which is how a
 // real alert channel gets ignored.
-const requiredHeartbeats = new Map([
+function linkedinSchedulingEnabled(cfg = loadConfig()) {
+  return process.env.RESUME_OS_LINKEDIN_SCHEDULED === '1' || cfg.linkedin?.scheduled === true || cfg.schedules?.linkedin === true;
+}
+const requiredHeartbeats = linkedinSchedulingEnabled() ? new Map([
   ['linkedin-discovery.json', 'LinkedIn discovery: no contract heartbeat file (collection never ran?)'],
   ['linkedin-worker.json', 'LinkedIn worker: no contract heartbeat file (worker never ran?)'],
-]);
+]) : new Map();
 for (const [name, message] of requiredHeartbeats) {
   if (!existsSync(join(hbDir, name))) problems.push(message);
 }

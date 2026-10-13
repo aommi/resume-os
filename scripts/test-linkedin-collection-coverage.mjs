@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { collectJobs } from './run-linkedin-discovery.mjs';
 import { searchPage, readSearchPaginationEnd } from './search-linkedin-jobs.mjs';
@@ -20,7 +21,7 @@ function pageFixture(pages, failureAt = -1) {
   };
 }
 try {
-  const searchSource = readFileSync(join(dirname(new URL(import.meta.url).pathname), 'search-linkedin-jobs.mjs'), 'utf8');
+  const searchSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'search-linkedin-jobs.mjs'), 'utf8');
   assert.ok(searchSource.lastIndexOf('await main();') > searchSource.indexOf('const rateObservers = new WeakMap();'), 'CLI main must run after module-scope dependencies initialize');
   mkdirSync(join(work, 'runtime'), { recursive: true });
   const old = time.getTime() - 5 * 86400000;
@@ -57,6 +58,18 @@ try {
   assert.equal(stalled.exitCode, 1); assert.equal(stalled.report.added.length, 1);
   assert.equal(JSON.parse(readFileSync(join(work, 'heartbeats/linkedin-discovery.json'))).failureCategory, 'coverage_incomplete');
   assert.equal(Number(readFileSync(boundary)), cycleStarted);
+  const stalledAgain = collectJobs({ work, now, search: request => {
+    assert.equal(request.cursor[0].nextStart, 25);
+    return { jobs: [job('9')], coverage: { complete: false, queries: [{ keyword: 'engineer', complete: false, nextStart: 25, reason: 'page_error' }] } };
+  } });
+  assert.equal(stalledAgain.exitCode, 1);
+  assert.equal(JSON.parse(readFileSync(cursorPath)).cursor[0].nextStart, 50, 'repeated stuck cursors advance after bounded retries');
+  const recovered = collectJobs({ work, now, search: request => {
+    assert.equal(request.cursor[0].nextStart, 50);
+    return { jobs: [job('10')], coverage: { complete: true, queries: [{ keyword: 'engineer', complete: true, nextStart: null, reason: 'explicit_empty_page' }] } };
+  } });
+  assert.equal(recovered.exitCode, 0);
+  assert.equal(existsSync(cursorPath), false);
   const visible = () => [1];
   let disabled = true, selectedNumber = '2';
   const next = { getClientRects: visible, get disabled() { return disabled; }, getAttribute: name => name === 'aria-label' ? 'Next' : null, textContent: '' };

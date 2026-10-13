@@ -206,8 +206,12 @@ try {
   const watchdogWork = join(root, 'profiles', 'watchdog-fixture', 'work');
   mkdirSync(watchdogWork, { recursive: true });
   const env = { ...process.env, RESUME_OS_PROFILE: 'watchdog-fixture' };
-  const watchdog = spawnSync(process.execPath, [new URL('./check-heartbeats.mjs', import.meta.url).pathname, '--quiet'],
+  const unscheduledWatchdog = spawnSync(process.execPath, [new URL('./check-heartbeats.mjs', import.meta.url).pathname, '--quiet'],
     { cwd: root, env, encoding: 'utf8' });
+  assert.doesNotMatch(unscheduledWatchdog.stdout, /LinkedIn discovery: no contract heartbeat file/);
+  assert.doesNotMatch(unscheduledWatchdog.stdout, /LinkedIn worker: no contract heartbeat file/);
+  const watchdog = spawnSync(process.execPath, [new URL('./check-heartbeats.mjs', import.meta.url).pathname, '--quiet'],
+    { cwd: root, env: { ...env, RESUME_OS_LINKEDIN_SCHEDULED: '1' }, encoding: 'utf8' });
   assert.equal(watchdog.status, 1, watchdog.stderr);
   assert.match(watchdog.stdout, /LinkedIn discovery: no contract heartbeat file/);
   assert.match(watchdog.stdout, /LinkedIn worker: no contract heartbeat file/);
