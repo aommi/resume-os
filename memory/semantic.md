@@ -348,4 +348,5 @@ cooldown aborts refund all unfinished leased batch work, retaining canonical ing
 Dismissal requires a nonempty reason and persists profile-local evidence at
 `work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
 collection overlap treats dismissal evidence as a duplicate and does not requeue it.
-Repeated stuck collection cursors advance after bounded retries rather than looping forever.
+Repeated stuck collection cursors close the incomplete cycle and restart from page 0 on
+next run rather than creeping forward and starving new cards.

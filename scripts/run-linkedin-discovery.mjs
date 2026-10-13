@@ -13,14 +13,14 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 function cursorKey(query) { return `${query.keyword || ''}\u0000${query.location || ''}`; }
 function stabilizeCursor(previous = [], next = [], maxStalls = 2) {
   const prior = new Map(previous.map(q => [cursorKey(q), q]));
-  return next.map(query => {
+  const queries = next.map(query => {
     if (query.complete || !['page_error', 'repeated_page'].includes(query.reason)) return { ...query, stallAttempts: 0 };
     const old = prior.get(cursorKey(query));
     const stuck = old && old.complete === false && old.nextStart === query.nextStart && old.lastPageIds === query.lastPageIds && ['page_error', 'repeated_page'].includes(old.reason);
-    const stallAttempts = stuck ? Number(old.stallAttempts || 0) + 1 : 1;
-    if (stallAttempts >= maxStalls) return { ...query, nextStart: query.nextStart + 25, lastPageIds: '', stallAttempts: 0, reason: 'stalled_cursor_skipped_page' };
-    return { ...query, stallAttempts };
+    return { ...query, stallAttempts: stuck ? Number(old.stallAttempts || 0) + 1 : 1 };
   });
+  const stalled = queries.filter(q => !q.complete && ['page_error', 'repeated_page'].includes(q.reason) && q.stallAttempts >= maxStalls);
+  return { queries, resetCycle: stalled.length > 0, gaps: stalled.map(q => Object.fromEntries(Object.entries({ keyword: q.keyword, location: q.location, nextStart: q.nextStart, reason: q.reason, stallAttempts: q.stallAttempts }).filter(([, value]) => value !== undefined))) };
 }
 export function collectJobs({ work = workDir(), repo = REPO, now = () => new Date(),
   zone = timezone(), overlapMs = 86400000, search = ({ since, cursor }) => JSON.parse(execFileSync(process.execPath,
@@ -73,9 +73,15 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
       if (existsSync(cursorPath)) unlinkSync(cursorPath);
     } else {
       const temp = `${cursorPath}.${process.pid}.tmp`;
-      const nextCursor = stabilizeCursor(cycle.cursor, coverage.queries);
-      writeFileSync(temp, JSON.stringify({ ...cycle, cursor: nextCursor }, null, 2) + '\n', { mode: 0o600 });
-      renameSync(temp, cursorPath);
+      const stabilized = stabilizeCursor(cycle.cursor, coverage.queries);
+      if (stabilized.resetCycle) {
+        report.coverageGaps = stabilized.gaps;
+        report.cursorReset = true;
+        if (existsSync(cursorPath)) unlinkSync(cursorPath);
+      } else {
+        writeFileSync(temp, JSON.stringify({ ...cycle, cursor: stabilized.queries }, null, 2) + '\n', { mode: 0o600 });
+        renameSync(temp, cursorPath);
+      }
       if (coverage.queries.some(q => ['page_error', 'repeated_page'].includes(q.reason))) {
         const error = new Error('Collection traversal stalled; queued results preserved, checkpoint unchanged');
         error.code = 'COVERAGE_INCOMPLETE';

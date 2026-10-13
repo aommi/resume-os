@@ -585,7 +585,9 @@ completeness judgment and exact-requisition recovery remain in the sweep/enrichm
 
 Supersedes the fixed-24-hour-only collection decision: use overlapped successful coverage,
 retain undated cards, and persist incomplete traversal cursors without falsely advancing a
-successful boundary. Budgets and schedules are unchanged. Exhausted work must remain
+successful boundary. A repeated stalled cursor closes the incomplete cycle with gap evidence
+instead of skipping unseen pages; the next run restarts at page 0 with the overlap. Budgets
+and schedules are unchanged. Exhausted work must remain
 visible in health reporting. Architecture Boundary: ALIGNED; no subjective scoring in code.
 
 ## Rate-limit recovery and complete page collection (2026-10-13)

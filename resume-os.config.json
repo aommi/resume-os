@@ -11,5 +11,8 @@
     "ai-workflow": "Senior Product Manager - AI Workflow",
     "commerce": "Senior Product Manager - Commerce",
     "commerce-pm": "Product Manager - Commerce"
+  },
+  "linkedin": {
+    "scheduled": true
   }
 }

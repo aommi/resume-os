@@ -54,18 +54,20 @@ try {
   const repeat = await searchPage(pageFixture({ 0: [job('8')], 25: [job('8')] }), 'https://www.linkedin.com/jobs/search/', { work: join(root, 'search'), sessionCheck: async () => {} });
   assert.equal(repeat.coverage.complete, false); assert.equal(repeat.coverage.reason, 'repeated_page');
   time = new Date(time.getTime() + 1000);
-  const stalled = collectJobs({ work, now, search: () => ({ jobs: [job('9')], coverage: { complete: false, queries: [{ keyword: 'engineer', complete: false, nextStart: 25, reason: 'page_error' }] } }) });
+  const stalled = collectJobs({ work, now, search: () => ({ jobs: [job('9')], coverage: { complete: false, queries: [{ keyword: 'engineer', complete: false, nextStart: 25, lastPageIds: '9', reason: 'repeated_page' }] } }) });
   assert.equal(stalled.exitCode, 1); assert.equal(stalled.report.added.length, 1);
   assert.equal(JSON.parse(readFileSync(join(work, 'heartbeats/linkedin-discovery.json'))).failureCategory, 'coverage_incomplete');
   assert.equal(Number(readFileSync(boundary)), cycleStarted);
   const stalledAgain = collectJobs({ work, now, search: request => {
     assert.equal(request.cursor[0].nextStart, 25);
-    return { jobs: [job('9')], coverage: { complete: false, queries: [{ keyword: 'engineer', complete: false, nextStart: 25, reason: 'page_error' }] } };
+    return { jobs: [job('9')], coverage: { complete: false, queries: [{ keyword: 'engineer', complete: false, nextStart: 25, lastPageIds: '9', reason: 'repeated_page' }] } };
   } });
   assert.equal(stalledAgain.exitCode, 1);
-  assert.equal(JSON.parse(readFileSync(cursorPath)).cursor[0].nextStart, 50, 'repeated stuck cursors advance after bounded retries');
+  assert.equal(stalledAgain.report.cursorReset, true);
+  assert.deepEqual(stalledAgain.report.coverageGaps, [{ keyword: 'engineer', nextStart: 25, reason: 'repeated_page', stallAttempts: 2 }]);
+  assert.equal(existsSync(cursorPath), false, 'repeated stuck cursors reset the cycle instead of creeping forward');
   const recovered = collectJobs({ work, now, search: request => {
-    assert.equal(request.cursor[0].nextStart, 50);
+    assert.deepEqual(request.cursor, []);
     return { jobs: [job('10')], coverage: { complete: true, queries: [{ keyword: 'engineer', complete: true, nextStart: null, reason: 'explicit_empty_page' }] } };
   } });
   assert.equal(recovered.exitCode, 0);

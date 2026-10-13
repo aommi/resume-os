@@ -87,7 +87,8 @@ budget. Dismissal requires a nonempty reason and writes profile-local evidence t
 also refunds earlier unfinished batch items while preserving their ingestion stage.
 These are workload budgets, not browser-request limits
 or detection guarantees. Machine schedules remain daily collection and two-hour processing;
-no extra worker is spawned for a backlog.
+no extra worker is spawned for a backlog. The watchdog requires LinkedIn collector/worker
+heartbeats only when `linkedin.scheduled: true` (or `RESUME_OS_LINKEDIN_SCHEDULED=1`) is set.
 
 Retrieval reuses verified employer links from collection, resolves missing links from
 selected-card responses/DOM, and fetches employer `JobPosting` structured data first.
