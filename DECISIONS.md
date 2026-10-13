@@ -583,8 +583,9 @@ source association and retry stages; retain canonical aliases rather than refetc
 employer postings. Structured extraction validates exact source fields; site adaptation,
 completeness judgment and exact-requisition recovery remain in the sweep/enrichment skills.
 
-Supersedes the fixed-24-hour-only collection decision: use a fixed recent search window
-from page 0 every scheduled run, retain undated cards, cap pages, and report page-cap
+Supersedes the fixed-24-hour-only collection decision: search from page 0 every scheduled
+run, retain undated cards, widen the default 48-hour window from the last successful
+collector heartbeat after missed runs (capped at 7 days), cap pages, and report page-cap
 hits instead of proving complete LinkedIn coverage. Exact-ID dedupe makes overlap safe.
 Budgets and schedules are unchanged. Exhausted work must remain
 visible in health reporting. Architecture Boundary: ALIGNED; no subjective scoring in code.

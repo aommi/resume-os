@@ -70,8 +70,9 @@ The search parser supports both legacy and current job cards. A login/checkpoint
 error requires manual verification; a parsing/script error is not evidence of a
 bot block. Do not repeatedly retry a CAPTCHA or security checkpoint.
 `node scripts/run-linkedin-discovery.mjs` collects paginated search cards into a
-profile-local pending queue. Each run starts at page 0 over a fixed recent window
-(default 48 hours), keeps undated cards eligible, caps pages, and reports when the
+profile-local pending queue. Each run starts at page 0 over a recent window
+(default 48 hours; widens from the last successful collector heartbeat after missed
+runs, capped at 7 days), keeps undated cards eligible, caps pages, and reports when the
 cap is hit. Exact-ID dedupe makes overlap safe; search results are not a guarantee
 of all market postings.
 

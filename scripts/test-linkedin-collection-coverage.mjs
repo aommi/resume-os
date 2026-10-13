@@ -41,7 +41,16 @@ try {
     return { jobs: [job('3')], coverage: { complete: true, queries: [{ keyword: 'engineer', complete: true, nextStart: null, reason: 'repeated_page' }] } };
   } });
   assert.equal(second.exitCode, 0);
+  assert.equal(second.report.searchWindowHours, 48);
   assert.equal(existsSync(cursorPath), false);
+  time = new Date(time.getTime() + 3 * 86400000);
+  const catchup = collectJobs({ work, now, searchWindowMs: 48 * 3600000, search: request => {
+    assert.equal(Date.parse(request.since), time.getTime() - 96 * 3600000);
+    return { jobs: [job('30', time.getTime() - 90 * 3600000), job('31', time.getTime() - 8 * 86400000)], coverage: { complete: true, queries: [{ keyword: 'engineer', complete: true, nextStart: null, reason: 'repeated_page' }] } };
+  } });
+  assert.equal(catchup.exitCode, 0);
+  assert.equal(catchup.report.searchWindowHours, 96);
+  assert.deepEqual(catchup.report.added, ['30']);
   const legacy = collectJobs({ work, now, search: () => [job('4')] });
   assert.equal(legacy.exitCode, 0); assert.equal(legacy.report.added.length, 1);
 

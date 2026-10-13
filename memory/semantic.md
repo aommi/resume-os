@@ -288,8 +288,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - LinkedIn search supports current component-key job cards and legacy cards, rejects
   authentication checkpoints, and does not mistake detail-pane links for search results.
 - Scheduled collection and execution are separate: `run-linkedin-discovery.mjs` durably
-  queues fixed-window recent search candidates from page 0, retaining undated cards and
-  reporting page-cap hits without proving total LinkedIn coverage. Exact-ID dedupe makes
+  queues recent search candidates from page 0, retaining undated cards and widening the
+  default 48-hour window from the last successful collector heartbeat after missed runs.
+  Page-cap hits are reported without proving total LinkedIn coverage. Exact-ID dedupe makes
   repeated overlap safe. It does not advance the interactive sweep boundary. `run-linkedin-worker.mjs` applies
   persisted run/day attempt budgets, FIFO, process exclusion and bounded retry before
   invoking canonical ingestion and one existing enrichment-skill call per batch. The

@@ -10,6 +10,13 @@ import { openDiscoveryQueue } from '../engine/linkedin-discovery-queue.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_SEARCH_WINDOW_MS = 48 * 3600000;
+const MAX_SEARCH_WINDOW_MS = 7 * 86400000;
+const MISSED_RUN_SLACK_MS = 24 * 3600000;
+function effectiveSearchWindowMs({ started, previous, minimum }) {
+  const lastSuccessMs = Date.parse(previous.lastSuccess || '');
+  if (!Number.isFinite(lastSuccessMs)) return minimum;
+  return Math.min(MAX_SEARCH_WINDOW_MS, Math.max(minimum, started.getTime() - lastSuccessMs + MISSED_RUN_SLACK_MS));
+}
 export function collectJobs({ work = workDir(), repo = REPO, now = () => new Date(),
   zone = timezone(), searchWindowMs = DEFAULT_SEARCH_WINDOW_MS, overlapMs,
   search = ({ since }) => JSON.parse(execFileSync(process.execPath,
@@ -30,7 +37,9 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
     assertLinkedInCooldown({ work, now: now() });
     queue = openDiscoveryQueue({ work, timezone: zone, now });
     if (!Number.isSafeInteger(windowMs) || windowMs < 1) throw new Error('Search window must be positive milliseconds');
-    report.since = new Date(started.getTime() - windowMs).toISOString();
+    const effectiveWindowMs = effectiveSearchWindowMs({ started, previous, minimum: windowMs });
+    report.searchWindowHours = Math.round(effectiveWindowMs / 3600000);
+    report.since = new Date(started.getTime() - effectiveWindowMs).toISOString();
     const result = search({ since: report.since });
     assertLinkedInCooldown({ work, now: now() });
     const jobs = Array.isArray(result) ? result : result?.jobs;
@@ -72,7 +81,7 @@ export function collectJobs({ work = workDir(), repo = REPO, now = () => new Dat
     writeFileSync(join(runDir, 'report.json'), JSON.stringify(report, null, 2), { mode: 0o600 });
     writeFileSync(hbPath, JSON.stringify({ workflow: 'linkedin-discovery', cadenceMinutes: 1440,
       lastAttempt: started.toISOString(), lastSuccess: exitCode === 0 ? now().toISOString() : previous.lastSuccess || null,
-      exitCode, failureCategory, runDir, model: 'none', queue: report.queue, coverage: report.coverage, hitPageCap: report.hitPageCap }) + '\n');
+      exitCode, failureCategory, runDir, model: 'none', queue: report.queue, coverage: report.coverage, hitPageCap: report.hitPageCap, searchWindowHours: report.searchWindowHours }) + '\n');
   }
   return { exitCode, report };
 }
@@ -81,6 +90,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const r = result.report, q = r.queue;
   console.log(process.argv.includes('--json') ? JSON.stringify(r, null, 2) :
     r.error ? `Resume OS collection failed: ${r.error}` :
-    `Resume OS discovery: ${r.found} recent matches, ${r.added.length} newly queued, ${r.duplicates.length} already known.\nWaiting: ${q.pending}; needs review: ${q.blocked}. Oldest waiting: ${q.oldestQueuedAt || 'none'}.\nCollection: fixed recent window${r.hitPageCap ? '; page cap hit' : ''}.\nProcessing budget: ${q.dailyCap} attempts/day; unfinished jobs stay queued.`);
+    `Resume OS discovery: ${r.found} recent matches, ${r.added.length} newly queued, ${r.duplicates.length} already known.\nWaiting: ${q.pending}; needs review: ${q.blocked}. Oldest waiting: ${q.oldestQueuedAt || 'none'}.\nCollection: ${r.searchWindowHours}h recent window${r.hitPageCap ? '; page cap hit' : ''}.\nProcessing budget: ${q.dailyCap} attempts/day; unfinished jobs stay queued.`);
   process.exitCode = result.exitCode;
 }
