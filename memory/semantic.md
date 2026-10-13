@@ -288,9 +288,9 @@ Switch profiles via `activeProfile` in `resume-os.config.json` or `RESUME_OS_PRO
 - LinkedIn search supports current component-key job cards and legacy cards, rejects
   authentication checkpoints, and does not mistake detail-pane links for search results.
 - Scheduled collection and execution are separate: `run-linkedin-discovery.mjs` durably
-  queues overlapping catch-up search candidates, retaining undated cards and incomplete
-  pagination cursors. Only complete observed traversal advances its collection watermark.
-  It does not advance the interactive sweep boundary. `run-linkedin-worker.mjs` applies
+  queues fixed-window recent search candidates from page 0, retaining undated cards and
+  reporting page-cap hits without proving total LinkedIn coverage. Exact-ID dedupe makes
+  repeated overlap safe. It does not advance the interactive sweep boundary. `run-linkedin-worker.mjs` applies
   persisted run/day attempt budgets, FIFO, process exclusion and bounded retry before
   invoking canonical ingestion and one existing enrichment-skill call per batch. The
   pending-only queue reconciles canonical artifacts after a crash; partial enrichment
@@ -348,5 +348,3 @@ cooldown aborts refund all unfinished leased batch work, retaining canonical ing
 Dismissal requires a nonempty reason and persists profile-local evidence at
 `work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
 collection overlap treats dismissal evidence as a duplicate and does not requeue it.
-Repeated stuck collection cursors close the incomplete cycle and restart from page 0 on
-next run rather than creeping forward and starving new cards.

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { collectJobs } from './run-linkedin-discovery.mjs';
@@ -206,18 +207,19 @@ try {
   const watchdogWork = join(root, 'profiles', 'watchdog-fixture', 'work');
   mkdirSync(watchdogWork, { recursive: true });
   const env = { ...process.env, RESUME_OS_PROFILE: 'watchdog-fixture' };
-  const unscheduledWatchdog = spawnSync(process.execPath, [new URL('./check-heartbeats.mjs', import.meta.url).pathname, '--quiet'],
+  const checkHeartbeatsCLI = fileURLToPath(new URL('./check-heartbeats.mjs', import.meta.url));
+  const unscheduledWatchdog = spawnSync(process.execPath, [checkHeartbeatsCLI, '--quiet'],
     { cwd: root, env, encoding: 'utf8' });
   assert.doesNotMatch(unscheduledWatchdog.stdout, /LinkedIn discovery: no contract heartbeat file/);
   assert.doesNotMatch(unscheduledWatchdog.stdout, /LinkedIn worker: no contract heartbeat file/);
-  const watchdog = spawnSync(process.execPath, [new URL('./check-heartbeats.mjs', import.meta.url).pathname, '--quiet'],
+  const watchdog = spawnSync(process.execPath, [checkHeartbeatsCLI, '--quiet'],
     { cwd: root, env: { ...env, RESUME_OS_LINKEDIN_SCHEDULED: '1' }, encoding: 'utf8' });
   assert.equal(watchdog.status, 1, watchdog.stderr);
   assert.match(watchdog.stdout, /LinkedIn discovery: no contract heartbeat file/);
   assert.match(watchdog.stdout, /LinkedIn worker: no contract heartbeat file/);
   assert.ok(existsSync(join(watchdogWork, 'watchdog-health.json')));
 
-  const workerCLI = new URL('./run-linkedin-worker.mjs', import.meta.url).pathname;
+  const workerCLI = fileURLToPath(new URL('./run-linkedin-worker.mjs', import.meta.url));
   const cliQueue = openDiscoveryQueue({ work: watchdogWork, now });
   cliQueue.enqueue(jobs(1)); cliQueue.close();
   for (const args of [[], ['--reason', ''], ['--reason', '   '], ['--reason']]) {

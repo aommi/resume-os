@@ -157,12 +157,10 @@ A sweep is complete only when:
 
 This is a separate operational contract from the interactive, screened sweep above.
 Daily `run-linkedin-discovery.mjs` collects paginated cards into the durable pending
-queue. Collection resumes an incomplete cursor before starting a new search cycle.
-A new cycle uses the previous successful collection boundary with a 24-hour overlap;
-the first cycle searches 24 hours. Undated cards remain eligible. A page cap or partial
-failure preserves incomplete coverage rather than advancing the successful boundary.
-Queue persistence precedes cursor/checkpoint updates. Coverage describes observed
-LinkedIn search pagination, not all market postings or a stable historical snapshot.
+queue. Each run starts at page 0 over a fixed recent window (default 48 hours),
+keeps undated cards eligible, caps pages, and reports page-cap hits as an
+observability signal. Exact-ID dedupe makes repeated overlap safe. Coverage describes
+observed LinkedIn search pagination, not all market postings or a stable historical snapshot.
 The separate interactive sweep boundary is unchanged.
 
 `run-linkedin-worker.mjs` claims a bounded FIFO batch from the profile-local pending
