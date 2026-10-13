@@ -25,6 +25,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
   const hb = join(work, 'heartbeats', 'linkedin-worker.json');
   const report = { runStartedAt: started.toISOString(), attempted: [], completed: [], duplicates: [], excluded: [], failures: [], model: 'none' };
   let queue, exitCode = 0, failureCategory = '', previous = {};
+  const batch = [];
   const command = (script, args = [], input) => execFileSync(process.execPath, [join(repo, 'scripts', script), ...args],
     { cwd: repo, input, encoding: 'utf8', timeout: 240000, maxBuffer: 8 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
   ingest ??= entry => JSON.parse(command('retrieve-queued-job.mjs', [], JSON.stringify(entry)));
@@ -66,7 +67,6 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
     queue = openDiscoveryQueue({ work, timezone: zone, now, runCap, dailyCap });
     if (!statusOnly) {
       queue.reconcile();
-      const batch = [];
       let entry;
       while ((entry = queue.beginNext())) {
         const id = entry.linkedinJobId;
@@ -98,29 +98,41 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
           batch.push({ id, canonical });
         } catch (cause) {
           const error = failure(cause);
-          queue.fail(id, { message: error.message });
-          report.failures.push({ id, error: error.message });
+          if (error.code === 'LINKEDIN_COOLDOWN') queue.refundAttempt(id, { message: error.message });
+          else queue.fail(id, { message: error.message });
+          report.failures.push({ id, error: error.message, refunded: error.code === 'LINKEDIN_COOLDOWN' });
           if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN'].includes(error.code)) throw error;
         }
       }
       if (batch.length) {
-        assertActive();
         let enrichError;
-        try { enrich([...new Set(batch.map(item => item.canonical))]); assertActive(); }
+        try { assertActive(); enrich([...new Set(batch.map(item => item.canonical))]); assertActive(); }
         catch (cause) { enrichError = failure(cause); }
         for (const { id } of batch) {
           try { queue.complete(id); report.completed.push(id); }
           catch (error) {
-            queue.fail(id, { message: enrichError?.message || error.message });
-            report.failures.push({ id, error: enrichError?.message || error.message });
+            if (enrichError?.code === 'LINKEDIN_COOLDOWN') queue.refundAttempt(id, { message: enrichError.message });
+            else queue.fail(id, { message: enrichError?.message || error.message });
+            report.failures.push({ id, error: enrichError?.message || error.message, refunded: enrichError?.code === 'LINKEDIN_COOLDOWN' });
           }
         }
+        batch.length = 0; // All leased items have been settled, including refunds.
         if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN'].includes(enrichError?.code)) throw enrichError;
       }
       if (report.attempted.length) render();
       if (report.failures.length) throw new Error(`${report.failures.length} queued attempt(s) failed; retained for bounded retry/manual review`);
     }
   } catch (error) {
+    if (error.code === 'LINKEDIN_COOLDOWN' && queue) {
+      // A later retrieval can pause the whole run before earlier items enrich.
+      for (const { id } of batch) {
+        try { queue.complete(id); report.completed.push(id); }
+        catch {
+          queue.refundAttempt(id, { message: error.message });
+          report.failures.push({ id, error: error.message, refunded: true });
+        }
+      }
+    }
     report.error = error.message;
     if (error.retryAt) report.retryAt = error.retryAt;
     exitCode = 1;
@@ -145,6 +157,26 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const statusOnly = process.argv.includes('--status');
+  const retryIndex = process.argv.indexOf('--retry');
+  const dismissIndex = process.argv.indexOf('--dismiss');
+  if (retryIndex !== -1 || dismissIndex !== -1) {
+    const queue = openDiscoveryQueue({ work: workDir(), timezone: timezone() });
+    try {
+      if (retryIndex !== -1) {
+        const id = process.argv[retryIndex + 1];
+        if (!id) throw new Error('usage: run-linkedin-worker.mjs --retry <linkedin-job-id>');
+        console.log(JSON.stringify({ retried: queue.retry(id) }, null, 2));
+      } else {
+        const id = process.argv[dismissIndex + 1];
+        if (!id) throw new Error('usage: run-linkedin-worker.mjs --dismiss <linkedin-job-id> --reason <text>');
+        const reasonIndex = process.argv.indexOf('--reason');
+        const reason = reasonIndex === -1 ? '' : process.argv[reasonIndex + 1];
+        if (!reason?.trim() || reason.startsWith('--')) throw new Error('Dismissal requires --reason <nonempty text>');
+        console.log(JSON.stringify(queue.dismiss(id, { reason }), null, 2));
+      }
+    } finally { queue.close(); }
+    process.exit(0);
+  }
   const result = runQueuedJobs({ statusOnly });
   const r = result.report, q = r.queue;
   console.log(statusOnly || process.argv.includes('--json') ? JSON.stringify(r, null, 2) :

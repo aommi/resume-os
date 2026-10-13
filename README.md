@@ -78,10 +78,16 @@ collection boundary. Search results are not a guarantee of all market postings.
 `node scripts/run-linkedin-worker.mjs` processes at most two attempts/run and ten per
 profile-local day by default (`LINKEDIN_WORKER_BATCH`, `LINKEDIN_WORKER_DAILY_CAP`).
 Run with `--status` for pending/blocked counts and remaining budget. Attempts are charged
-before external work and persisted across restarts; ordinary failures have bounded
-cooldowns and at most three attempts before review. These are workload budgets, not
-browser-request limits or detection guarantees. Machine schedules remain daily collection
-and two-hour processing; no extra worker is spawned for a backlog.
+before external work and persisted across restarts; LinkedIn cooldown pauses are refunded
+and consume no job or daily attempt. Ordinary failures have bounded cooldowns and at most
+three attempts before review; use `--retry <id>` or `--dismiss <id> --reason <text>` for
+lock-safe blocked-entry recovery. Retry resets the item's attempt ceiling, not the daily
+budget. Dismissal requires a nonempty reason and writes profile-local evidence to
+`work/runtime/linkedin-dismissals/<id>.json` before removing pending work. A cooldown
+also refunds earlier unfinished batch items while preserving their ingestion stage.
+These are workload budgets, not browser-request limits
+or detection guarantees. Machine schedules remain daily collection and two-hour processing;
+no extra worker is spawned for a backlog.
 
 Retrieval reuses verified employer links from collection, resolves missing links from
 selected-card responses/DOM, and fetches employer `JobPosting` structured data first.

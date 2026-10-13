@@ -201,6 +201,38 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
       entry.blocked = blocked || entry.attempts >= 3;
       save();
     },
+    refundAttempt(id, { message = 'Attempt paused without consuming retry budget' } = {}) {
+      const entry = entryFor(id);
+      const ledger = budget();
+      if (entry.attempts > 0) entry.attempts -= 1;
+      if (ledger.attempts > 0) ledger.attempts -= 1;
+      if (used > 0) used -= 1;
+      entry.lastError = String(message).slice(0, 1000);
+      entry.blocked = false;
+      entry.nextAttemptAt = null;
+      save();
+    },
+    retry(id) {
+      const entry = entryFor(id);
+      // Release the per-item retry ceiling, not the persisted daily ledger.
+      entry.attempts = 0;
+      entry.blocked = false;
+      entry.nextAttemptAt = null;
+      entry.lastError = 'Manually released for retry';
+      save();
+      return structuredClone(entry);
+    },
+    dismiss(id, { reason } = {}) {
+      const entry = entryFor(id);
+      if (typeof reason !== 'string' || !reason.trim()) throw new Error('Dismissal requires a nonempty reason');
+      const evidencePath = join(work, 'runtime', 'linkedin-dismissals', `${id}.json`);
+      mkdirSync(dirname(evidencePath), { recursive: true });
+      // Evidence must be durable before removing pending work.
+      atomicWrite(evidencePath, { ...structuredClone(entry), dismissedAt: now().toISOString(), reason: reason.trim().slice(0, 1000) });
+      state.entries = state.entries.filter(e => e.linkedinJobId !== id);
+      save();
+      return { linkedinJobId: id, dismissed: true, reason: reason.trim().slice(0, 1000) };
+    },
     summary() {
       guard();
       const ledger = budget();

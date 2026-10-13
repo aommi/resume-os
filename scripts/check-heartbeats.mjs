@@ -67,7 +67,10 @@ const hbDir = join(WORK, "heartbeats");
 // it became an on-demand screening step: demanding a recent heartbeat from a
 // workflow nothing schedules produces a permanent false alarm, which is how a
 // real alert channel gets ignored.
-const requiredHeartbeats = new Map();
+const requiredHeartbeats = new Map([
+  ['linkedin-discovery.json', 'LinkedIn discovery: no contract heartbeat file (collection never ran?)'],
+  ['linkedin-worker.json', 'LinkedIn worker: no contract heartbeat file (worker never ran?)'],
+]);
 for (const [name, message] of requiredHeartbeats) {
   if (!existsSync(join(hbDir, name))) problems.push(message);
 }

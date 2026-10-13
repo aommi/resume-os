@@ -20,22 +20,25 @@ function readLedger(work) {
 function serverDeadline(retryAfter, nowMs) {
   if (retryAfter === undefined || retryAfter === null || String(retryAfter).trim() === '') return null;
   const raw = String(retryAfter).trim();
+  const cap = nowMs + 7 * 24 * 3600000;
   if (/^\d+$/.test(raw)) {
     const value = nowMs + Number(raw) * 1000;
-    return Number.isSafeInteger(value) && Number.isFinite(new Date(value).getTime()) ? value : null;
+    return Number.isSafeInteger(value) && Number.isFinite(new Date(value).getTime()) ? Math.min(value, cap) : null;
   }
   const value = Date.parse(raw);
-  return Number.isFinite(value) && value > nowMs ? value : null;
+  return Number.isFinite(value) && value > nowMs ? Math.min(value, cap) : null;
 }
 export function recordLinkedInCooldown({ work, retryAfter, now = new Date(), workflow = 'linkedin' }) {
   const date = instant(now), nowMs = date.getTime();
   if (!Number.isFinite(nowMs)) throw new Error('Invalid cooldown clock');
   const previous = readLedger(work);
-  const active = previous && Date.parse(previous.retryAt) > nowMs;
-  const count = active ? previous.count : (previous?.count || 0) + 1;
+  const previousRetryAt = previous ? Date.parse(previous.retryAt) : 0;
+  const active = previous && previousRetryAt > nowMs;
+  const stale = previous && previousRetryAt < nowMs - 48 * 3600000;
+  const count = active ? previous.count : stale ? 1 : (previous?.count || 0) + 1;
   const fallback = nowMs + Math.min(24, 2 ** Math.min(count - 1, 5)) * 3600000;
   const deadline = serverDeadline(retryAfter, nowMs);
-  const retryAt = Math.max(deadline ?? (active ? Date.parse(previous.retryAt) : fallback), previous ? Date.parse(previous.retryAt) : 0);
+  const retryAt = Math.max(deadline ?? (active ? previousRetryAt : fallback), active ? previousRetryAt : 0);
   const ledger = { version: 1, reason: 'rate_limited', count, recordedAt: date.toISOString(), retryAt: new Date(retryAt).toISOString(), workflow };
   const path = ledgerPath(work);
   mkdirSync(dirname(path), { recursive: true });

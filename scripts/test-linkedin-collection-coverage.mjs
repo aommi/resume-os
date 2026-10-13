@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { collectJobs } from './run-linkedin-discovery.mjs';
 import { searchPage, readSearchPaginationEnd } from './search-linkedin-jobs.mjs';
@@ -20,6 +20,8 @@ function pageFixture(pages, failureAt = -1) {
   };
 }
 try {
+  const searchSource = readFileSync(join(dirname(new URL(import.meta.url).pathname), 'search-linkedin-jobs.mjs'), 'utf8');
+  assert.ok(searchSource.lastIndexOf('await main();') > searchSource.indexOf('const rateObservers = new WeakMap();'), 'CLI main must run after module-scope dependencies initialize');
   mkdirSync(join(work, 'runtime'), { recursive: true });
   const old = time.getTime() - 5 * 86400000;
   writeFileSync(boundary, String(old));

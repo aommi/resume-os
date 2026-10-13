@@ -26,7 +26,14 @@ try {
   assert.equal(recordLinkedInCooldown({ work: server, now, retryAfter: '172800' }).retryAt, '2026-10-15T12:00:00.000Z');
   assert.equal(recordLinkedInCooldown({ work: server, now, retryAfter: '30' }).retryAt, '2026-10-15T12:00:00.000Z');
   assert.equal(recordLinkedInCooldown({ work: join(root, 'date'), now, retryAfter: 'Fri, 16 Oct 2026 12:00:00 GMT' }).retryAt, '2026-10-16T12:00:00.000Z');
+  assert.equal(recordLinkedInCooldown({ work: join(root, 'huge'), now, retryAfter: '999999999' }).retryAt, '2026-10-20T12:00:00.000Z');
   assert.equal(recordLinkedInCooldown({ work: join(root, 'badheader'), now, retryAfter: 'garbage' }).retryAt, '2026-10-13T13:00:00.000Z');
+  const reset = join(root, 'reset');
+  const initial = recordLinkedInCooldown({ work: reset, now });
+  assert.equal(initial.count, 1);
+  const afterQuietPeriod = recordLinkedInCooldown({ work: reset, now: new Date(Date.parse(initial.retryAt) + 49 * 3600000) });
+  assert.equal(afterQuietPeriod.count, 1);
+  assert.equal(afterQuietPeriod.retryAt, '2026-10-15T15:00:00.000Z');
   const malformed = join(root, 'malformed'); mkdirSync(join(malformed, 'runtime'), { recursive: true });
   writeFileSync(join(malformed, 'runtime/linkedin-cooldown.json'), '{bad');
   assert.throws(() => assertLinkedInCooldown({ work: malformed, now }), { code: 'LINKEDIN_COOLDOWN_INVALID' });

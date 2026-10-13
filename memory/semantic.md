@@ -343,3 +343,7 @@ call; links and retrieval stage evidence survive retries. Canonical records reta
 LinkedIn aliases before duplicate acknowledgement. Unresolved/exhausted work stays visible;
 malformed metadata is an explicit repair barrier. The sweep skill owns source adaptation
 and exact-requisition search rules. No new dependency, provider, schedule or fit judgment.
+Manual queue retry releases the per-item ceiling without resetting daily accounting;
+cooldown aborts refund all unfinished leased batch work, retaining canonical ingestion.
+Dismissal requires a nonempty reason and persists profile-local evidence at
+`work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry.

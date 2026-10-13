@@ -70,6 +70,45 @@ try {
   }
   q = open('retry'); assert.equal(q.beginNext(), null); assert.equal(q.summary().blocked, 1); q.close();
 
+  q = open('operator'); q.enqueue([job('11'), job('12')]);
+  q.beginNext(); q.fail('11'); q.close();
+  clock = new Date(clock.getTime() + 3600001);
+  q = open('operator'); q.beginNext(); q.fail('11'); q.close();
+  clock = new Date(clock.getTime() + 2 * 3600001);
+  q = open('operator'); q.beginNext(); q.fail('11');
+  assert.equal(q.summary().blocked, 1);
+  q.retry('11');
+  assert.equal(q.summary().blocked, 0);
+  assert.equal(q.summary().pending, 2);
+  const charged = q.summary().dailyUsed;
+  q.close();
+  q = open('operator', { dailyCap: charged });
+  assert.equal(q.summary().dailyUsed, charged, 'retry preserves daily ledger across reopen');
+  assert.equal(q.beginNext(), null, 'retry cannot bypass daily cap'); q.close();
+  q = open('operator', { dailyCap: charged + 1 });
+  assert.equal(q.beginNext().linkedinJobId, '11', 'retry must lease exhausted item after reopen');
+  assert.equal(q.summary().dailyUsed, charged + 1);
+  for (const reason of [undefined, '', '   ', null]) assert.throws(() => q.dismiss('11', { reason }), /nonempty reason/);
+  assert.equal(q.summary().pending, 2);
+  assert.deepEqual(q.dismiss('11', { reason: 'bad lead' }), { linkedinJobId: '11', dismissed: true, reason: 'bad lead' });
+  assert.equal(q.summary().pending, 1); q.close();
+  const dismissal = JSON.parse(readFileSync(join(root, 'operator/runtime/linkedin-dismissals/11.json')));
+  assert.equal(dismissal.linkedinJobId, '11');
+  assert.equal(dismissal.url, job('11').url);
+  assert.equal(dismissal.reason, 'bad lead');
+  assert.equal(dismissal.dismissedAt, now().toISOString());
+  q = open('operator'); assert.equal(q.summary().pending, 1); q.close();
+
+  q = open('refund', { dailyCap: 1 }); q.enqueue([job('13')]);
+  q.beginNext();
+  assert.equal(q.summary().dailyUsed, 1);
+  q.refundAttempt('13', { message: 'cooldown' });
+  assert.equal(q.summary().dailyUsed, 0);
+  q.close();
+  q = open('refund', { dailyCap: 1 });
+  assert.equal(q.beginNext().attempts, 1, 'refunded cooldown must not consume a retry attempt');
+  q.close();
+
   q = open('duplicate'); q.enqueue([job('20')]); q.beginNext(); evidence('duplicate', '21');
   assert.throws(() => q.acknowledgeDuplicate('20', '../canonical-21'));
   assert.throws(() => q.acknowledgeDuplicate('20', 'missing'));

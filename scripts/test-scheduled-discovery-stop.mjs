@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { collectJobs } from './run-linkedin-discovery.mjs';
 import { runQueuedJobs } from './run-linkedin-worker.mjs';
 import { openDiscoveryQueue } from '../engine/linkedin-discovery-queue.mjs';
@@ -88,6 +90,55 @@ try {
   assert.equal(coolingWorker.report.attempted.length, 0);
   assert.equal(JSON.parse(readFileSync(join(limited.work, 'heartbeats/linkedin-worker.json'))).failureCategory, 'linkedin_cooldown');
 
+  const midRunLimited = fixture('mid-run-limited');
+  collectJobs({ ...midRunLimited, search: () => jobs(1) });
+  const midRunCooldown = runQueuedJobs({ ...midRunLimited, ingest: () => { throw Object.assign(new Error('LINKEDIN_RATE_LIMITED: detail'), { code: 'LINKEDIN_COOLDOWN' }); }, enrich: () => assert.fail('cooldown skips enrichment'), render: () => {} });
+  assert.equal(midRunCooldown.exitCode, 1);
+  assert.equal(midRunCooldown.report.failures[0].refunded, true);
+  assert.equal(state(midRunLimited.work).entries[0].attempts, 0);
+  assert.equal(state(midRunLimited.work).budget.attempts, 0);
+  assert.equal(state(midRunLimited.work).entries[0].blocked, false);
+
+  for (const timing of ['second-job-429', 'before-enrichment', 'during-enrichment']) {
+    const paused = fixture(timing);
+    collectJobs({ ...paused, search: () => jobs(2) });
+    let calls = 0;
+    const result = runQueuedJobs({ ...paused,
+      now: () => {
+        const saved = state(paused.work);
+        // The next budget check after both ingestions precedes enrichment.
+        if (timing === 'before-enrichment' && saved.budget.attempts === 2 && saved.entries.every(e => e.stage === 'enrich')) {
+          recordLinkedInCooldown({ work: paused.work, now: now(), workflow: 'fixture' });
+        }
+        return now();
+      },
+      ingest: entry => {
+        calls++;
+        if (timing === 'second-job-429' && calls === 2) throw new Error('LINKEDIN_RATE_LIMITED: HTTP 429');
+        ingest(paused.work, entry.linkedinJobId); return {};
+      },
+      enrich: ids => {
+        assert.equal(timing, 'during-enrichment', 'cooldown must skip enrichment');
+        enrich(paused.work, [ids[0]]);
+        throw new Error('LINKEDIN_RATE_LIMITED: HTTP 429');
+      }, render: () => assert.fail('cooldown must skip render') });
+    assert.equal(result.exitCode, 1);
+    assert.equal(JSON.parse(readFileSync(join(paused.work, 'heartbeats/linkedin-worker.json'))).failureCategory, 'linkedin_cooldown');
+    const saved = state(paused.work);
+    assert.equal(saved.budget.attempts, timing === 'during-enrichment' ? 1 : 0);
+    assert.equal(result.report.queue.runUsed, saved.budget.attempts);
+    assert.equal(result.report.failures.length, saved.entries.length);
+    assert.ok(result.report.failures.every(f => f.refunded));
+    assert.ok(saved.entries.every(e => e.attempts === 0 && !e.blocked && e.nextAttemptAt === null));
+    assert.equal(saved.entries[0].stage, 'enrich', 'earlier ingestion survives pause');
+    clock = new Date(Date.parse(JSON.parse(readFileSync(join(paused.work, 'runtime/linkedin-cooldown.json'))).retryAt) + 1);
+    const resumed = runQueuedJobs({ ...paused,
+      ingest: entry => { assert.equal(timing, 'second-job-429'); assert.equal(entry.linkedinJobId, '102'); ingest(paused.work, entry.linkedinJobId); return {}; },
+      enrich: ids => enrich(paused.work, ids), render: () => {} });
+    assert.equal(resumed.exitCode, 0, JSON.stringify(resumed.report));
+    assert.equal(state(paused.work).entries.length, 0);
+  }
+
   clock = new Date(Date.parse(JSON.parse(readFileSync(join(limited.work, 'runtime/linkedin-cooldown.json'))).retryAt) + 1);
   assert.equal(collectJobs({ ...limited, search: () => [] }).exitCode, 0, 'ordinary collection resumes after expiry without clearing auth state');
 
@@ -151,6 +202,30 @@ try {
   assert.equal(ipcResult.exitCode, 0, JSON.stringify(ipcResult.report));
   assert.deepEqual(ipcResult.report.completed, ['101']);
   assert.equal(ipcResult.report.queue.pending, 0);
+
+  const watchdogWork = join(root, 'profiles', 'watchdog-fixture', 'work');
+  mkdirSync(watchdogWork, { recursive: true });
+  const env = { ...process.env, RESUME_OS_PROFILE: 'watchdog-fixture' };
+  const watchdog = spawnSync(process.execPath, [new URL('./check-heartbeats.mjs', import.meta.url).pathname, '--quiet'],
+    { cwd: root, env, encoding: 'utf8' });
+  assert.equal(watchdog.status, 1, watchdog.stderr);
+  assert.match(watchdog.stdout, /LinkedIn discovery: no contract heartbeat file/);
+  assert.match(watchdog.stdout, /LinkedIn worker: no contract heartbeat file/);
+  assert.ok(existsSync(join(watchdogWork, 'watchdog-health.json')));
+
+  const workerCLI = new URL('./run-linkedin-worker.mjs', import.meta.url).pathname;
+  const cliQueue = openDiscoveryQueue({ work: watchdogWork, now });
+  cliQueue.enqueue(jobs(1)); cliQueue.close();
+  for (const args of [[], ['--reason', ''], ['--reason', '   '], ['--reason']]) {
+    const dismissed = spawnSync(process.execPath, [workerCLI, '--dismiss', '101', ...args], { cwd: root, env, encoding: 'utf8' });
+    assert.equal(dismissed.status, 1);
+    assert.match(dismissed.stderr, /nonempty/);
+    assert.equal(state(watchdogWork).entries.length, 1);
+  }
+  const dismissed = spawnSync(process.execPath, [workerCLI, '--dismiss', '101', '--reason', 'fixture rejection'], { cwd: root, env, encoding: 'utf8' });
+  assert.equal(dismissed.status, 0, dismissed.stderr);
+  assert.equal(state(watchdogWork).entries.length, 0);
+  assert.equal(JSON.parse(readFileSync(join(watchdogWork, 'runtime/linkedin-dismissals/101.json'))).reason, 'fixture rejection');
 
   console.log('bounded discovery/worker integration and stop tests: PASS');
 } finally { rmSync(root, { recursive: true, force: true }); }

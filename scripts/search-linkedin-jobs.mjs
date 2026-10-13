@@ -149,8 +149,6 @@ if (opts.coverageJson) {
 
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
-
 // ── Core ──────────────────────────────────────────────────────────────────
 
 // Completion needs an explicit paginator state, never a short virtualized card list.
@@ -359,3 +357,5 @@ function parseArgs(args, defaultLocation) {
   }
   return p;
 }
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
