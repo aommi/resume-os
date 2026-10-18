@@ -349,3 +349,13 @@ cooldown aborts refund all unfinished leased batch work, retaining canonical ing
 Dismissal requires a nonempty reason and persists profile-local evidence at
 `work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
 collection overlap treats dismissal evidence as a duplicate and does not requeue it.
+
+## Profile-owned application quality and compensation (2026-10-18)
+
+application-quality.md owns conditional fit, evidence visibility, salary-answer provenance,
+receipt reconciliation and browser cleanup judgment. The screening, sweep, tailoring and form-assist
+routes load it. Optional applicationQualityPolicy and compensationPolicy live in the active
+profile's application-policy.json; a fictional example documents the shape without granting
+submission authority. Applicable advertised midpoint or researched no-band targets follow
+profile instructions. No hardcoded salary table or parser fallback was added. Submitted
+packages stay frozen. README/resolver/startup checked; Architecture Boundary ALIGNED.

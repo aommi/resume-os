@@ -1,5 +1,9 @@
 # Resume OS v2
 
+[Application quality and compensation](application-quality.md) documents profile-owned fit,
+tailoring, salary-answer and receipt rules. The [fictional policy example](profiles/example/application-policy.json)
+shows optional preferences; it does not authorize submission. Real profile data stays private.
+
 A reusable engine for resume tailoring, job-pipeline tracking, and application packaging.
 The reusable engine is profile-agnostic; each person's private data lives under `profiles/<id>/`.
 

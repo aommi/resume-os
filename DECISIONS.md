@@ -601,3 +601,18 @@ cooldown is the traffic cap, while attempts measure actual useful processing wor
 This supersedes treating every429 as a permanent manual-clear stop. No safe platform
 rate or observable platform heat meter is claimed. Materialize virtualized cards
 before advancing page pagination, and observe background-response429s.
+
+## 2026-10-18 — Profile-owned application quality and salary expectations
+
+Quality and compensation-answer preferences live in optional active-profile policy, with a
+fictional checked-in example. Screening, sweep, tailoring and form-assist routes load
+application-quality.md. Applicable employer-band selection, exact midpoint expectations,
+no-band market comparisons and evidence visibility remain markdown judgment; deterministic
+parsers do not acquire salary fallbacks or seniority tables. Submitted snapshots stay frozen.
+
+Architecture Boundary: ALIGNED. (1) Fit, evidence visibility and salary-answer judgment changes.
+(2) Judgment lives in markdown and profile policy. (3) No new execution or validation code.
+(4) Resolver adds document paths only; no adapter/harness domain logic. (5) Preferences are
+conditional on profile instructions; no new universal approval gate or submission authority.
+(6) ALIGNED. README, resolver/startup and semantic memory checked and updated. Private policy,
+application evidence and unrelated in-progress automation are excluded from publication.

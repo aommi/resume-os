@@ -1,0 +1,16 @@
+{
+  "_comment": "Fictional, optional model-readable preferences. This file does not enable automation or authorize submission. Real preferences and evidence remain profile-local.",
+  "applicationQualityPolicy": {
+    "strongMatchTargetPerRound": 5,
+    "selection": "Read the full employer JD and verified evidence. Report strong matches and domain stretches separately; carry unfilled strong-match slots forward.",
+    "tailoring": "Choose the appropriate base; tailor headline, evidence selection and bullet order. Review actual page one and the most relevant recent role's first two bullets.",
+    "answers": "Use verified examples and outcomes; preserve submitted packages and answers.",
+    "execution": "Reuse portal lessons; wait for save/upload completion; verify employer receipts and reconcile email separately; close only completed task-owned tabs."
+  },
+  "compensationPolicy": {
+    "advertisedRange": "Use the exact midpoint of the applicable employer base-pay range for the candidate geography and level, with explicit currency and pay period. Round only when required by the form.",
+    "noAdvertisedRange": "Research current comparable employer ranges by country, currency, role family, seniority and scope. Adjust the target for more senior scope; document sources and reasoning.",
+    "noHardcodedFallback": true,
+    "evidence": "Record the question, applicable range or comparable sources, observation dates, calculation, currency/pay period and exact submitted answer in per-job notes."
+  }
+}

@@ -18,13 +18,13 @@ function expect(task, expected) {
   console.log(`PASS  ${task.padEnd(20)} -> ${got.join(", ")}`);
 }
 
-expect("tailor", [...always, "resume-os.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md"]);
+expect("tailor", [...always, "resume-os.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md", "application-quality.md"]);
 expect("score", [...always, "eval-rubric.md", "tailoring-methodology.md"]);
 expect("cover_letter", [...always, "resume-os.md", "tailoring-methodology.md"]);
 expect("resume_maintenance", [...always, "resume-os.md", "bullet-rubric.md"]);
-expect("job_screening", [...always, "job-screening.md"]);
-expect("job_search_sweep", [...always, "job-search-sweep.md", "job-screening.md"]);
-expect("application_form", [...always, "resume-os.md", "application-form-assist.md"]);
+expect("job_screening", [...always, "job-screening.md", "application-quality.md"]);
+expect("job_search_sweep", [...always, "job-search-sweep.md", "job-screening.md", "application-quality.md"]);
+expect("application_form", [...always, "resume-os.md", "application-form-assist.md", "application-quality.md"]);
 expect("interview_postmortem", [...always, "interview-postmortem.md"]);
 expect("interview_prep", [...always, "resume-os.md", "interview-prep.md", "interview-postmortem.md", "profiles/<activeProfile>/sources/interview-question-bank.md", "profiles/<activeProfile>/work/interview-evidence.md"]);
 expect("model_eval", [...always, "evals/model-comparison.md"]);
