@@ -28,6 +28,7 @@ import { isCompanyExcluded } from "../engine/job-exclusions.mjs";
 import {
   buildLinkedInSearchUrl,
   dedupeSearchResults,
+  matchesSearchTitle,
   resolveRecencySeconds,
 } from "../engine/linkedin-discovery-query.mjs";
 
@@ -50,12 +51,12 @@ if (!existsSync(PROFILE_DIR)) {
   process.exit(1);
 }
 
-// LinkedIn's OR search is unreliable — run two separate searches and merge
+// Run each configured title query separately, then merge exact job identities.
 const keywords = opts.keywords ? [opts.keywords] : defaultTitles.map((t) => t.toLowerCase());
 const allJobs = [];
 const queries = [];
 
-// Reuse one Chrome session for both searches
+// Reuse one Chrome session for all configured searches
 const sharedLock = acquireLinkedInLock("linkedin-discovery");
 if (!sharedLock.acquired) {
   console.error(`skipped: lock held by ${sharedLock.holder?.workflow || "unknown"}`);
@@ -88,7 +89,9 @@ try {
   for (const kw of keywords) {
     const url = buildLinkedInSearchUrl(kw, opts.location, recencySeconds);
     if (!opts.dryrun) console.error(`Search [${kw}]: ${url}`);
-    const result = await searchPage(page, url, { maxPages: opts.pages });
+    const prior = opts.cursor.find(item => item.keyword === kw && item.location === opts.location);
+    if (prior?.complete) { queries.push(prior); continue; }
+    const result = await searchPage(page, url, { startOffset: prior?.nextStart || 0, maxPages: opts.pages, previousPageIds: prior?.lastPageIds || '' });
     console.error(`  ${kw}: ${result.jobs.length} jobs (${result.coverage.reason})`);
     allJobs.push(...result.jobs);
     queries.push({ keyword: kw, location: opts.location, ...result.coverage });
@@ -101,21 +104,20 @@ try {
 }
 
 
-// Dedup across both searches
+// Dedup across configured searches
 const unique = dedupeSearchResults(allJobs);
 
 console.error(`Total: ${unique.length} unique jobs (from ${allJobs.length} raw).`);
 
-// Title filter: must contain "product manager" or "product owner"
-// Excludes: Director of Product, VP of Product, Product Designer, etc.
-const titleFilter = /product\s*(manager|owner)/i;
-const titleFiltered = unique.filter(j => titleFilter.test(j.title));
+// Match the same profile-owned title families used for discovery, at any seniority.
+const titlePhrases = opts.keywords ? [...defaultTitles, opts.keywords] : defaultTitles;
+const titleFiltered = unique.filter(j => matchesSearchTitle(j.title, titlePhrases));
 
 const skipped_titles = unique.length - titleFiltered.length;
 if (skipped_titles > 0) {
-  console.error(`Title filter: removed ${skipped_titles} non-PM/PO jobs:`);
+  console.error(`Title filter: removed ${skipped_titles} jobs outside configured title phrases:`);
   for (const j of unique) {
-    if (!titleFilter.test(j.title)) {
+    if (!matchesSearchTitle(j.title, titlePhrases)) {
       console.error(`  ✗ ${j.company} — ${j.title}`);
     }
   }
@@ -146,6 +148,8 @@ if (opts.coverageJson) {
 }
 
 }
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
 
 // ── Core ──────────────────────────────────────────────────────────────────
 
@@ -224,13 +228,13 @@ export async function materializeSearchCards(page, assertActive, maxSteps = 40) 
   return { jobs: [...found.values()], complete: false };
 }
 
-export async function searchPage(page, url, { maxPages = 4, sessionCheck = assertLinkedInSession, work = workDir(), now = () => new Date() } = {}) {
-  if (!Number.isSafeInteger(maxPages) || maxPages < 1) throw new Error('Invalid search pagination options');
+export async function searchPage(page, url, { startOffset = 0, maxPages = 4, previousPageIds = '', sessionCheck = assertLinkedInSession, work = workDir(), now = () => new Date() } = {}) {
+  if (!Number.isSafeInteger(startOffset) || startOffset < 0 || startOffset % 25 || !Number.isSafeInteger(maxPages) || maxPages < 1) throw new Error('Invalid search pagination options');
   const assertRateLimit = rateLimitGuard(page, { work, now });
   assertRateLimit();
   const allJobs = [];
-  let start = 0;
-  let lastPageIds = '';
+  let start = startOffset;
+  let lastPageIds = previousPageIds;
   for (let count = 0; count < maxPages; count++, start += 25) {
     try {
       assertRateLimit();
@@ -255,7 +259,10 @@ export async function searchPage(page, url, { maxPages = 4, sessionCheck = asser
       }
       const pageIds = jobs.map(job => job.linkedinJobId).sort().join(',');
       if (pageIds && pageIds === lastPageIds) {
-        return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'repeated_page' } };
+        const ended = await page.evaluate(readSearchPaginationEnd);
+        assertRateLimit();
+        if (ended) return { jobs: allJobs, coverage: { complete: true, nextStart: null, reason: 'explicit_last_page' } };
+        return { jobs: allJobs, coverage: { complete: false, nextStart: start, lastPageIds, reason: 'repeated_page' } };
       }
       const selectedIds = await page.evaluate(() => [...new Set([...document.querySelectorAll('a[href*="/jobs/view/"]')]
         .filter(a => !a.closest('[componentkey^="job-card-component-ref-"],li[data-occludable-job-id],.job-card-container'))
@@ -330,6 +337,7 @@ function parseArgs(args, defaultLocation) {
     dryrun: false,
     since: null,
     coverageJson: false,
+    cursor: [],
     pages: 4,
   };
   for (let i = 0; i < args.length; i++) {
@@ -337,6 +345,10 @@ function parseArgs(args, defaultLocation) {
     else if (args[i] === "--location") p.location = args[++i] ?? p.location;
     else if (args[i] === "--max") p.max = parseInt(args[++i], 10) || 15;
     else if (args[i] === '--coverage-json') p.coverageJson = true;
+    else if (args[i] === '--cursor-json') {
+      p.cursor = JSON.parse(args[++i]);
+      if (!Array.isArray(p.cursor) || p.cursor.some(q => typeof q.keyword !== 'string' || typeof q.complete !== 'boolean' || (!q.complete && (!Number.isSafeInteger(q.nextStart) || q.nextStart < 0 || q.nextStart % 25)))) throw new Error('Invalid pagination cursor');
+    }
     else if (args[i] === '--pages') {
       p.pages = Number(args[++i]);
       if (!Number.isSafeInteger(p.pages) || p.pages < 1) throw new Error('Invalid page budget');
@@ -348,4 +360,3 @@ function parseArgs(args, defaultLocation) {
   return p;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

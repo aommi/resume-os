@@ -63,6 +63,11 @@ and `tailoring-methodology.md` for package-building procedure.
 
 ## Common commands
 
+Search queries and title filtering both follow `jobSearch.titles` in the active profile.
+Include abbreviated titles and leadership phrases explicitly when wanted (see the fictional
+profile). Matching uses whole phrases across punctuation and seniority prefixes; fit remains
+a separate screening decision.
+
 LinkedIn setup uses a dedicated local Chrome profile. Run
 `node scripts/save-linkedin-cookies.mjs`, sign in manually in that window, then close
 it before running `node scripts/search-linkedin-jobs.mjs --dryrun`.

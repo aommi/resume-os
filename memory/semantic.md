@@ -349,3 +349,12 @@ cooldown aborts refund all unfinished leased batch work, retaining canonical ing
 Dismissal requires a nonempty reason and persists profile-local evidence at
 `work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
 collection overlap treats dismissal evidence as a duplicate and does not requeue it.
+
+## Profile-owned discovery title coverage (2026-10-19)
+
+LinkedIn search and retention now share jobSearch.titles rather than discarding everything
+outside two hardcoded full-title phrases. Optional abbreviations and leadership phrases come
+from the profile; matching is literal, case-insensitive, Unicode/punctuation-normalized and
+bounded by tokens. Explicit --keywords adds its phrase to retention for that run. Screening
+still owns qualification and fit. Fictional profile illustrates configuration. Query/identity
+and title-family regressions pass. README/resolver/startup checked; Architecture ALIGNED.

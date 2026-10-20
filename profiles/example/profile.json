@@ -37,7 +37,7 @@
     "aiUsageFrame": "Uses automation and data to compress discovery-to-validation; see positioning.md."
   },
   "jobSearch": {
-    "titles": ["Product Manager", "Senior Product Manager"],
+    "titles": ["Product Manager", "Product Owner", "PM", "PO", "Product Lead", "Product Management", "Director of Product", "Head of Product", "VP of Product", "Chief Product Officer"],
     "locations": ["Toronto", "Remote", "Canada"],
     "excludedCompanies": [],
     "matchSignals": ["payments", "merchant tooling", "ecommerce", "returns", "operational workflows"]

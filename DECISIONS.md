@@ -601,3 +601,16 @@ cooldown is the traffic cap, while attempts measure actual useful processing wor
 This supersedes treating every429 as a permanent manual-clear stop. No safe platform
 rate or observable platform heat meter is claimed. Materialize virtualized cards
 before advancing page pagination, and observe background-response429s.
+
+## 2026-10-19 — Profile-owned discovery title phrases
+
+Discovery searches and title retention use the same profile-owned title list rather than a
+hardcoded Product Manager/Product Owner gate. Abbreviations and leadership roles are explicit
+profile choices. Matching normalizes case, Unicode and punctuation and checks whole phrases;
+qualification and seniority suitability remain screening judgment. Explicit --keywords searches
+also admit that literal phrase, without changing the stored profile.
+
+Architecture Boundary: ALIGNED. (1) Role-family scope is profile-owned judgment. (2) Its meaning
+and selection belong in profile instructions and screening docs. (3) Code does literal normalized
+phrase matching only. (4) No resolver/adapter/harness domain logic. (5) No new approval or workflow
+gate. (6) ALIGNED. README and semantic memory updated; resolver/startup checked, no routing change.

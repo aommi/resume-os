@@ -5,6 +5,7 @@ import {
   DEFAULT_LINKEDIN_RECENCY_SECONDS,
   buildLinkedInSearchUrl,
   dedupeSearchResults,
+  matchesSearchTitle,
   resolveRecencySeconds,
 } from "../engine/linkedin-discovery-query.mjs";
 
@@ -57,3 +58,24 @@ assert.deepEqual(dedupeSearchResults([
 ]);
 
 console.log("linkedin discovery query tests: PASS");
+
+const titlePhrases = ["PM", "PO", "Product Manager", "Product Owner", "Product Lead",
+  "Product Management", "Director of Product", "Head of Product", "VP of Product",
+  "Chief Product Officer"];
+for (const title of ["PM", "Senior PM - Communications", "Sr. PM, Platform", "PO",
+  "Senior PO", "Senior Product Manager", "Staff Product Manager", "Principal Product Manager",
+  "Group Product Manager", "Senior Product Owner", "Product-Owner, Data", "Lead Product Manager",
+  "Director of Product", "Senior Director of Product Management", "Head of Product",
+  "VP of Product", "Chief Product Officer", "Product Lead", "ＰＭ – Platform"]) {
+  assert.equal(matchesSearchTitle(title, titlePhrases), true, title);
+}
+for (const title of ["Product Designer", "Marketing Communications Manager", "PMO Analyst",
+  "Program Manager", "Product Marketing Manager", "Portfolio Manager", "Support", "", null]) {
+  assert.equal(matchesSearchTitle(title, titlePhrases), false, String(title));
+}
+assert.equal(matchesSearchTitle("Program Manager", ["Program Manager"]), true,
+  "another profile owns its own role choices");
+assert.equal(matchesSearchTitle("Senior PM", ["Product Manager"]), false,
+  "abbreviation authority comes from the profile, not a hardcoded alias table");
+assert.equal(matchesSearchTitle("Senior PM", ["", " "]), false);
+console.log("profile-owned title-family matching: PASS");

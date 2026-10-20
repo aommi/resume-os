@@ -59,3 +59,14 @@ function validIsoParts(match) {
   }
   return true;
 }
+
+// Literal profile-owned title phrases; no seniority/fit judgment belongs here.
+export function matchesSearchTitle(title, phrases) {
+  const normalize = value => String(value ?? "").normalize("NFKC")
+    .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const normalizedTitle = ` ${normalize(title)} `;
+  return phrases.some(phrase => {
+    const normalizedPhrase = normalize(phrase);
+    return normalizedPhrase.length > 0 && normalizedTitle.includes(` ${normalizedPhrase} `);
+  });
+}
