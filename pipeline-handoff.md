@@ -48,9 +48,11 @@ invalid policy/config fails closed; nothing automatically restores permission.
 `work/pipeline-stop.json`, `work/linkedin-stop.json` or `work/application-stop.json` prevents dispatch. The wrapper
 rechecks gates immediately before child execution, after acquiring browser ownership.
 The supervisor polls cancellation/policy while the child runs, terminates its
-process group on revocation (with a bounded kill fallback), and records an uncertain
-result rather than retry permission. The owner must also check cancellation/policy
-at meaningful work boundaries; polling does not replace any final submit guard.
+process group on revocation, timeout, SIGTERM or SIGINT (TERM, up to five seconds
+of cleanup grace, then KILL), and records an uncertain result rather than retry
+permission. `timeoutMs` bounds execution before this additional cleanup grace.
+The owner must also check cancellation/policy at meaningful work boundaries;
+polling does not replace any final submit guard.
 
 The owner reads one JSON request on stdin, containing `version`, unique `runId`,
 `jobIds` (canonical inbox directory IDs), `work`, `policyPath`, `stage: enriched`
@@ -152,7 +154,9 @@ and is not leased through the shared desktop lock.
 `node scripts/test-pipeline-handoff.mjs` exercises the normal worker with fictional
 jobs and real injected owner subprocesses, including incremental delivery before an
 unrelated failure, exact acknowledgments, policy stops, overlapping schedulers,
-aliases, crashes and a live child surviving a killed browser-lock wrapper. Existing
+aliases, crashes, a live child surviving a killed browser-lock wrapper, and a
+TERM-ignoring owner/descendant timing out without releasing the lease early or
+replaying uncertain work. Existing
 queue/stop regressions remain applicable. This does not exercise live Chrome,
 employer submission. `node scripts/test-application-owner.mjs` additionally runs
 the normal worker through the real configured foreground owner and guarded executor

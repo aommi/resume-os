@@ -54,35 +54,30 @@ def main():
         env = dict(os.environ, RESUME_OS_BROWSER_LEASE_FD=str(fd), RESUME_OS_BROWSER_LEASE_PATH=os.path.abspath(args.lock))
         child = subprocess.Popen(command, pass_fds=(fd,), start_new_session=True, env=env)
 
-        def terminate():
-            # Timeout signals must finish even when the owner ignores TERM.
-            # Kill the entire owned group, including descendants retaining fd.
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-            try:
-                os.killpg(child.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                child.wait(timeout=0.5)
-            except subprocess.TimeoutExpired:
-                pass
-            try:
-                os.killpg(child.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            child.wait()
+        stopping = False
 
-        def stop(signum, _frame):
-            terminate()
-            print('HANDOFF_CANCELLED', file=sys.stderr)
-            raise SystemExit(78)
+        def stop(_signum, _frame):
+            nonlocal stopping
+            stopping = True
+
+        def signal_group(signum):
+            try:
+                os.killpg(child.pid, signum)
+            except ProcessLookupError:
+                pass
 
         signal.signal(signal.SIGTERM, stop)
         signal.signal(signal.SIGINT, stop)
         while child.poll() is None:
-            if not authorized():
-                terminate()
+            if stopping or not authorized():
+                signal_group(signal.SIGTERM)
+                try:
+                    child.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+                # Also clean up descendants if the foreground child exited first.
+                signal_group(signal.SIGKILL)
+                child.wait()
                 # Execution began: cancellation is uncertain, NOT a safe retry.
                 print('HANDOFF_CANCELLED', file=sys.stderr)
                 return 78

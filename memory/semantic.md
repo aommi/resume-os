@@ -367,6 +367,8 @@ trigger with partial failure, defaults, revocation, aliases and restart protecti
 No private policy/schedule is deployed by the reusable integration. The
 application_automation resolver route loads the markdown judgment contract.
 Unknown owner results survive restart as uncertain and are never auto-relaunched.
+Timeout/termination and revocation share process-group TERM cleanup with a
+five-second grace then KILL; the inherited browser lease remains held until death.
 The existing process-lock primitive is shared by queue and handoff state. Queued
 browser commands and configured owner use a Python/POSIX inherited kernel lease;
 shared-desktop profiles must configure one browser.ownershipLock path. Legacy

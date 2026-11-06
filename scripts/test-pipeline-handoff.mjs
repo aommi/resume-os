@@ -161,29 +161,48 @@ try {
     dispatchHandoffs(cancel); assert.equal(events(cancel.work)[0].status, 'uncertain');
     assert.equal(read(join(cancel.profile, 'application-policy.json')).enabled, false);
   } finally { if (cancelRun.exitCode === null) cancelRun.kill('SIGKILL'); }
+  // Real execFileSync timeout: TERM-ignoring owner/descendant must die before
+  // the inherited kernel lease is released; ambiguous work is never replayed.
+  const timeout = fixture('timeout'); evidence(timeout, '802'); recordEnrichedHandoff({ work: timeout.work, jobId: '802' });
+  const timeoutOwner = join(root, 'timeout-owner.py'), timeoutReady = join(root, 'timeout-ready');
+  const descendantReady = join(root, 'timeout-descendant'), termSeen = join(root, 'timeout-term');
+  const descendantCode = `import os,signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); open(${JSON.stringify(descendantReady)},'w').write(str(os.getpid())); time.sleep(60)`;
+  writeFileSync(timeoutOwner, `import os,signal,subprocess,sys,time\nsignal.signal(signal.SIGTERM,lambda *_: open(${JSON.stringify(termSeen)},'w').write('TERM'))\nsubprocess.Popen([sys.executable,'-c',${JSON.stringify(descendantCode)}],close_fds=False)\nopen(${JSON.stringify(timeoutReady)},'w').write(str(os.getpid()))\ntime.sleep(60)\n`);
+  writeFileSync(join(timeout.profile, 'profile.json'), JSON.stringify({ pipelineHandoff: { ...timeout.config.pipelineHandoff, timeoutMs: 1500, command: ['python3', timeoutOwner] } }));
+  const timeoutLock = browserOwnershipPath(timeout.work);
+  const timeoutCompete = () => spawnSync('python3', [wrapper, '--lock', timeoutLock, '--', process.execPath, '-e', 'process.exit(0)'], { encoding: 'utf8' });
+  const alive = pid => { try { process.kill(pid, 0); return true; } catch (error) { if (error.code === 'ESRCH') return false; throw error; } };
+  const started = Date.now();
+  const timeoutRun = spawn(process.execPath, ['--input-type=module', '-e', `import {dispatchHandoffs} from ${JSON.stringify(moduleURL)}; dispatchHandoffs(${JSON.stringify(timeout)});`], { stdio: 'pipe' });
+  const timeoutExit = new Promise(ok => timeoutRun.on('exit', code => ok(code)));
+  let watchdog;
+  try {
+    await waitFor(() => existsSync(timeoutReady) && existsSync(descendantReady));
+    const ownerPid = Number(readFileSync(timeoutReady, 'utf8')), descendantPid = Number(readFileSync(descendantReady, 'utf8'));
+    await waitFor(() => existsSync(termSeen));
+    assert.ok(alive(ownerPid) && alive(descendantPid), 'fixture ignores TERM');
+    assert.equal(events(timeout.work)[0].status, 'running');
+    assert.equal(timeoutCompete().status, 75, 'lease remains held during TERM grace');
+    const code = await Promise.race([timeoutExit, new Promise((_, fail) => { watchdog = setTimeout(() => fail(new Error('owner timeout did not terminate within 9 seconds')), 9000); })]);
+    assert.equal(code, 0);
+    assert.ok(Date.now() - started < 9000, 'timeout plus bounded cleanup returns promptly');
+    await waitFor(() => !alive(ownerPid) && !alive(descendantPid));
+    assert.equal(timeoutCompete().status, 0, 'lease released after owner and descendant death');
+    assert.equal(events(timeout.work)[0].status, 'uncertain');
+    assert.match(readFileSync(join(events(timeout.work)[0].runDir, 'owner.stderr'), 'utf8'), /ETIMEDOUT/);
+    const before = events(timeout.work)[0];
+    dispatchHandoffs(timeout);
+    assert.deepEqual(events(timeout.work)[0], before, 'timeout is not automatically replayed');
+    console.log(`owner timeout: PASS (${Date.now() - started}ms; TERM-ignoring owner/descendant dead, lease released, uncertain/no replay)`);
+  } finally {
+    clearTimeout(watchdog);
+    if (existsSync(timeoutReady)) { try { process.kill(-Number(readFileSync(timeoutReady, 'utf8')), 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; } }
+    if (timeoutRun.exitCode === null) { timeoutRun.kill('SIGKILL'); await timeoutExit; }
+  }
   // A persisted running claim without an acknowledgment is held on restart.
   const lost = fixture('lost-ack'); evidence(lost, '901');
   const lostPath = recordEnrichedHandoff({ work: lost.work, jobId: '901' });
   writeFileSync(lostPath, JSON.stringify({ ...read(lostPath), status: 'running', runId: 'old-unacknowledged-run' }));
   dispatchHandoffs(lost); assert.equal(events(lost.work)[0].status, 'uncertain'); assert.equal(existsSync(lost.log), false);
-  // execFileSync timeout must bound cleanup even if TERM is ignored by owner
-  // and its lease-inheriting descendant. Unknown work cannot become safe retry.
-  const stubborn = fixture('stubborn-timeout'); evidence(stubborn, '950');
-  const stubbornPath = recordEnrichedHandoff({work:stubborn.work,jobId:'950'});
-  const stubbornOwner = join(root,'stubborn.py'), stubbornPid = join(root,'stubborn.pid');
-  writeFileSync(stubbornOwner, `import os,signal,subprocess,time\nsignal.signal(signal.SIGTERM,signal.SIG_IGN)\nfd=int(os.environ['RESUME_OS_BROWSER_LEASE_FD'])\nsubprocess.Popen(['python3','-c','import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(60)'],pass_fds=(fd,))\nopen(${JSON.stringify(stubbornPid)},'w').write(str(os.getpid()))\nwhile True: time.sleep(1)\n`);
-  writeFileSync(join(stubborn.profile,'profile.json'),JSON.stringify({pipelineHandoff:{...stubborn.config.pipelineHandoff,command:['python3',stubbornOwner],timeoutMs:200}}));
-  const began=Date.now();
-  const timed=spawnSync(process.execPath,['--input-type=module','-e',`import {dispatchHandoffs} from ${JSON.stringify(moduleURL)};dispatchHandoffs(${JSON.stringify(stubborn)});`],{encoding:'utf8',timeout:5000});
-  assert.equal(timed.status,0,timed.stderr || timed.error?.message);
-  assert.ok(Date.now()-began<3000,'stubborn timeout cleanup must be bounded');
-  assert.ok(existsSync(stubbornPid),'fixture must actually start and ignore TERM');
-  const pid=Number(readFileSync(stubbornPid));
-  assert.throws(()=>process.kill(pid,0),e=>e.code==='ESRCH','direct owner reaped');
-  assert.equal(read(stubbornPath).status,'uncertain');
-  const freed=spawnSync('python3',[wrapper,'--lock',browserOwnershipPath(stubborn.work),'--',process.execPath,'-e','process.exit(0)'],{encoding:'utf8',timeout:3000});
-  assert.equal(freed.status,0,'descendant must not retain inherited browser lease');
-  const oldRun=read(stubbornPath).runId;dispatchHandoffs(stubborn);assert.equal(read(stubbornPath).runId,oldRun);
-  console.log('stubborn TERM-ignoring owner timeout: PASS (bounded KILL, group lease cleanup, uncertain/no replay)');
   console.log('pipeline handoff: PASS (incremental normal worker, real owner argv/acks, aliases, partial failure, restart/dedup, policy stops/revocation, uncertain outcomes, overlapping schedulers, inherited browser lease, busy-budget refund)');
 } finally { rmSync(root, { recursive: true, force: true }); }
