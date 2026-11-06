@@ -358,6 +358,8 @@ foreground and run/accepted-ID acknowledged; configured workers settle each job
 then dispatch before unrelated jobs, while non-opt-in batching remains unchanged.
 This is review-only: no submission authority, lifecycle writes or applied counts.
 Unknown owner results survive restart as uncertain and are never auto-relaunched.
+Timeout/termination and revocation share process-group TERM cleanup with a
+five-second grace then KILL; the inherited browser lease remains held until death.
 The existing process-lock primitive is shared by queue and handoff state. Queued
 browser commands and configured owner use a Python/POSIX inherited kernel lease;
 shared-desktop profiles must configure one browser.ownershipLock path. Legacy

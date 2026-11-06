@@ -161,6 +161,44 @@ try {
     dispatchHandoffs(cancel); assert.equal(events(cancel.work)[0].status, 'uncertain');
     assert.equal(read(join(cancel.profile, 'application-policy.json')).enabled, false);
   } finally { if (cancelRun.exitCode === null) cancelRun.kill('SIGKILL'); }
+  // Real execFileSync timeout: TERM-ignoring owner/descendant must die before
+  // the inherited kernel lease is released; ambiguous work is never replayed.
+  const timeout = fixture('timeout'); evidence(timeout, '802'); recordEnrichedHandoff({ work: timeout.work, jobId: '802' });
+  const timeoutOwner = join(root, 'timeout-owner.py'), timeoutReady = join(root, 'timeout-ready');
+  const descendantReady = join(root, 'timeout-descendant'), termSeen = join(root, 'timeout-term');
+  const descendantCode = `import os,signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); open(${JSON.stringify(descendantReady)},'w').write(str(os.getpid())); time.sleep(60)`;
+  writeFileSync(timeoutOwner, `import os,signal,subprocess,sys,time\nsignal.signal(signal.SIGTERM,lambda *_: open(${JSON.stringify(termSeen)},'w').write('TERM'))\nsubprocess.Popen([sys.executable,'-c',${JSON.stringify(descendantCode)}],close_fds=False)\nopen(${JSON.stringify(timeoutReady)},'w').write(str(os.getpid()))\ntime.sleep(60)\n`);
+  writeFileSync(join(timeout.profile, 'profile.json'), JSON.stringify({ pipelineHandoff: { ...timeout.config.pipelineHandoff, timeoutMs: 1500, command: ['python3', timeoutOwner] } }));
+  const timeoutLock = browserOwnershipPath(timeout.work);
+  const timeoutCompete = () => spawnSync('python3', [wrapper, '--lock', timeoutLock, '--', process.execPath, '-e', 'process.exit(0)'], { encoding: 'utf8' });
+  const alive = pid => { try { process.kill(pid, 0); return true; } catch (error) { if (error.code === 'ESRCH') return false; throw error; } };
+  const started = Date.now();
+  const timeoutRun = spawn(process.execPath, ['--input-type=module', '-e', `import {dispatchHandoffs} from ${JSON.stringify(moduleURL)}; dispatchHandoffs(${JSON.stringify(timeout)});`], { stdio: 'pipe' });
+  const timeoutExit = new Promise(ok => timeoutRun.on('exit', code => ok(code)));
+  let watchdog;
+  try {
+    await waitFor(() => existsSync(timeoutReady) && existsSync(descendantReady));
+    const ownerPid = Number(readFileSync(timeoutReady, 'utf8')), descendantPid = Number(readFileSync(descendantReady, 'utf8'));
+    await waitFor(() => existsSync(termSeen));
+    assert.ok(alive(ownerPid) && alive(descendantPid), 'fixture ignores TERM');
+    assert.equal(events(timeout.work)[0].status, 'running');
+    assert.equal(timeoutCompete().status, 75, 'lease remains held during TERM grace');
+    const code = await Promise.race([timeoutExit, new Promise((_, fail) => { watchdog = setTimeout(() => fail(new Error('owner timeout did not terminate within 9 seconds')), 9000); })]);
+    assert.equal(code, 0);
+    assert.ok(Date.now() - started < 9000, 'timeout plus bounded cleanup returns promptly');
+    await waitFor(() => !alive(ownerPid) && !alive(descendantPid));
+    assert.equal(timeoutCompete().status, 0, 'lease released after owner and descendant death');
+    assert.equal(events(timeout.work)[0].status, 'uncertain');
+    assert.match(readFileSync(join(events(timeout.work)[0].runDir, 'owner.stderr'), 'utf8'), /ETIMEDOUT/);
+    const before = events(timeout.work)[0];
+    dispatchHandoffs(timeout);
+    assert.deepEqual(events(timeout.work)[0], before, 'timeout is not automatically replayed');
+    console.log(`owner timeout: PASS (${Date.now() - started}ms; TERM-ignoring owner/descendant dead, lease released, uncertain/no replay)`);
+  } finally {
+    clearTimeout(watchdog);
+    if (existsSync(timeoutReady)) { try { process.kill(-Number(readFileSync(timeoutReady, 'utf8')), 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; } }
+    if (timeoutRun.exitCode === null) { timeoutRun.kill('SIGKILL'); await timeoutExit; }
+  }
   // A persisted running claim without an acknowledgment is held on restart.
   const lost = fixture('lost-ack'); evidence(lost, '901');
   const lostPath = recordEnrichedHandoff({ work: lost.work, jobId: '901' });

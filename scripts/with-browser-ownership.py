@@ -53,21 +53,30 @@ def main():
             return 77
         child = subprocess.Popen(command, pass_fds=(fd,), start_new_session=True)
 
-        def stop(signum, _frame):
+        stopping = False
+
+        def stop(_signum, _frame):
+            nonlocal stopping
+            stopping = True
+
+        def signal_group(signum):
             try:
                 os.killpg(child.pid, signum)
             except ProcessLookupError:
                 pass
+
         signal.signal(signal.SIGTERM, stop)
         signal.signal(signal.SIGINT, stop)
         while child.poll() is None:
-            if not authorized():
-                stop(signal.SIGTERM, None)
+            if stopping or not authorized():
+                signal_group(signal.SIGTERM)
                 try:
                     child.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    stop(signal.SIGKILL, None)
-                    child.wait()
+                    pass
+                # Also clean up descendants if the foreground child exited first.
+                signal_group(signal.SIGKILL)
+                child.wait()
                 # Execution began: cancellation is uncertain, NOT a safe retry.
                 print('HANDOFF_CANCELLED', file=sys.stderr)
                 return 78
