@@ -1,9 +1,10 @@
 // Pending work and execution budgets only. Selection judgment belongs to skills.
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { extractLinkedInJobId } from './job-identity.mjs';
+import { recordEnrichedHandoff } from './pipeline-handoff.mjs';
+import { acquireProcessLock } from './process-lock.mjs';
 import { isEnrichmentComplete } from './enrichment-completion.mjs';
 
 export function validateDiscoveryJob(job) {
@@ -36,46 +37,15 @@ function atomicWrite(path, value) {
   finally { closeSync(fd); }
   renameSync(temp, path);
 }
-function alive(pid) {
-  try { process.kill(pid, 0); return true; } catch (error) { return error.code !== 'ESRCH'; }
-}
-function readOwner(path) {
-  try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; }
-}
-function acquire(path) {
-  const owner = { pid: process.pid, hostname: hostname(), token: randomUUID() };
-  function create() {
-    const fd = openSync(path, 'wx', 0o600);
-    try { writeFileSync(fd, JSON.stringify(owner)); } finally { closeSync(fd); }
-  }
-  try { create(); } catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    // Serialize dead-owner recovery. Malformed/foreign locks always require manual review.
-    const recovery = `${path}.recovery`;
-    let fd;
-    try { fd = openSync(recovery, 'wx', 0o600); writeFileSync(fd, JSON.stringify(owner)); } catch (error) {
-      if (fd !== undefined) { closeSync(fd); unlinkSync(recovery); }
-      if (error.code !== 'EEXIST') throw error;
-      throw Object.assign(new Error('Discovery queue recovery is locked; a dead recovery owner requires manual review'), { code: 'QUEUE_LOCKED' });
-    }
-    try {
-      const old = readOwner(path);
-      if (old?.hostname === hostname() && Number.isInteger(old.pid) && old.pid > 0 && !alive(old.pid)) unlinkSync(path);
-      try { create(); } catch (error) {
-        if (error.code !== 'EEXIST') throw error;
-        throw Object.assign(new Error('Discovery queue is locked'), { code: 'QUEUE_LOCKED' });
-      }
-    } finally { closeSync(fd); unlinkSync(recovery); }
-  }
-  return () => { if (readOwner(path)?.token === owner.token) unlinkSync(path); };
-}
 
 export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Date(), dailyCap = 10, runCap = 2 } = {}) {
   for (const value of [dailyCap, runCap]) if (!Number.isSafeInteger(value) || value < 1) throw new Error('Queue caps must be positive integers');
   const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' });
   const path = join(work, 'runtime', 'linkedin-discovery-queue.json');
   mkdirSync(dirname(path), { recursive: true });
-  const release = acquire(`${path}.lock`);
+  let release;
+  try { release = acquireProcessLock(`${path}.lock`); }
+  catch (error) { if (error.code === 'RESOURCE_LOCKED') error.code = 'QUEUE_LOCKED'; throw error; }
   let state;
   try {
     state = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : { version: 1, budget: { day: '', attempts: 0 }, entries: [] };
@@ -129,7 +99,7 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
     guard();
     state.entries = state.entries.filter(entry => {
       const found = canonical(entry.linkedinJobId);
-      if (found?.enriched) return false;
+      if (found?.enriched) { recordEnrichedHandoff({ work, jobId: found.id }); return false; }
       if (found) { entry.stage = 'enrich'; entry.canonicalId = found.id; }
       return true;
     });
@@ -194,7 +164,9 @@ export function openDiscoveryQueue({ work, timezone = 'UTC', now = () => new Dat
     },
     complete(id) {
       entryFor(id);
-      if (!canonical(id)?.enriched) throw new Error('Cannot complete without canonical ingestion and enrichment evidence');
+      const found = canonical(id);
+      if (!found?.enriched) throw new Error('Cannot complete without canonical ingestion and enrichment evidence');
+      recordEnrichedHandoff({ work, jobId: found.id });
       state.entries = state.entries.filter(e => e.linkedinJobId !== id);
       save();
     },

@@ -9,7 +9,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 
 1. Identify the task type. Known tasks: `tailor`, `score`, `cover_letter`, `resume_maintenance`,
    `job_screening`, `job_search_sweep`, `application_form`, `interview_postmortem`, `interview_prep`, `model_eval`, `pipeline_status`,
-   `discover`.
+   `discover`, `pipeline_handoff`.
 2. Load `always` docs (the active profile's `resume-project-tracker.md`) plus the task's route.
 3. **Unknown or ambiguous intent → the `default` route** (`resume-os.md` + `tailoring-methodology.md`).
    This is the safety net: the sparse resolver degrades to roughly the old cold-start behavior, so it is
@@ -27,6 +27,7 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 | `interview_postmortem` | interview-postmortem.md | analyze a completed interview or contract-scope call and ground the next step |
 | `interview_prep` | resume-os.md, interview-prep.md, interview-postmortem.md, profile question bank and evidence ledger | future interview, recruiter call, or active-application “next step”; create responsive, printable HTML prep using confirmed event details and transferable evidence |
 | `model_eval` | evals/model-comparison.md | two-layer model comparison and approval gate |
+| `pipeline_handoff` | pipeline-handoff.md, job-screening.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md | opt-in enriched-to-review owner contract; never submission authority |
 | `pipeline_status` | (none) | just run `node scripts/job-board.mjs` |
 | `discover` | (none) | run scrapers (Hermes); facts only |
 | _unknown_ | resume-os.md, tailoring-methodology.md | **fallback** |

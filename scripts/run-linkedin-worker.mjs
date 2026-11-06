@@ -4,9 +4,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { workDir, timezone } from '../engine/config.mjs';
+import { workDir, timezone, profileDir } from '../engine/config.mjs';
 import { assertLinkedInCooldown, recordLinkedInCooldown } from '../engine/linkedin-cooldown.mjs';
 import { openDiscoveryQueue } from '../engine/linkedin-discovery-queue.mjs';
+
+import { browserCommand, dispatchHandoffs, handoffConfigured } from '../engine/pipeline-handoff.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 function limit(value, fallback, name) {
@@ -18,31 +20,57 @@ function limit(value, fallback, name) {
 export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new Date(), zone = timezone(),
   runCap = limit(process.env.LINKEDIN_WORKER_BATCH, 2, 'LINKEDIN_WORKER_BATCH'),
   dailyCap = limit(process.env.LINKEDIN_WORKER_DAILY_CAP, 10, 'LINKEDIN_WORKER_DAILY_CAP'),
-  ingest, enrich, render, statusOnly = false } = {}) {
+  ingest, enrich, render, profile = profileDir(), statusOnly = false } = {}) {
   const started = now();
   const runDir = join(work, 'runtime', 'linkedin-worker', String(started.getTime()));
   const stop = join(work, 'linkedin-stop.json');
   const hb = join(work, 'heartbeats', 'linkedin-worker.json');
-  const report = { runStartedAt: started.toISOString(), attempted: [], completed: [], duplicates: [], excluded: [], failures: [], model: 'none' };
+  const report = { runStartedAt: started.toISOString(), attempted: [], completed: [], duplicates: [], excluded: [], failures: [], handoffRuns: [], handoffErrors: [], newReceiptConfirmedApplications: 0, model: 'none' };
   let queue, exitCode = 0, failureCategory = '', previous = {};
   const batch = [];
-  const command = (script, args = [], input) => execFileSync(process.execPath, [join(repo, 'scripts', script), ...args],
-    { cwd: repo, input, encoding: 'utf8', timeout: 240000, maxBuffer: 8 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
+  const command = (script, args = [], input) => browserCommand(process.execPath, [join(repo, 'scripts', script), ...args],
+    { cwd: repo, input, encoding: 'utf8', timeout: 240000, maxBuffer: 8 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }, { work });
   ingest ??= entry => JSON.parse(command('retrieve-queued-job.mjs', [], JSON.stringify(entry)));
-  render ??= () => command('job-board.mjs', ['render']);
+  render ??= () => execFileSync(process.execPath, [join(repo, 'scripts/job-board.mjs'), 'render'], { cwd: repo, encoding: 'utf8', timeout: 240000 });
   enrich ??= ids => {
     const model = JSON.parse(readFileSync(join(repo, 'engine/models.json'), 'utf8')).steps.discovery_enrich.model;
     report.model = model;
     const prompt = `Enrich ONLY these leased job IDs: ${ids.join(', ')}. Work directory: ${work}. Read job-search-sweep.md section Scheduled source-retrieval hierarchy, then load skill resume-os-enrich and follow its ATS workflow using scripts/enrich-job.mjs. Ingestion is already complete: do not run process-job.mjs again. Write factual enrichment.md and enrichedAt/atsType metadata only for these IDs. No new searches, historical catch-up, fit assessment, resume work, messages, or LinkedIn save actions. Never change scheduler queue/budget/watermark files. A LinkedIn authentication challenge requires writing ${stop} with reason auth_challenge and stopping the entire batch; do not retry it. Ordinary per-job failures may continue within this batch. The harness verifies artifacts and owns completion/retry accounting.`;
-    const output = execFileSync('hermes', ['chat', '-q', prompt, '--model', model, '-Q', '-t', 'terminal,file,browser', '--max-turns', '40', '--ignore-rules'],
-      { cwd: repo, encoding: 'utf8', timeout: 900000, maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-    writeFileSync(join(runDir, 'enrichment.log'), output, { mode: 0o600 });
+    const output = browserCommand('hermes', ['chat', '-q', prompt, '--model', model, '-Q', '-t', 'terminal,file,browser', '--max-turns', '40', '--ignore-rules'],
+      { cwd: repo, encoding: 'utf8', timeout: 900000, maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }, { work });
+    writeFileSync(join(runDir, 'enrichment.log'), output, { mode: 0o600, flag: 'a' });
   };
+  function handoff() {
+    try {
+      report.handoff = dispatchHandoffs({ work, profile, repo });
+      report.handoffRuns.push(report.handoff);
+    } catch (error) {
+      report.handoffErrors.push(error.message); // Do not reclassify enrichment or stall unrelated IDs.
+    }
+  }
+  function settleBatch() {
+    if (batch.length) {
+      let enrichError;
+      try { assertActive(); enrich([...new Set(batch.map(item => item.canonical))]); assertActive(); }
+      catch (cause) { enrichError = failure(cause); }
+      for (const { id } of batch) {
+        try { queue.complete(id); report.completed.push(id); }
+        catch (error) {
+          if (['LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(enrichError?.code)) queue.refundAttempt(id, { message: enrichError.message });
+          else queue.fail(id, { message: enrichError?.message || error.message });
+          report.failures.push({ id, error: enrichError?.message || error.message, refunded: ['LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(enrichError?.code) });
+        }
+      }
+      batch.length = 0; // All leased items have been settled, including refunds.
+      if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(enrichError?.code)) throw enrichError;
+    }
+  }
   function assertActive() {
     assertLinkedInCooldown({ work, now: now() });
     if (existsSync(stop)) throw Object.assign(new Error('LinkedIn is stopped; manual verification and explicit stop-file clearance required'), { code: 'LINKEDIN_STOPPED' });
   }
   function failure(error) {
+    if (error.status === 75 && /^BROWSER_BUSY\s*$/.test(String(error.stderr).trim())) { error.code = 'BROWSER_BUSY'; return error; }
     if (error.code === 'LINKEDIN_COOLDOWN' || /LINKEDIN_RATE_LIMITED:/.test(`${error.message} ${error.stderr || ''}`)) {
       try { assertLinkedInCooldown({ work, now: now() }); error.retryAt = recordLinkedInCooldown({ work, now: now(), workflow: 'linkedin-worker' }).retryAt; } catch (cooldown) {
         if (cooldown.code !== 'LINKEDIN_COOLDOWN') { error.message = cooldown.message; error.code = cooldown.code || 'COOLDOWN_STATE_INVALID'; return error; }
@@ -67,6 +95,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
     queue = openDiscoveryQueue({ work, timezone: zone, now, runCap, dailyCap });
     if (!statusOnly) {
       queue.reconcile();
+      handoff(); // Recover durable pending events even on an idle restart.
       let entry;
       while ((entry = queue.beginNext())) {
         const id = entry.linkedinJobId;
@@ -90,7 +119,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
             }
             canonical = queue.ingested(id);
             // Structured retrieval may already have persisted complete enrichment.
-            try { queue.complete(id); report.completed.push(id); continue; }
+            try { queue.complete(id); report.completed.push(id); handoff(); continue; }
             catch (error) {
               if (error.message !== 'Cannot complete without canonical ingestion and enrichment evidence') throw error;
             }
@@ -98,32 +127,21 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
           batch.push({ id, canonical });
         } catch (cause) {
           const error = failure(cause);
-          if (error.code === 'LINKEDIN_COOLDOWN') queue.refundAttempt(id, { message: error.message });
+          if (['LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(error.code)) queue.refundAttempt(id, { message: error.message });
           else queue.fail(id, { message: error.message });
-          report.failures.push({ id, error: error.message, refunded: error.code === 'LINKEDIN_COOLDOWN' });
-          if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN'].includes(error.code)) throw error;
+          report.failures.push({ id, error: error.message, refunded: ['LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(error.code) });
+          if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(error.code)) throw error;
         }
+        if (handoffConfigured(profile)) { settleBatch(); handoff(); }
       }
-      if (batch.length) {
-        let enrichError;
-        try { assertActive(); enrich([...new Set(batch.map(item => item.canonical))]); assertActive(); }
-        catch (cause) { enrichError = failure(cause); }
-        for (const { id } of batch) {
-          try { queue.complete(id); report.completed.push(id); }
-          catch (error) {
-            if (enrichError?.code === 'LINKEDIN_COOLDOWN') queue.refundAttempt(id, { message: enrichError.message });
-            else queue.fail(id, { message: enrichError?.message || error.message });
-            report.failures.push({ id, error: enrichError?.message || error.message, refunded: enrichError?.code === 'LINKEDIN_COOLDOWN' });
-          }
-        }
-        batch.length = 0; // All leased items have been settled, including refunds.
-        if (['LINKEDIN_STOPPED', 'LINKEDIN_COOLDOWN'].includes(enrichError?.code)) throw enrichError;
-      }
+      settleBatch();
+      handoff();
       if (report.attempted.length) render();
+      if (report.handoffErrors.length || report.handoff?.uncertain?.length) throw new Error('Application review handoff requires reconciliation; see durable run evidence');
       if (report.failures.length) throw new Error(`${report.failures.length} queued attempt(s) failed; retained for bounded retry/manual review`);
     }
   } catch (error) {
-    if (error.code === 'LINKEDIN_COOLDOWN' && queue) {
+    if (['LINKEDIN_COOLDOWN', 'BROWSER_BUSY'].includes(error.code) && queue) {
       // A later retrieval can pause the whole run before earlier items enrich.
       for (const { id } of batch) {
         try { queue.complete(id); report.completed.push(id); }
@@ -136,7 +154,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
     report.error = error.message;
     if (error.retryAt) report.retryAt = error.retryAt;
     exitCode = 1;
-    failureCategory = error.code === 'LINKEDIN_COOLDOWN' ? 'linkedin_cooldown' : error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : error.code === 'QUEUE_LOCKED' ? 'queue_busy' : error.code === 'CANONICAL_METADATA_INVALID' ? 'canonical_metadata_invalid' : 'worker_failed';
+    failureCategory = error.code === 'BROWSER_BUSY' ? 'browser_busy' : error.code === 'LINKEDIN_COOLDOWN' ? 'linkedin_cooldown' : error.code === 'LINKEDIN_STOPPED' ? 'linkedin_stopped' : error.code === 'QUEUE_LOCKED' ? 'queue_busy' : error.code === 'CANONICAL_METADATA_INVALID' ? 'canonical_metadata_invalid' : 'worker_failed';
   } finally {
     if (queue) { report.queue = queue.summary(); queue.close(); }
     // Retry exhaustion remains an operational problem until explicitly repaired.
@@ -181,6 +199,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const r = result.report, q = r.queue;
   console.log(statusOnly || process.argv.includes('--json') ? JSON.stringify(r, null, 2) :
     result.exitCode === 0 && !r.attempted.length ? '[SILENT]' :
-    `Resume OS processing: ${r.completed.length} completed, ${r.duplicates.length} duplicates, ${r.excluded.length} excluded, ${r.failures.length} failed.\nWaiting: ${q?.pending ?? 'unknown'}; needs review: ${q?.blocked ?? 'unknown'}; budget remaining today: ${q?.remainingToday ?? 'unknown'}.\nOldest waiting: ${q?.oldestQueuedAt || 'none'}.${r.error ? `\n${r.error}` : ''}`);
+    `Resume OS enrichment: ${r.completed.length} ingested/enriched, ${r.duplicates.length} duplicates, ${r.excluded.length} excluded, ${r.failures.length} failed. New receipt-confirmed applications: 0 (review handoff only).\nWaiting: ${q?.pending ?? 'unknown'}; needs review: ${q?.blocked ?? 'unknown'}; budget remaining today: ${q?.remainingToday ?? 'unknown'}.\nOldest waiting: ${q?.oldestQueuedAt || 'none'}.${r.error ? `\n${r.error}` : ''}`);
   process.exitCode = result.exitCode;
 }
