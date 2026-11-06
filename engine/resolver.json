@@ -12,7 +12,8 @@
     "interview_postmortem": ["interview-postmortem.md"],
     "interview_prep": ["resume-os.md", "interview-prep.md", "interview-postmortem.md", "profiles/<activeProfile>/sources/interview-question-bank.md", "profiles/<activeProfile>/work/interview-evidence.md"],
     "model_eval": ["evals/model-comparison.md"],
-    "pipeline_handoff": ["pipeline-handoff.md", "job-screening.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md"],
+    "application_automation": ["application-automation.md", "pipeline-handoff.md", "job-screening.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md"],
+    "pipeline_handoff": ["pipeline-handoff.md", "application-automation.md", "job-screening.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md"],
     "pipeline_status": [],
     "discover": []
   },

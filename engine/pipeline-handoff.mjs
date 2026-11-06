@@ -80,7 +80,7 @@ export function dispatchHandoffs({ work = workDir(), profile = profileDir(), rep
       const configPath = join(profile, 'profile.json'), policyPath = join(profile, 'application-policy.json');
       const config = existsSync(configPath) ? read(configPath).pipelineHandoff : null;
       const policy = existsSync(policyPath) ? read(policyPath) : {};
-      const stops = [join(work, 'pipeline-stop.json'), join(work, 'linkedin-stop.json')];
+      const stops = [join(work, 'pipeline-stop.json'), join(work, 'linkedin-stop.json'), join(work, 'application-stop.json')];
       if (config?.enabled !== true || policy.enabled !== true || policy.paused === true || stops.some(existsSync)) {
         summary.pending.push(event.jobIds); continue;
       }
@@ -96,7 +96,7 @@ export function dispatchHandoffs({ work = workDir(), profile = profileDir(), rep
       if (active.length !== event.jobIds.length) { event.status = 'held'; event.reason = 'An exact-job alias has already advanced in canonical lifecycle'; atomic(path, event); summary.held.push(event.jobIds); continue; }
       event.runId = randomUUID(); event.status = 'running'; event.startedAt = new Date().toISOString();
       const runDir = join(dir, 'runs', event.runId); mkdirSync(runDir, { recursive: true });
-      const request = { version: 1, runId: event.runId, stage: 'enriched', mode: 'review-only', jobIds: active,
+      const request = { version: 1, runId: event.runId, stage: 'enriched', mode: config.mode === 'policy-guarded' ? 'policy-guarded' : 'review-only', jobIds: active,
         work, policyPath, instruction: 'Read pipeline-handoff.md. Screening and tailoring judgment precede readiness. This handoff does not authorize submission.' };
       atomic(join(runDir, 'request.json'), request);
       event.runDir = runDir;
@@ -106,7 +106,15 @@ export function dispatchHandoffs({ work = workDir(), profile = profileDir(), rep
           { work, gate: ['--config', configPath, '--policy', policyPath, ...stops.flatMap(p => ['--stop', p])] });
         writeFileSync(join(runDir, 'owner.stdout'), output, { mode: 0o600 });
         const result = JSON.parse(output);
-        if (result.runId !== event.runId || !Array.isArray(result.acceptedJobIds) || result.acceptedJobIds.length !== active.length || new Set(result.acceptedJobIds).size !== active.length || result.acceptedJobIds.some(id => !active.includes(id)) || !['prepared', 'held', 'uncertain'].includes(result.outcome)) throw new Error('Owner must acknowledge exact run/job IDs and a review-only outcome');
+        if (result.runId !== event.runId || !Array.isArray(result.acceptedJobIds) || result.acceptedJobIds.length !== active.length || new Set(result.acceptedJobIds).size !== active.length || result.acceptedJobIds.some(id => !active.includes(id)) || !['prepared', 'held', 'uncertain', ...(request.mode === 'policy-guarded' ? ['submitted'] : [])].includes(result.outcome)) throw new Error('Owner must acknowledge exact run/job IDs and a review-only outcome');
+        // Count only newly acknowledged receipts corroborated by the durable journal.
+        const journalPath = join(work, 'runtime/auto-apply/submissions.json');
+        const attempts = existsSync(journalPath) ? read(journalPath).attempts : [];
+        const submitted = result.results?.filter(r => r.status === 'submitted') || [];
+        if (submitted.length || result.outcome === 'submitted') {
+          if (request.mode !== 'policy-guarded' || !submitted.length || submitted.some(r => !active.includes(r.jobId) || !attempts.some(a => a.ownerRun === request.runId && a.jobId === r.jobId && a.status === 'submitted' && a.receipt?.confirmation && a.receipt.receivedAt === r.receipt?.receivedAt))) throw Error('Submitted acknowledgment requires matching durable receipts');
+          summary.newReceiptConfirmedApplications += new Set(submitted.map(r => r.jobId)).size;
+        }
         event.acceptedJobIds = result.acceptedJobIds; event.result = result;
         event.status = result.outcome === 'uncertain' ? 'uncertain' : 'consumed';
         summary[event.status].push(event.acceptedJobIds);

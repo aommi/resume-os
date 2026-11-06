@@ -51,7 +51,8 @@ def main():
         if not authorized():
             print('HANDOFF_REVOKED', file=sys.stderr)
             return 77
-        child = subprocess.Popen(command, pass_fds=(fd,), start_new_session=True)
+        env = dict(os.environ, RESUME_OS_BROWSER_LEASE_FD=str(fd), RESUME_OS_BROWSER_LEASE_PATH=os.path.abspath(args.lock))
+        child = subprocess.Popen(command, pass_fds=(fd,), start_new_session=True, env=env)
 
         stopping = False
 

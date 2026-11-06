@@ -44,6 +44,7 @@ export function runQueuedJobs({ work = workDir(), repo = REPO, now = () => new D
     try {
       report.handoff = dispatchHandoffs({ work, profile, repo });
       report.handoffRuns.push(report.handoff);
+      report.newReceiptConfirmedApplications += report.handoff.newReceiptConfirmedApplications;
     } catch (error) {
       report.handoffErrors.push(error.message); // Do not reclassify enrichment or stall unrelated IDs.
     }
@@ -199,6 +200,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const r = result.report, q = r.queue;
   console.log(statusOnly || process.argv.includes('--json') ? JSON.stringify(r, null, 2) :
     result.exitCode === 0 && !r.attempted.length ? '[SILENT]' :
-    `Resume OS enrichment: ${r.completed.length} ingested/enriched, ${r.duplicates.length} duplicates, ${r.excluded.length} excluded, ${r.failures.length} failed. New receipt-confirmed applications: 0 (review handoff only).\nWaiting: ${q?.pending ?? 'unknown'}; needs review: ${q?.blocked ?? 'unknown'}; budget remaining today: ${q?.remainingToday ?? 'unknown'}.\nOldest waiting: ${q?.oldestQueuedAt || 'none'}.${r.error ? `\n${r.error}` : ''}`);
+    `Resume OS enrichment: ${r.completed.length} ingested/enriched, ${r.duplicates.length} duplicates, ${r.excluded.length} excluded, ${r.failures.length} failed. New receipt-confirmed applications: ${r.newReceiptConfirmedApplications}.\nWaiting: ${q?.pending ?? 'unknown'}; needs review: ${q?.blocked ?? 'unknown'}; budget remaining today: ${q?.remainingToday ?? 'unknown'}.\nOldest waiting: ${q?.oldestQueuedAt || 'none'}.${r.error ? `\n${r.error}` : ''}`);
   process.exitCode = result.exitCode;
 }

@@ -95,7 +95,12 @@ Completed enrichment now writes a durable enriched-to-review event before queue
 acknowledgment. An opt-in `profile.json` `pipelineHandoff` argv contract dispatches
 one completion at a time through the configured owner before unrelated work finishes;
 without opt-in the existing enrichment batching is unchanged. Enriched is not ready
-or applied, and this contract is **review-only**, regardless of `autoSubmit` policy.
+or applied. The default contract is **review-only**, regardless of `autoSubmit`.
+An optional foreground `scripts/application-owner.mjs` bridge composes configured
+markdown-directed preparation with the guarded package/journal/receipt executor.
+Execution requires separate explicit handoff mode, owner execution opt-in and exact
+current policy scope; enrichment never expands authorization. See
+`application-automation.md` for operator configuration and package contracts.
 See `pipeline-handoff.md` for owner acknowledgments, stop/revocation handling, exact
 identity deduplication and uncertain-run reconciliation. No schedule is installed.
 Queued browser subprocesses and the configured owner share a POSIX kernel lease

@@ -32,7 +32,7 @@ if (isMain()) {
   }
 }
 
-export function buildAutofillPlan({ manifest, profile, work }) {
+export function buildAutofillPlan({ manifest, profile, work, secretValues = {} }) {
   if (!manifest?.url) throw new Error("manifest.url is required");
   assertHttpUrl(manifest.url, "manifest.url");
   if (!manifest.profileId) throw new Error("manifest.profileId is required");
@@ -41,7 +41,7 @@ export function buildAutofillPlan({ manifest, profile, work }) {
     throw new Error(`manifest profileId ${manifest.profileId} does not match active profile ${profile.profileId}`);
   }
 
-  const profileValues = profileValueMap(profile);
+  const profileValues = { ...profileValueMap(profile), ...secretValues };
   const fields = [];
   const unresolved = [];
 
@@ -111,7 +111,7 @@ export function profileValueMap(profile = {}) {
   const [firstName, ...lastParts] = String(profile.fullName || "").trim().split(/\s+/).filter(Boolean);
   const links = Array.isArray(contact.links) ? contact.links : [];
   const link = (needle) => links.find((value) => String(value).toLowerCase().includes(needle)) || "";
-  return {
+  const values = {
     "profile.fullName": profile.fullName || "",
     "profile.firstName": firstName || "",
     "profile.lastName": lastParts.join(" "),
@@ -133,6 +133,8 @@ export function profileValueMap(profile = {}) {
     "ats.accommodationsRequired": profile.atsAnswers?.accommodationsRequired || "",
     "ats.howDidYouHear": profile.atsAnswers?.howDidYouHear || "",
   };
+  for (const [key, value] of Object.entries(profile.atsAnswers || {})) values[`ats.${key}`] = value;
+  return values;
 }
 
 export function parseArgs(args) {
