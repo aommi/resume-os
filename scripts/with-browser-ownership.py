@@ -51,23 +51,38 @@ def main():
         if not authorized():
             print('HANDOFF_REVOKED', file=sys.stderr)
             return 77
-        child = subprocess.Popen(command, pass_fds=(fd,), start_new_session=True)
+        env = dict(os.environ, RESUME_OS_BROWSER_LEASE_FD=str(fd), RESUME_OS_BROWSER_LEASE_PATH=os.path.abspath(args.lock))
+        child = subprocess.Popen(command, pass_fds=(fd,), start_new_session=True, env=env)
 
-        def stop(signum, _frame):
+        def terminate():
+            # Timeout signals must finish even when the owner ignores TERM.
+            # Kill the entire owned group, including descendants retaining fd.
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
             try:
-                os.killpg(child.pid, signum)
+                os.killpg(child.pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
+            try:
+                child.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                pass
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            child.wait()
+
+        def stop(signum, _frame):
+            terminate()
+            print('HANDOFF_CANCELLED', file=sys.stderr)
+            raise SystemExit(78)
+
         signal.signal(signal.SIGTERM, stop)
         signal.signal(signal.SIGINT, stop)
         while child.poll() is None:
             if not authorized():
-                stop(signal.SIGTERM, None)
-                try:
-                    child.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    stop(signal.SIGKILL, None)
-                    child.wait()
+                terminate()
                 # Execution began: cancellation is uncertain, NOT a safe retry.
                 print('HANDOFF_CANCELLED', file=sys.stderr)
                 return 78

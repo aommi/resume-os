@@ -356,7 +356,16 @@ The queue persists enriched events before completion acknowledgment under profil
 work/runtime/pipeline-handoff. The optional profile pipelineHandoff argv owner is
 foreground and run/accepted-ID acknowledged; configured workers settle each job
 then dispatch before unrelated jobs, while non-opt-in batching remains unchanged.
-This is review-only: no submission authority, lifecycle writes or applied counts.
+Review-only remains the default: enrichment grants no submission authority.
+The optional foreground application-owner adapter composes configured preparation
+with package/profile/path/hash validation and the guarded submission boundary.
+Execution requires explicit policy-guarded mode, owner execute opt-in and exact
+current policy scope. Journal reservation precedes final submit; newly observed
+receipt evidence precedes submitted/applied. Uncertain attempts/owner runs never
+automatically retry. Normal-worker fictional Chrome tests exercise the complete
+trigger with partial failure, defaults, revocation, aliases and restart protection.
+No private policy/schedule is deployed by the reusable integration. The
+application_automation resolver route loads the markdown judgment contract.
 Unknown owner results survive restart as uncertain and are never auto-relaunched.
 The existing process-lock primitive is shared by queue and handoff state. Queued
 browser commands and configured owner use a Python/POSIX inherited kernel lease;

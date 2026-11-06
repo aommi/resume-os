@@ -27,7 +27,8 @@ table is data: `engine/resolver.json`. The deterministic lookup is `engine/resol
 | `interview_postmortem` | interview-postmortem.md | analyze a completed interview or contract-scope call and ground the next step |
 | `interview_prep` | resume-os.md, interview-prep.md, interview-postmortem.md, profile question bank and evidence ledger | future interview, recruiter call, or active-application “next step”; create responsive, printable HTML prep using confirmed event details and transferable evidence |
 | `model_eval` | evals/model-comparison.md | two-layer model comparison and approval gate |
-| `pipeline_handoff` | pipeline-handoff.md, job-screening.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md | opt-in enriched-to-review owner contract; never submission authority |
+| `pipeline_handoff` | pipeline-handoff.md, application-automation.md, job-screening.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md | default review-only handoff; optional separately authorized guarded owner |
+| `application_automation` | application-automation.md, pipeline-handoff.md, job-screening.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md | configured foreground preparation and guarded execution |
 | `pipeline_status` | (none) | just run `node scripts/job-board.mjs` |
 | `discover` | (none) | run scrapers (Hermes); facts only |
 | _unknown_ | resume-os.md, tailoring-methodology.md | **fallback** |

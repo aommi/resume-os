@@ -13,6 +13,8 @@ You are continuing the Resume OS project. The active profile is `resume-os.confi
    - tailoring a job → `tailor` route (resume-os.md, tailoring-methodology.md, bullet-rubric.md, eval-rubric.md)
    - ship check → `score`; cover letter → `cover_letter`; base-resume edits → `resume_maintenance`
    - application form filling → `application_form` (application-form-assist.md; never submit)
+   - configured guarded application owner → `application_automation`; enriched-stage handoff →
+     `pipeline_handoff` (review-only unless separately configured and currently authorized)
    - completed interview or contract-scope call → `interview_postmortem`; “prep me for the next
      step/round” in an active application, or an upcoming recruiter, hiring-manager, functional,
      technical, panel, or case interview → `interview_prep`
