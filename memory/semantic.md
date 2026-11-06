@@ -349,3 +349,19 @@ cooldown aborts refund all unfinished leased batch work, retaining canonical ing
 Dismissal requires a nonempty reason and persists profile-local evidence at
 `work/runtime/linkedin-dismissals/<id>.json` before removing the pending entry; later
 collection overlap treats dismissal evidence as a duplicate and does not requeue it.
+
+## Incremental review handoff
+
+The queue persists enriched events before completion acknowledgment under profile
+work/runtime/pipeline-handoff. The optional profile pipelineHandoff argv owner is
+foreground and run/accepted-ID acknowledged; configured workers settle each job
+then dispatch before unrelated jobs, while non-opt-in batching remains unchanged.
+This is review-only: no submission authority, lifecycle writes or applied counts.
+Unknown owner results survive restart as uncertain and are never auto-relaunched.
+Timeout/termination and revocation share process-group TERM cleanup with a
+five-second grace then KILL; the inherited browser lease remains held until death.
+The existing process-lock primitive is shared by queue and handoff state. Queued
+browser commands and configured owner use a Python/POSIX inherited kernel lease;
+shared-desktop profiles must configure one browser.ownershipLock path. Legacy
+private owners/manual agents require explicit adoption. See pipeline-handoff.md
+and its resolver route; no schedules or candidate policies are changed.

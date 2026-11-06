@@ -91,6 +91,17 @@ or detection guarantees. Machine schedules remain daily collection and two-hour 
 no extra worker is spawned for a backlog. The watchdog requires LinkedIn collector/worker
 heartbeats only when `linkedin.scheduled: true` (or `RESUME_OS_LINKEDIN_SCHEDULED=1`) is set.
 
+Completed enrichment now writes a durable enriched-to-review event before queue
+acknowledgment. An opt-in `profile.json` `pipelineHandoff` argv contract dispatches
+one completion at a time through the configured owner before unrelated work finishes;
+without opt-in the existing enrichment batching is unchanged. Enriched is not ready
+or applied, and this contract is **review-only**, regardless of `autoSubmit` policy.
+See `pipeline-handoff.md` for owner acknowledgments, stop/revocation handling, exact
+identity deduplication and uncertain-run reconciliation. No schedule is installed.
+Queued browser subprocesses and the configured owner share a POSIX kernel lease
+(Python 3 required); profiles sharing a desktop must configure the same absolute
+`browser.ownershipLock`. Legacy/manual owners must explicitly adopt that lease.
+
 Retrieval reuses verified employer links from collection, resolves missing links from
 selected-card responses/DOM, and fetches employer `JobPosting` structured data first.
 An exact verified match writes canonical artifacts without an enrichment model call.

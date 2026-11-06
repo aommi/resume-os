@@ -28,6 +28,7 @@ expect("application_form", [...always, "resume-os.md", "application-form-assist.
 expect("interview_postmortem", [...always, "interview-postmortem.md"]);
 expect("interview_prep", [...always, "resume-os.md", "interview-prep.md", "interview-postmortem.md", "profiles/<activeProfile>/sources/interview-question-bank.md", "profiles/<activeProfile>/work/interview-evidence.md"]);
 expect("model_eval", [...always, "evals/model-comparison.md"]);
+expect("pipeline_handoff", [...always, "pipeline-handoff.md", "job-screening.md", "tailoring-methodology.md", "bullet-rubric.md", "eval-rubric.md"]);
 expect("pipeline_status", [...always]);
 expect("discover", [...always]);
 // Fallback: unknown/ambiguous intent -> default route (degrades to cold-start behavior).
